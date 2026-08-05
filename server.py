@@ -30,6 +30,11 @@ HOP_BY_HOP = {"content-encoding", "content-length", "transfer-encoding", "connec
 
 app = Flask(__name__)
 
+# One keep-alive session for every upstream call. Reusing the TCP and TLS
+# connection saves a few hundred milliseconds per request, which is the
+# difference between autocomplete feeling live and feeling laggy.
+HTTP = requests.Session()
+
 STATIC_DIR = Path(app.static_folder)
 
 # Cache-bust static assets: one version per change = newest mtime among css/js, so editing
@@ -103,7 +108,7 @@ def geocode_suggest():
     if len(query) < 3:
         return jsonify({"suggestions": []})
     try:
-        response = requests.get(
+        response = HTTP.get(
             "https://photon.komoot.io/api/",
             params={
                 "q": query,
@@ -122,6 +127,7 @@ def geocode_suggest():
     except requests.RequestException as error:
         return jsonify({"error": f"Suggestions failed: {error}"}), 502
     suggestions = []
+    seen = set()
     for feature in features:
         props = feature.get("properties", {})
         lon, lat = feature["geometry"]["coordinates"]
@@ -130,6 +136,13 @@ def geocode_suggest():
         label = f"{number} {street}".strip() if street else (props.get("name") or "")
         if not label:
             continue
+        # Photon returns the same street once per OSM segment and the same
+        # address as both a building and a range. One label, one row; the
+        # lat/lon bias means the first occurrence is the nearest one.
+        key = label.lower()
+        if key in seen:
+            continue
+        seen.add(key)
         suggestions.append(
             {
                 "label": label,
@@ -154,7 +167,7 @@ def geocode():
     if not query:
         return jsonify({"error": "Missing query."}), 400
     try:
-        response = requests.get(
+        response = HTTP.get(
             "https://nominatim.openstreetmap.org/search",
             params={
                 "q": f"{query}, Chicago, Illinois",
@@ -201,7 +214,7 @@ def proxy(api_path: str):
 
     upstream = f"{API_BASE}/api/{api_path}"
     try:
-        response = requests.request(
+        response = HTTP.request(
             request.method,
             upstream,
             params=request.args,

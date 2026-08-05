@@ -875,7 +875,9 @@
 
   let suggestTimer = null;
   let suggestSeq = 0;
+  let suggestPending = false;
   let addressSuggestions = [];
+  const suggestCache = new Map(); // query -> suggestions, so backspacing is instant
 
   function renderSearchResults(query) {
     const box = el("k3-search-results");
@@ -893,6 +895,9 @@
           `&#9906; ${esc(s.label)}<span class="hood">${esc(s.extra)}</span></button>`,
       );
     });
+    if (suggestPending && !addressSuggestions.length) {
+      rows.push(`<button type="button" disabled>Searching addresses&hellip;</button>`);
+    }
     if (!rows.length) {
       box.hidden = query.trim().length < 2;
       box.innerHTML = `<button type="button" disabled>No match yet, keep typing an address, a neighborhood, or a ward number.</button>`;
@@ -906,11 +911,20 @@
   // suggestions stream in behind them, debounced and sequence-guarded
   function scheduleSuggestions(query) {
     clearTimeout(suggestTimer);
-    if (query.trim().length < 3) {
+    const trimmed = query.trim().toLowerCase();
+    if (trimmed.length < 3) {
       addressSuggestions = [];
+      suggestPending = false;
       renderSearchResults(query);
       return;
     }
+    if (suggestCache.has(trimmed)) {
+      addressSuggestions = suggestCache.get(trimmed);
+      suggestPending = false;
+      renderSearchResults(query);
+      return;
+    }
+    suggestPending = true;
     renderSearchResults(query);
     suggestTimer = setTimeout(async () => {
       const seq = ++suggestSeq;
@@ -919,13 +933,17 @@
           `/geocode/suggest?q=${encodeURIComponent(query)}`,
           "Suggestions unavailable.",
         );
+        if (suggestCache.size > 80) suggestCache.clear();
+        suggestCache.set(trimmed, result.suggestions || []);
         if (seq !== suggestSeq) return; // a newer keystroke superseded this one
         addressSuggestions = result.suggestions || [];
+        suggestPending = false;
         renderSearchResults(query);
       } catch (_error) {
+        suggestPending = false;
         /* suggestions are best-effort, submit still resolves the address */
       }
-    }, 280);
+    }, 160);
   }
 
   function pickAddress(index) {
