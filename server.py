@@ -54,6 +54,13 @@ def inject_globals():
 
 @app.get("/")
 def index():
+    # K3: the sequenced explorer (landing -> your ward -> choose -> compare).
+    # The pre-K3 explorer stays reachable at /classic while the redesign settles.
+    return render_template("k3.html")
+
+
+@app.get("/classic")
+def classic():
     return render_template("explorer.html")
 
 
