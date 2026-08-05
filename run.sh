@@ -1,8 +1,5 @@
 #!/usr/bin/env bash
-# Start the Penlight frontend on http://localhost:1837.
-#
-#   ./run.sh                                          # against the live API
-#   PENLIGHT_API_BASE=http://localhost:1838 ./run.sh   # against a local backend (upstream's port)
+# Start the Penlight frontend on http://localhost:1837, backed by the live Penlight API.
 set -euo pipefail
 
 cd "$(dirname "$0")"

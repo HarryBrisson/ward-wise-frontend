@@ -38,11 +38,7 @@ GET /dictionary  ->  templates/dictionary.html
 GET /api/metrics ->  https://penlight.wardwise.org/api/metrics
 ```
 
-To develop against a local backend instead — 1838 is the port the upstream Penlight app runs on:
-
-```bash
-PENLIGHT_API_BASE=http://localhost:1838 ./run.sh
-```
+The live API is the only backend you need; it's public and unauthenticated for these reads.
 
 | Variable | Default | Purpose |
 |---|---|---|
@@ -94,7 +90,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) — including a list of good first issues
 
 ## Provenance
 
-Cut from `HarryBrisson/ward-wise-civic-tech` at commit `b5ba7e4`
+Cut from `HarryBrisson/ward-wise-civic-tech` (private) at commit `b5ba7e4`
 (`apps/ward_wise_explorer/`). Most files here are byte-identical copies, so fixes still port
 cleanly in either direction. The deliberate differences:
 

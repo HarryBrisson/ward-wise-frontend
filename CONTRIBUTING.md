@@ -37,13 +37,13 @@ Match what's there — this codebase has a consistent voice.
 
 ## Where things live
 
-Data questions — a metric's definition, a wrong number, coverage years, a new metric — belong
-upstream in
-[ward-wise-civic-tech](https://github.com/HarryBrisson/ward-wise-civic-tech), not here. This repo
-only renders what the API returns.
+This repo renders what the API returns; it doesn't produce the data. Data questions — a metric's
+definition, a wrong number, coverage years, a new metric — live in the private backend repo, as
+does the API itself.
 
-If a change needs a new API field, open an issue upstream first. The proxy in `server.py` is
-deliberately dumb: it forwards and streams, and does no shaping of its own.
+You don't need access to that repo to work here. Open an issue in *this* repo for anything on the
+other side of the API, including a change that needs a new API field, and it'll get routed. The
+proxy in `server.py` is deliberately dumb: it forwards and streams, and does no shaping of its own.
 
 ## Testing a change
 
