@@ -81,6 +81,56 @@ def about():
     return render_template("about.html")
 
 
+# --- Geocoding ---------------------------------------------------------------
+
+# Chicago bounding box for Nominatim, so "Clark St" resolves here and not Iowa.
+CHICAGO_VIEWBOX = "-87.95,42.03,-87.50,41.62"
+
+
+@app.get("/geocode")
+def geocode():
+    """Resolve a street address to coordinates via OpenStreetMap's Nominatim.
+
+    Proxied server-side rather than called from the browser so the request
+    carries a proper User-Agent per the Nominatim usage policy, and so the
+    frontend stays same-origin. The ward lookup itself happens client-side
+    against the ward boundaries the page already holds.
+    """
+    query = (request.args.get("q") or "").strip()
+    if not query:
+        return jsonify({"error": "Missing query."}), 400
+    try:
+        response = requests.get(
+            "https://nominatim.openstreetmap.org/search",
+            params={
+                "q": f"{query}, Chicago, Illinois",
+                "format": "jsonv2",
+                "limit": 1,
+                "viewbox": CHICAGO_VIEWBOX,
+                "bounded": 1,
+            },
+            headers={
+                "User-Agent": "ward-wise-frontend (https://github.com/HarryBrisson/ward-wise-frontend)",
+            },
+            timeout=8,
+        )
+        results = response.json()
+    except requests.RequestException as error:
+        return jsonify({"error": f"Geocoding failed: {error}"}), 502
+    if not results:
+        return jsonify({"match": None})
+    top = results[0]
+    return jsonify(
+        {
+            "match": {
+                "lat": float(top["lat"]),
+                "lon": float(top["lon"]),
+                "label": top.get("display_name", query),
+            }
+        }
+    )
+
+
 # --- API proxy ---------------------------------------------------------------
 
 @app.route("/api/<path:api_path>", methods=["GET", "POST"])

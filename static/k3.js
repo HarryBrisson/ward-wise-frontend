@@ -241,9 +241,13 @@
       scrollWheelZoom: false,
       attributionControl: true,
     });
-    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: "&copy; OpenStreetMap contributors",
-      opacity: 0.35,
+    // CARTO Positron: the quiet light basemap, free for public projects.
+    // It matches the page instead of fighting the choropleth.
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      subdomains: "abcd",
+      maxZoom: 15,
     }).addTo(map);
     geoLayer = L.geoJSON(data.geojson, {
       style: wardStyle,
@@ -794,6 +798,62 @@
       .join("");
   }
 
+  // ---------- address lookup ----------
+
+  // ray-casting point-in-polygon over the ward boundaries already in memory.
+  // geojson coordinates are [lng, lat].
+  function pointInRing(lng, lat, ring) {
+    let inside = false;
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i, i += 1) {
+      const [xi, yi] = ring[i];
+      const [xj, yj] = ring[j];
+      if (yi > lat !== yj > lat && lng < ((xj - xi) * (lat - yi)) / (yj - yi) + xi) {
+        inside = !inside;
+      }
+    }
+    return inside;
+  }
+
+  function wardAtPoint(lat, lng) {
+    for (const feature of data.geojson.features || []) {
+      const geom = feature.geometry || {};
+      const polys =
+        geom.type === "Polygon" ? [geom.coordinates] : geom.type === "MultiPolygon" ? geom.coordinates : [];
+      for (const poly of polys) {
+        if (poly.length && pointInRing(lng, lat, poly[0])) {
+          return featureWardId(feature);
+        }
+      }
+    }
+    return null;
+  }
+
+  async function geocodeAndGo(query) {
+    const box = el("k3-search-results");
+    box.hidden = false;
+    box.innerHTML = `<button type="button" disabled>Looking up that address&hellip;</button>`;
+    try {
+      const result = await api.fetchJson(
+        `/geocode?q=${encodeURIComponent(query)}`,
+        "Address lookup is unavailable right now.",
+      );
+      if (result.match) {
+        const wardId = wardAtPoint(result.match.lat, result.match.lon);
+        if (wardId) {
+          box.hidden = true;
+          selectWard(wardId);
+          toast(`That address is in ${wardName(wardId)}`);
+          return;
+        }
+      }
+      box.innerHTML =
+        `<button type="button" disabled>No Chicago match for that. ` +
+        `Try a street address, a neighborhood, or a ward number.</button>`;
+    } catch (error) {
+      box.innerHTML = `<button type="button" disabled>${esc(error.message)}</button>`;
+    }
+  }
+
   // ---------- landing search ----------
 
   function matchWards(query) {
@@ -905,17 +965,19 @@
     });
     const search = el("k3-search");
     search.addEventListener("input", () => renderSearchResults(search.value));
-    search.addEventListener("keydown", (event) => {
-      if (event.key === "Enter") {
-        const first = matchWards(search.value)[0];
-        if (first) selectWard(first.ward.ward_id);
-      }
-    });
-    el("k3-search-go").addEventListener("click", () => {
-      const first = matchWards(search.value)[0];
+    // neighborhood and ward-number matches win instantly; anything else,
+    // like a street address, goes through the geocoder
+    const go = () => {
+      const query = search.value.trim();
+      if (!query) return;
+      const first = matchWards(query)[0];
       if (first) selectWard(first.ward.ward_id);
-      else renderSearchResults(search.value);
+      else geocodeAndGo(query);
+    };
+    search.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") go();
     });
+    el("k3-search-go").addEventListener("click", go);
     const metricSearch = el("k3-metric-search");
     metricSearch.addEventListener("input", () => {
       state.search = metricSearch.value;
