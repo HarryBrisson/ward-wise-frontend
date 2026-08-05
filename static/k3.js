@@ -459,29 +459,72 @@
       `<b>${esc(wardName(state.wardId))} is the pinned line.</b></div></div>`;
   }
 
+  // one measure, all 50 wards on its real value scale, so closeness is
+  // visible: 2nd place one landmark behind 1st reads differently than
+  // 2nd place forty behind
+  function relativePanel(metricId) {
+    const metric = data.metricById.get(metricId);
+    const standing = metricStanding(metricId, state.wardId);
+    if (!metric || !standing) return "";
+    const entries = [];
+    Object.entries(data.cells).forEach(([wid, cells]) => {
+      if (metricId in cells) entries.push([wid, cells[metricId].s, cells[metricId].v]);
+    });
+    const values = entries.map((e) => e[2]);
+    const vmin = Math.min(...values);
+    const vmax = Math.max(...values);
+    const span = Math.max(1e-9, vmax - vmin);
+    const X = (v) => ((v - vmin) / span) * 96 + 2;
+    const top = entries.reduce((best, e) => (e[1] > best[1] ? e : best), entries[0]);
+    const mine = entries.find((e) => e[0] === String(state.wardId));
+    let ticks = "";
+    entries.forEach(([wid, , value]) => {
+      if (wid === String(state.wardId) || wid === top[0]) return;
+      ticks += `<line x1="${X(value).toFixed(1)}" y1="14" x2="${X(value).toFixed(1)}" y2="40" stroke="#d5d8df" stroke-width="1.4" vector-effect="non-scaling-stroke"/>`;
+    });
+    ticks += `<line x1="${X(top[2]).toFixed(1)}" y1="8" x2="${X(top[2]).toFixed(1)}" y2="40" stroke="#6f7683" stroke-width="2.5" vector-effect="non-scaling-stroke"/>`;
+    ticks += `<line x1="${X(mine[2]).toFixed(1)}" y1="8" x2="${X(mine[2]).toFixed(1)}" y2="40" stroke="#4c1d95" stroke-width="3" vector-effect="non-scaling-stroke"/>`;
+    const fmt = (v) => api.formatMetricValue(v, metric);
+    const gapWords =
+      standing.rank === 1
+        ? `${esc(wardName(state.wardId))} sets the pace on this one.`
+        : `The lead ward has <b>${esc(fmt(top[2]))}</b>, ${esc(wardName(state.wardId))} has ` +
+          `<b>${esc(fmt(mine[2]))}</b>, so ${ord(standing.rank)} place sits exactly that far back.`;
+    return (
+      `<div class="k3-relative"><h6>${esc(metric.label)} · every ward on the real scale</h6>` +
+      `<div class="relviz">` +
+      `<span class="youtag" style="left:${X(mine[2]).toFixed(1)}%">You · ${esc(fmt(mine[2]))}</span>` +
+      (top[0] !== String(state.wardId)
+        ? `<span class="toptag" style="left:${X(top[2]).toFixed(1)}%">Top · ${esc(fmt(top[2]))}</span>`
+        : "") +
+      `<svg viewBox="0 0 100 40" preserveAspectRatio="none">${ticks}</svg>` +
+      `</div>` +
+      `<div class="relcap">${gapWords}` +
+      (metric.direction === "lower" ? " Lower is better here, the ranking already accounts for it." : "") +
+      `</div></div>`
+    );
+  }
+
   function renderPeek(standings) {
     const sorted = [...standings].sort((a, b) => a.standing.rank - b.standing.rank);
-    const strongest = sorted.slice(0, 2);
-    const weakest = sorted.slice(-1);
-    const railRow = (item, withEnds) => {
-      const pos = ((50 - item.standing.rank) / 49) * 100;
-      return (
-        `<div class="k3-mrow"><span class="nm">${esc(item.metric.label)}</span>` +
-        `<span class="val num">${esc(api.formatMetricValue(item.standing.value, item.metric))}</span>` +
-        `<span class="rk num">${ord(item.standing.rank)}</span>` +
-        `<span class="k3-rail"><span class="medt"></span>` +
-        `<span class="pt" style="left:${pos.toFixed(1)}%"></span></span>` +
-        (withEnds
-          ? `<span class="k3-railends"><span>behind the city</span><span>ahead</span></span>`
-          : "") +
-        `</div>`
-      );
-    };
+    const strongest = sorted.slice(0, 3);
+    const weakest = sorted.slice(-2).filter((item) => !strongest.includes(item));
+    const box = (item, weak) =>
+      `<button type="button" class="k3-rankbox${weak ? " weak" : ""}` +
+      `${state.peekOpen === item.id ? " open" : ""}" data-act="rankbox" ` +
+      `data-metricbox="${esc(item.id)}">` +
+      `<span class="ord num">${ord(item.standing.rank)}</span>` +
+      `<span class="lbl">${esc(item.metric.label)}</span></button>`;
+    const openPanel = state.peekOpen ? relativePanel(state.peekOpen) : "";
     el("k3-peek").innerHTML =
-      `<div class="k3-peekhead">Strongest, on ${state.edited ? "your list" : "the starter set"}</div>` +
-      strongest.map((item) => railRow(item, false)).join("") +
-      `<div class="k3-peekhead">Weakest</div>` +
-      weakest.map((item) => railRow(item, true)).join("") +
+      `<div class="k3-peekhead">Strongest, on ${state.edited ? "your list" : "the starter set"} · ` +
+      `tap a box for the real gaps</div>` +
+      `<div class="k3-rankboxes">${strongest.map((item) => box(item, false)).join("")}</div>` +
+      (weakest.length
+        ? `<div class="k3-peekhead">Weakest</div>` +
+          `<div class="k3-rankboxes">${weakest.map((item) => box(item, true)).join("")}</div>`
+        : "") +
+      openPanel +
       `<button type="button" class="k3-seeall" data-act="open-list">` +
       `See everything we measure for ${esc(wardName(state.wardId))} ›</button>`;
   }
@@ -593,6 +636,40 @@
 
   // ---------- state 3: choose what matters ----------
 
+  // Presets: seven starting points for politically engaged residents,
+  // proposed by nine single-lens drafts and organized down to seven.
+  // Each is name, tagline, metric ids. Ids are validated against the
+  // catalog at render time, so a missing measure degrades gracefully.
+  const PRESETS = window.K3_PRESETS || [];
+
+  function applyPreset(preset) {
+    const weights = {};
+    preset.metric_ids.forEach((id) => {
+      if (data.metricById.has(id) && id in (data.cells[state.wardId] || {})) weights[id] = 1;
+    });
+    if (!Object.keys(weights).length) return;
+    state.weights = weights;
+    state.edited = true;
+    state.lastShift = null;
+    render();
+    const row = scoreRow(state.wardId, state.weights);
+    if (row) toast(`${preset.name} · ${wardName(state.wardId)} ranks ${ord(row.rank)} of 50`);
+  }
+
+  function pill(metricId, onList) {
+    const metric = data.metricById.get(metricId);
+    if (!metric) return "";
+    const standing = metricStanding(metricId, state.wardId);
+    return (
+      `<button type="button" class="k3-pill${onList ? " on" : ""}" data-act="${onList ? "remove" : "add"}" ` +
+      `data-metric="${esc(metricId)}" title="${esc(metric.description || metric.label)}">` +
+      `${esc(metric.label)}` +
+      (standing ? `<span class="rk num">${ord(standing.rank)}</span>` : "") +
+      (onList ? `<span class="x">&#10005;</span>` : "") +
+      `</button>`
+    );
+  }
+
   function renderList() {
     const row = scoreRow(state.wardId, state.weights);
     const count = Object.keys(state.weights).length;
@@ -600,60 +677,40 @@
       `${wardName(state.wardId)} · ${row ? `${ord(row.rank)} of 50` : "no rank yet"} · based on your ${count}`;
     el("k3-back-num").textContent = state.wardId;
 
-    const onListRows = Object.keys(state.weights)
-      .map((id) => listRow(id, true))
-      .join("");
-    el("k3-onlist").innerHTML =
-      `<div class="k3-listhead"><b>On your list</b> · ${count}</div>` + onListRows;
-
-    renderAddMore();
-  }
-
-  function listRow(metricId, onList) {
-    const metric = data.metricById.get(metricId);
-    if (!metric) return "";
-    const standing = metricStanding(metricId, state.wardId);
-    const standingText = standing ? `${ord(standing.rank)} in Chicago` : "no data here";
-    const isOpen = state.detailFor === metricId;
-    const shift = state.lastShift && state.lastShift.metricId === metricId ? state.lastShift : null;
-    let detail = "";
-    if (isOpen) {
-      const consequence = consequenceOf(metricId, onList);
-      const consequenceText =
-        consequence.from === consequence.to
-          ? `${onList ? "Removing" : "Adding"} it would not change the overall rank.`
-          : `${onList ? "Removing" : "Adding"} it would move ${wardName(state.wardId)} from ` +
-            `${ord(consequence.from)} to ${ord(consequence.to)} of 50.`;
-      detail =
-        `<span class="k3-detail">${esc(metric.description || "")} ` +
-        (standing && standing.n < 50 ? `Data covers ${standing.n} of 50 wards. ` : "") +
-        (metric.direction === "lower" ? "Lower is better, the standing already accounts for it. " : "") +
-        esc(consequenceText) +
-        `</span>`;
+    let html = "";
+    if (PRESETS.length) {
+      html +=
+        `<div class="k3-listhead"><b>Starting points</b> · tap one to load it</div>` +
+        `<div class="k3-pilltray">` +
+        PRESETS.map(
+          (p, i) =>
+            `<button type="button" class="k3-preset" data-act="preset" data-idx="${i}" ` +
+            `title="${esc(p.tagline)}">${esc(p.name)}</button>`,
+        ).join("") +
+        `</div>`;
     }
-    let just = "";
-    if (shift) {
+    html +=
+      `<div class="k3-listhead"><b>On your list</b> · ${count} · tap a pill to remove it</div>` +
+      `<div class="k3-pilltray">` +
+      Object.keys(state.weights).map((id) => pill(id, true)).join("") +
+      `</div>`;
+    if (state.lastShift) {
+      const shift = state.lastShift;
+      const metric = data.metricById.get(shift.metricId);
       const moved =
         shift.from === shift.to
           ? "the rank held"
           : `${wardName(state.wardId)} moved from ${ord(shift.from)} to ${ord(shift.to)}`;
-      just =
-        `<span class="k3-justrow">${shift.removed ? "Removed" : "Added"} · ${esc(moved)}` +
-        `<button type="button" data-act="undo">Undo</button></span>`;
+      html +=
+        `<div class="k3-justrow" style="margin-top:10px">` +
+        `${shift.removed ? "Removed" : "Added"} ${esc(metric ? metric.label : "")} · ${esc(moved)}` +
+        `<button type="button" data-act="undo">Undo</button></div>`;
     }
-    return (
-      `<div class="k3-lrow" data-metric="${esc(metricId)}">` +
-      `<span class="nm">${esc(metric.label)}</span>` +
-      `<span class="st num">${esc(standingText)}</span>` +
-      `<span style="display:flex;gap:12px;justify-self:end">` +
-      `<button type="button" class="btn quiet" data-act="detail">Details</button>` +
-      `<button type="button" class="btn" data-act="${onList ? "remove" : "add"}">${onList ? "Remove" : "Add"}</button>` +
-      `</span>` +
-      detail +
-      just +
-      `</div>`
-    );
+    el("k3-onlist").innerHTML = html;
+
+    renderAddMore();
   }
+
 
   function renderAddMore() {
     const query = state.search.trim().toLowerCase();
@@ -667,7 +724,7 @@
       groups.get(domain).push(metric);
     });
     const sortedDomains = [...groups.entries()].sort((a, b) => b[1].length - a[1].length);
-    let html = `<div class="k3-listhead"><b>Add more</b></div>`;
+    let html = `<div class="k3-listhead"><b>Add more</b> · tap a pill to count it</div>`;
     sortedDomains.forEach(([domain, metrics]) => {
       metrics.sort(
         (a, b) =>
@@ -679,7 +736,12 @@
       html +=
         `<button type="button" class="toggle" data-act="toggle-domain" data-domain="${domain}">` +
         `${open ? "hide" : `${metrics.length} measures ›`}</button></div>`;
-      if (open) html += metrics.map((metric) => listRow(metric.metric_id, false)).join("");
+      if (open) {
+        html +=
+          `<div class="k3-pillgrid">` +
+          metrics.map((metric) => pill(metric.metric_id, false)).join("") +
+          `</div>`;
+      }
     });
     el("k3-addmore").innerHTML = html;
   }
@@ -981,9 +1043,10 @@
       state.view = "list";
       render();
     }
-    if (act === "detail") {
-      state.detailFor = state.detailFor === metricId ? null : metricId;
-      renderList();
+    if (act === "preset") applyPreset(PRESETS[Number(target.dataset.idx)]);
+    if (act === "rankbox") {
+      state.peekOpen = state.peekOpen === target.dataset.metricbox ? null : target.dataset.metricbox;
+      renderWard();
     }
     if (act === "add") changeMix(metricId, false);
     if (act === "remove") changeMix(metricId, true);

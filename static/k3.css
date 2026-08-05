@@ -533,6 +533,118 @@ header.site-header {
 
 .k3-list .k3-cta { margin-top: 26px; }
 
+/* ---------- pills: the whole list speaks in chips ---------- */
+
+.k3-pilltray { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
+
+.k3-pill {
+  align-items: center;
+  background: #fff;
+  border: 1.5px solid var(--hair);
+  border-radius: 99px;
+  color: var(--ink);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 650;
+  gap: 6px;
+  padding: 6px 12px;
+}
+
+.k3-pill .rk { color: var(--soft); font-size: 11px; font-weight: 600; }
+.k3-pill:hover { border-color: var(--hue-bright); }
+
+.k3-pill.on {
+  background: var(--hue-bright);
+  border-color: var(--hue-bright);
+  color: #fff;
+}
+
+.k3-pill.on .rk { color: rgb(255 255 255 / 75%); }
+.k3-pill.on .x { font-size: 13px; font-weight: 700; opacity: 0.8; }
+
+.k3-preset {
+  background: var(--hue-soft);
+  border: 1.5px solid transparent;
+  border-radius: 99px;
+  color: var(--hue);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 6px 13px;
+}
+
+.k3-preset:hover { border-color: var(--hue-bright); }
+
+.k3-pillgrid { display: flex; flex-wrap: wrap; gap: 7px; padding: 10px 0 16px; }
+
+/* ---------- rank boxes: the number is the display ---------- */
+
+.k3-rankboxes {
+  display: grid;
+  gap: 9px;
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  margin-top: 8px;
+}
+
+.k3-rankbox {
+  background: #fff;
+  border: 1.5px solid var(--hair);
+  border-radius: 12px;
+  cursor: pointer;
+  font: inherit;
+  padding: 12px 10px 10px;
+  text-align: center;
+}
+
+.k3-rankbox .ord {
+  display: block;
+  font-size: 27px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.k3-rankbox .lbl {
+  color: var(--soft);
+  display: block;
+  font-size: 11px;
+  font-weight: 650;
+  margin-top: 5px;
+}
+
+.k3-rankbox:hover { border-color: var(--hue-bright); }
+.k3-rankbox.open { border-color: var(--hue-bright); box-shadow: 0 0 0 1px var(--hue-bright); }
+.k3-rankbox.weak .ord { color: var(--warm); }
+
+.k3-relative {
+  border: 1.5px solid var(--hue-bright);
+  border-radius: 12px;
+  margin-top: 9px;
+  padding: 14px 16px 12px;
+}
+
+.k3-relative h6 { font-size: 12.5px; font-weight: 750; margin: 0; }
+.k3-relative .relviz { margin-top: 14px; position: relative; }
+.k3-relative svg { display: block; height: 46px; width: 100%; }
+
+.k3-relative .youtag,
+.k3-relative .toptag {
+  font-size: 10px;
+  font-weight: 700;
+  position: absolute;
+  top: -8px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.k3-relative .youtag { color: var(--hue); }
+.k3-relative .toptag { color: var(--soft); }
+.k3-relative .relcap { color: var(--soft); font-size: 11.5px; margin-top: 8px; }
+.k3-relative .relcap b { color: var(--ink); font-weight: 650; }
+
 /* ---------- compare ---------- */
 
 .k3-compare { padding-top: 26px; }
