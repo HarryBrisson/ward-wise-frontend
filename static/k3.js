@@ -1,12 +1,16 @@
 // K3: the sequenced explorer. Landing -> your ward -> choose what matters -> compare.
 //
-// Three commitments, carried from the design review:
+// Four commitments, carried from the design review:
 //   1. A named starter set replaces the random default. Every visitor sees the
 //      same Chicago until they change it, and the copy never claims they chose.
 //   2. Rank leads everywhere. The composite rescales whenever the mix changes,
 //      so the raw score never appears as a headline number.
 //   3. Every edit states its consequence in one sentence, next to the row that
 //      caused it, and the URL always carries the exact view for sharing.
+//   4. Time is a first-class axis. The API keeps a score matrix per year back to
+//      2002, so the same rank you see today can be run against any past year and
+//      plotted. Coverage grew over that span, so every historical number says how
+//      many of your measures actually existed then.
 //
 // Scoring mirrors the server: each metric's ward value is min-max normalized to
 // 0-100 across wards (direction-aware), the composite is the weighted average of
@@ -29,6 +33,17 @@
   const STARTER_SENTENCE =
     "parks, libraries, landmarks, community belonging, and mental distress";
 
+  // The API keys wards as "01".."50". Anything the map, the URL, or a click
+  // hands us gets normalized to that shape before it touches the data.
+  const pad = (value) => String(Number(value)).padStart(2, "0");
+
+  // Coverage thins out fast before 2002 (two metrics in 1990), so the time
+  // machine starts where a composite is worth computing.
+  const EARLIEST_YEAR = 2002;
+  // Each year is a separate ~200KB matrix fetch, so a wide range gets sampled
+  // rather than walked year by year.
+  const MAX_YEAR_FETCHES = 8;
+
   const state = {
     view: "landing", // landing | ward | list | compare
     wardId: null,
@@ -39,6 +54,11 @@
     openDomains: new Set(),
     detailFor: null,
     search: "",
+    presetName: null, // which starting point is loaded, for the highlighted pill
+    peekOpen: null,
+    picking: null,
+    year: "latest", // "latest" or a four-digit year: what the whole page reads
+    span: 10, // years back the trajectory covers; null means all of them
     sessionId: `k3-${Math.random().toString(36).slice(2, 10)}`,
   };
 
@@ -47,7 +67,9 @@
     metricById: new Map(),
     wards: [],
     wardById: new Map(),
-    cells: {}, // wardId -> metricId -> { s, v }
+    years: new Map(), // "latest" | year -> wardId -> metricId -> { s, v }
+    yearsWanted: new Set(), // fetches in flight, so we never ask twice
+    availableYears: [], // years the ward actually has records for
     geojson: null,
   };
 
@@ -62,6 +84,17 @@
     const s = ["th", "st", "nd", "rd"];
     const v = n % 100;
     return n + (s[(v - 20) % 10] || s[v] || s[0]);
+  }
+
+  // 1st, 2nd, 3rd get the podium treatment. The number is always spelled out
+  // beside it, so the color is decoration on top of the fact, never the fact.
+  function medal(rank) {
+    return rank === 1 ? "gold" : rank === 2 ? "silver" : rank === 3 ? "bronze" : "";
+  }
+
+  function medalClass(rank, prefix) {
+    const name = medal(rank);
+    return name ? ` ${prefix || ""}${name}` : "";
   }
 
   function el(id) {
@@ -83,12 +116,12 @@
   }
 
   function wardName(wardId) {
-    const ward = data.wardById.get(String(wardId));
-    return ward ? ward.display_name : `Ward ${wardId}`;
+    const ward = data.wardById.get(pad(wardId));
+    return ward ? ward.display_name : `Ward ${Number(wardId)}`;
   }
 
   function wardHoods(wardId) {
-    const ward = data.wardById.get(String(wardId));
+    const ward = data.wardById.get(pad(wardId));
     const overlaps = ward?.community_area_overlaps || [];
     return overlaps
       .slice(0, 2)
@@ -96,18 +129,54 @@
       .join(" & ");
   }
 
+  // ---------- the year the page is reading ----------
+
+  function cells() {
+    return data.years.get(state.year) || data.years.get("latest") || {};
+  }
+
+  function yearLabel(year) {
+    return year === "latest" ? "today" : String(year);
+  }
+
+  // A year's matrix arrives on demand and stays cached. Callers get a promise
+  // that resolves once the year is usable (or immediately if it already is).
+  async function loadYear(year) {
+    if (data.years.has(year)) return data.years.get(year);
+    if (data.yearsWanted.has(year)) return null;
+    data.yearsWanted.add(year);
+    try {
+      const raw = await api.fetchJson(
+        `/api/metrics/score-matrix?area_type=ward&year=${encodeURIComponent(year)}`,
+        "Unable to load that year.",
+      );
+      const matrix = raw.matrix || {};
+      const grid = matrix[String(year)] || matrix.latest || null;
+      if (grid && Object.keys(grid).length) {
+        data.years.set(year, grid);
+        return grid;
+      }
+    } catch (_error) {
+      /* a missing year just stays missing; the chart shows the gap */
+    } finally {
+      data.yearsWanted.delete(year);
+    }
+    return null;
+  }
+
   // ---------- scoring, the same math as the server ----------
 
-  function computeScores(weights) {
+  function computeScores(weights, grid) {
+    const source = grid || cells();
     const active = Object.entries(weights).filter(([, w]) => Number(w) > 0);
     const rows = [];
-    Object.entries(data.cells).forEach(([wardId, cells]) => {
+    Object.entries(source).forEach(([wardId, wardCells]) => {
       let total = 0;
       let applied = 0;
       let used = 0;
       active.forEach(([metricId, weight]) => {
-        if (metricId in cells) {
-          total += cells[metricId].s * Number(weight);
+        if (metricId in wardCells) {
+          total += wardCells[metricId].s * Number(weight);
           applied += Number(weight);
           used += 1;
         }
@@ -127,17 +196,17 @@
     return ranked;
   }
 
-  function scoreRow(wardId, weights) {
-    return computeScores(weights).find((row) => row.wardId === String(wardId)) || null;
+  function scoreRow(wardId, weights, grid) {
+    return computeScores(weights, grid).find((row) => row.wardId === pad(wardId)) || null;
   }
 
   function metricStanding(metricId, wardId) {
     const entries = [];
-    Object.entries(data.cells).forEach(([wid, cells]) => {
-      if (metricId in cells) entries.push([wid, cells[metricId].s, cells[metricId].v]);
+    Object.entries(cells()).forEach(([wid, wardCells]) => {
+      if (metricId in wardCells) entries.push([wid, wardCells[metricId].s, wardCells[metricId].v]);
     });
     entries.sort((a, b) => b[1] - a[1]);
-    const index = entries.findIndex(([wid]) => wid === String(wardId));
+    const index = entries.findIndex(([wid]) => wid === pad(wardId));
     if (index === -1) return null;
     return { rank: index + 1, n: entries.length, value: entries[index][2] };
   }
@@ -155,9 +224,10 @@
 
   function writeUrl() {
     const params = new URLSearchParams();
-    if (state.wardId) params.set("ward", state.wardId);
+    if (state.wardId) params.set("ward", String(Number(state.wardId)));
     if (state.view !== "landing" && state.view !== "ward") params.set("view", state.view);
-    if (state.vsId && state.view === "compare") params.set("vs", state.vsId);
+    if (state.vsId && state.view === "compare") params.set("vs", String(Number(state.vsId)));
+    if (state.year !== "latest") params.set("y", state.year);
     if (state.edited) {
       const mix = Object.entries(state.weights)
         .map(([id, w]) => (Number(w) === 1 ? id : `${id}:${w}`))
@@ -172,13 +242,15 @@
     const params = new URLSearchParams(location.search);
     const ward = params.get("ward");
     if (ward && /^\d{1,2}$/.test(ward)) {
-      state.wardId = String(Number(ward));
+      state.wardId = pad(ward);
       state.view = "ward";
     }
     const view = params.get("view");
     if (state.wardId && (view === "list" || view === "compare")) state.view = view;
     const vs = params.get("vs");
-    if (vs && /^\d{1,2}$/.test(vs)) state.vsId = String(Number(vs));
+    if (vs && /^\d{1,2}$/.test(vs)) state.vsId = pad(vs);
+    const year = params.get("y");
+    if (year && /^\d{4}$/.test(year)) state.year = Number(year);
     const mix = params.get("m");
     if (mix) {
       const weights = {};
@@ -211,18 +283,20 @@
       data.wards = Array.isArray(wardsRaw)
         ? wardsRaw
         : wardsRaw.wards || Object.values(wardsRaw).find(Array.isArray) || [];
-      data.wards.forEach((ward) => data.wardById.set(String(ward.ward_id), ward));
+      data.wards.forEach((ward) => data.wardById.set(pad(ward.ward_id), ward));
       const matrix = matrixRaw.matrix || matrixRaw;
-      data.cells = matrix.latest || matrix;
+      data.years.set("latest", matrix.latest || matrix);
       data.geojson = geojson;
     } catch (error) {
       el("k3-landing").insertAdjacentHTML(
         "beforeend",
         `<p class="k3-quiet">${esc(error.message)} Refresh to try again.</p>`,
       );
+      revealMap();
       return;
     }
     initMap();
+    if (state.year !== "latest") await loadYear(state.year);
     render();
   }
 
@@ -235,6 +309,18 @@
     return `rgb(${mix[0]},${mix[1]},${mix[2]})`;
   }
 
+  // The outline skeleton holds the box until real boundaries AND a first screen
+  // of tiles are down. Without the tile wait the outlines vanish into a white
+  // rectangle, which is the blank state we were trying to avoid.
+  let mapRevealed = false;
+
+  function revealMap() {
+    if (mapRevealed) return;
+    mapRevealed = true;
+    const skeleton = el("k3-mapskel");
+    if (skeleton) skeleton.classList.add("gone");
+  }
+
   function initMap() {
     map = L.map("k3-map", {
       zoomControl: true,
@@ -243,12 +329,13 @@
     });
     // CARTO Positron: the quiet light basemap, free for public projects.
     // It matches the page instead of fighting the choropleth.
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+    const tiles = L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
       attribution:
         '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
       subdomains: "abcd",
       maxZoom: 15,
     }).addTo(map);
+    tiles.on("load", revealMap);
     geoLayer = L.geoJSON(data.geojson, {
       style: wardStyle,
       onEachFeature: (feature, layer) => {
@@ -265,16 +352,18 @@
     }).addTo(map);
     map.fitBounds(geoLayer.getBounds(), { padding: [8, 8] });
     paintMap();
+    // Tiles can stall behind a slow CDN; the boundaries alone are enough to
+    // stop showing a skeleton, so cap the wait.
+    setTimeout(revealMap, 2500);
   }
 
   function featureWardId(feature) {
     const props = feature.properties || {};
-    const raw = props.ward_id ?? props.ward ?? props.WARD ?? props.ward_num;
-    return String(Number(raw));
+    return pad(props.ward_id ?? props.ward ?? props.WARD ?? props.ward_num);
   }
 
   function labelFor(wardId) {
-    return `<span data-ward-label="${wardId}">${wardId}</span>`;
+    return `<span data-ward-label="${wardId}">${Number(wardId)}</span>`;
   }
 
   function wardStyle(feature) {
@@ -293,6 +382,7 @@
 
   function paintMap() {
     const ranked = computeScores(state.weights);
+    if (!ranked.length) return;
     const scores = ranked.map((row) => row.score);
     paintCache = {
       byWard: new Map(ranked.map((row) => [row.wardId, row])),
@@ -310,6 +400,7 @@
     const median = medianScore(scores);
     el("k3-maplegend").innerHTML =
       `<b>Darker is a higher rank</b> on ${state.edited ? "your list" : "the starter set"}` +
+      (state.year === "latest" ? "" : `, as of <b>${state.year}</b>`) +
       `<span class="k3-legendbar" aria-hidden="true"></span>` +
       `median ward ${Math.round(median)}, top ward ${Math.round(paintCache.max)}, ` +
       `so color spans what wards actually score, not an imaginary 100.`;
@@ -317,7 +408,7 @@
 
   function mapFill(wardId) {
     if (!paintCache) return "#eee9fa";
-    const row = paintCache.byWard.get(String(wardId));
+    const row = paintCache.byWard.get(pad(wardId));
     if (!row) return "#eee9fa";
     const t = (row.score - paintCache.min) / Math.max(1e-9, paintCache.max - paintCache.min);
     return hueColor(t);
@@ -332,22 +423,38 @@
   // ---------- view switching ----------
 
   function selectWard(wardId) {
+    const id = pad(wardId);
     if (state.picking === "b") {
-      state.vsId = String(wardId);
+      state.vsId = id;
       state.picking = null;
       state.view = "compare";
     } else if (state.picking === "a") {
-      state.wardId = String(wardId);
+      state.wardId = id;
       state.picking = null;
       state.view = "compare";
     } else {
-      state.wardId = String(wardId);
+      state.wardId = id;
       state.view = "ward";
     }
     render();
   }
 
+  // Views cross-fade rather than snapping. The map sits outside the swapped
+  // sections, so it never re-mounts and never flashes between states.
+  let lastView = null;
+
+  function animateIn(id) {
+    const node = el(id);
+    node.classList.remove("k3-enter");
+    void node.offsetWidth; // restart the animation on a repeat entry
+    node.classList.add("k3-enter");
+  }
+
   function render() {
+    // Every view but the landing one is about a specific ward. Without one
+    // there is nothing to render, so fall back rather than paint "Ward 0".
+    if (!state.wardId && state.view !== "landing") state.view = "landing";
+    const changed = lastView !== state.view;
     el("k3-app").dataset.view = state.view;
     show("k3-landing", state.view === "landing");
     show("k3-ward", state.view === "ward");
@@ -358,11 +465,42 @@
       el("k3-context-ward").textContent =
         `${wardHoods(state.wardId) || "Chicago"} · ${wardName(state.wardId)}`;
     }
+    if (state.view === "landing") renderLanding();
     if (state.view === "ward") renderWard();
     if (state.view === "list") renderList();
     if (state.view === "compare") renderCompare();
     if (map) paintMap();
+    if (changed) {
+      animateIn(`k3-${state.view}`);
+      if (lastView !== null && window.scrollY > 8) {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+      lastView = state.view;
+    }
     writeUrl();
+  }
+
+  // ---------- state 1: landing ----------
+
+  function renderLanding() {
+    const box = el("k3-landing-presets");
+    if (!PRESETS.length) return;
+    const activeName = state.presetName || "";
+    box.innerHTML =
+      `<div class="k3-lp-head">Or start with a question people argue about</div>` +
+      `<div class="k3-pilltray center">` +
+      PRESETS.map(
+        (preset, index) =>
+          `<button type="button" class="k3-preset${preset.name === activeName ? " on" : ""}" ` +
+          `data-act="preset" data-idx="${index}" title="${esc(preset.tagline)}">` +
+          `${esc(preset.name)}</button>`,
+      ).join("") +
+      `</div>` +
+      `<div class="k3-lp-note">${
+        activeName
+          ? `The map is showing <b>${esc(activeName)}</b>. Pick your ward to see where it lands.`
+          : "Each one loads a different set of measures and recolors the map."
+      }</div>`;
   }
 
   // ---------- state 2: their ward ----------
@@ -373,7 +511,11 @@
     el("k3-ward-head").innerHTML =
       `<div class="k3-wardname">${esc(wardName(state.wardId))}` +
       (hoods ? `<span>${esc(hoods)}</span>` : "") +
-      `</div>`;
+      `</div>` +
+      (state.year === "latest"
+        ? ""
+        : `<div class="k3-timenote">Viewing <b>${state.year}</b>, not today` +
+          `<button type="button" data-act="year-now">back to today</button></div>`);
 
     const active = Object.keys(state.weights);
     const standings = active
@@ -384,18 +526,29 @@
     const mixNoun = state.edited
       ? `the <b>${active.length} things on your list</b>`
       : `the <b>starter set</b>, five everyday measures counted equally, ${STARTER_SENTENCE}. A starting point, not a verdict`;
+    const missing = active.length - standings.length;
     el("k3-ward-hero").innerHTML =
-      `<div class="k3-hero-big num">${row ? ord(row.rank) : "?"}<small>of 50 wards</small></div>` +
+      `<div class="k3-hero-big num${medalClass(row?.rank, "m-")}">${row ? ord(row.rank) : "?"}` +
+      `<small>of 50 wards</small></div>` +
       `<div class="k3-starter">on ${mixNoun}. ${esc(wardName(state.wardId))} is ahead of the ` +
-      `city median on ${ahead} of the ${standings.length}.</div>`;
+      `city median on ${ahead} of the ${standings.length}.` +
+      (missing > 0
+        ? ` ${missing === 1 ? "One measure has" : `${missing} measures have`} no record for ` +
+          `${yearLabel(state.year)}, so ${missing === 1 ? "it is" : "they are"} left out.`
+        : "") +
+      `</div>`;
 
     renderField(row);
     renderPeek(standings);
-    renderOverTime(row);
+    renderOverTime();
   }
 
   function renderField(row) {
     const ranked = computeScores(state.weights);
+    if (!ranked.length) {
+      el("k3-field").innerHTML = "";
+      return;
+    }
     const scores = ranked.map((r) => r.score);
     const min = Math.min(...scores);
     const max = Math.max(...scores);
@@ -467,8 +620,8 @@
     const standing = metricStanding(metricId, state.wardId);
     if (!metric || !standing) return "";
     const entries = [];
-    Object.entries(data.cells).forEach(([wid, cells]) => {
-      if (metricId in cells) entries.push([wid, cells[metricId].s, cells[metricId].v]);
+    Object.entries(cells()).forEach(([wid, wardCells]) => {
+      if (metricId in wardCells) entries.push([wid, wardCells[metricId].s, wardCells[metricId].v]);
     });
     const values = entries.map((e) => e[2]);
     const vmin = Math.min(...values);
@@ -476,10 +629,10 @@
     const span = Math.max(1e-9, vmax - vmin);
     const X = (v) => ((v - vmin) / span) * 96 + 2;
     const top = entries.reduce((best, e) => (e[1] > best[1] ? e : best), entries[0]);
-    const mine = entries.find((e) => e[0] === String(state.wardId));
+    const mine = entries.find((e) => e[0] === pad(state.wardId));
     let ticks = "";
     entries.forEach(([wid, , value]) => {
-      if (wid === String(state.wardId) || wid === top[0]) return;
+      if (wid === pad(state.wardId) || wid === top[0]) return;
       ticks += `<line x1="${X(value).toFixed(1)}" y1="14" x2="${X(value).toFixed(1)}" y2="40" stroke="#d5d8df" stroke-width="1.4" vector-effect="non-scaling-stroke"/>`;
     });
     ticks += `<line x1="${X(top[2]).toFixed(1)}" y1="8" x2="${X(top[2]).toFixed(1)}" y2="40" stroke="#6f7683" stroke-width="2.5" vector-effect="non-scaling-stroke"/>`;
@@ -494,7 +647,7 @@
       `<div class="k3-relative"><h6>${esc(metric.label)} · every ward on the real scale</h6>` +
       `<div class="relviz">` +
       `<span class="youtag" style="left:${X(mine[2]).toFixed(1)}%">You · ${esc(fmt(mine[2]))}</span>` +
-      (top[0] !== String(state.wardId)
+      (top[0] !== pad(state.wardId)
         ? `<span class="toptag" style="left:${X(top[2]).toFixed(1)}%">Top · ${esc(fmt(top[2]))}</span>`
         : "") +
       `<svg viewBox="0 0 100 40" preserveAspectRatio="none">${ticks}</svg>` +
@@ -509,8 +662,12 @@
     const sorted = [...standings].sort((a, b) => a.standing.rank - b.standing.rank);
     const strongest = sorted.slice(0, 3);
     const weakest = sorted.slice(-2).filter((item) => !strongest.includes(item));
+    // "Weakest" means weakest on your list, which is not the same as bad. The
+    // warm treatment is reserved for measures actually behind the city median,
+    // so a 10th-of-50 never gets painted like a problem.
     const box = (item, weak) =>
-      `<button type="button" class="k3-rankbox${weak ? " weak" : ""}` +
+      `<button type="button" class="k3-rankbox${weak && item.standing.rank > 25 ? " weak" : ""}` +
+      `${medalClass(item.standing.rank, "m-")}` +
       `${state.peekOpen === item.id ? " open" : ""}" data-act="rankbox" ` +
       `data-metricbox="${esc(item.id)}">` +
       `<span class="ord num">${ord(item.standing.rank)}</span>` +
@@ -529,87 +686,302 @@
       `See everything we measure for ${esc(wardName(state.wardId))} ›</button>`;
   }
 
-  async function renderOverTime(row) {
-    const now = new Date();
-    const monthName = now.toLocaleDateString(undefined, { month: "short", year: "numeric" });
-    const yearNow = now.getFullYear();
-    const rankY = (rank) => 6 + ((rank - 1) / 49) * 26;
-    let record =
-      `<div class="k3-peekhead">${esc(wardName(state.wardId))} over time</div>` +
-      `<div class="k3-rankrec"><svg viewBox="0 0 100 38" preserveAspectRatio="none">`;
-    [1, 25, 50].forEach((r) => {
-      record += `<line x1="7" y1="${rankY(r)}" x2="99" y2="${rankY(r)}" stroke="#00000012" stroke-width="0.5" vector-effect="non-scaling-stroke"/>`;
+  // ---------- the time machine ----------
+
+  const SPANS = [
+    { label: "5 years", years: 5 },
+    { label: "10 years", years: 10 },
+    { label: "20 years", years: 20 },
+    { label: "All", years: null },
+  ];
+
+  function latestYear() {
+    const years = data.availableYears;
+    return years.length ? years[years.length - 1] : new Date().getFullYear();
+  }
+
+  function rangeYears() {
+    const all = data.availableYears;
+    if (!all.length) return [];
+    if (state.span === null) return all;
+    const cutoff = latestYear() - state.span + 1;
+    return all.filter((year) => year >= cutoff);
+  }
+
+  // Every year is its own request, so a wide window gets sampled evenly. The
+  // endpoints always survive so the span reads honestly.
+  function sampledYears(years) {
+    if (years.length <= MAX_YEAR_FETCHES) return years;
+    const step = (years.length - 1) / (MAX_YEAR_FETCHES - 1);
+    const picked = new Set();
+    for (let i = 0; i < MAX_YEAR_FETCHES; i += 1) {
+      picked.add(years[Math.round(i * step)]);
+    }
+    return [...picked].sort((a, b) => a - b);
+  }
+
+  let trajectoryToken = 0;
+
+  async function renderOverTime() {
+    const token = (trajectoryToken += 1);
+    const wardId = state.wardId;
+    const live = () => token === trajectoryToken && state.view === "ward" && state.wardId === wardId;
+
+    // The ward's own record tells us which years to even offer, so it reloads
+    // whenever the visitor moves to a different ward.
+    if (data.seriesWard !== wardId) {
+      el("k3-overtime").innerHTML =
+        `<div class="k3-peekhead">${esc(wardName(wardId))} over time</div>` +
+        `<div class="k3-rankrec loading" aria-hidden="true"></div>` +
+        `<div class="k3-trendcap">Pulling this ward's record&hellip;</div>`;
+      await loadAvailableYears(wardId);
+      if (!live()) return;
+    }
+    drawTrajectory();
+
+    // Three at a time: enough to feel quick, gentle enough on the API. Each
+    // year that lands redraws, so the line fills in rather than popping.
+    const queue = sampledYears(rangeYears()).filter((year) => !data.years.has(year));
+    const workers = new Array(Math.min(3, queue.length)).fill(null).map(async () => {
+      while (queue.length) {
+        const year = queue.shift();
+        await loadYear(year);
+        if (!live()) return;
+        drawTrajectory();
+      }
     });
-    for (let k = 0; k < 5; k += 1) {
-      record += `<line x1="${10 + k * 22}" y1="4" x2="${10 + k * 22}" y2="34" stroke="#00000009" stroke-width="0.5" vector-effect="non-scaling-stroke"/>`;
-    }
-    if (row) {
-      record +=
-        `<line x1="10" y1="${rankY(row.rank)}" x2="10" y2="${rankY(row.rank)}" stroke="#fff" stroke-width="12" stroke-linecap="round" vector-effect="non-scaling-stroke"/>` +
-        `<line x1="10" y1="${rankY(row.rank)}" x2="10" y2="${rankY(row.rank)}" stroke="#4c1d95" stroke-width="8" stroke-linecap="round" vector-effect="non-scaling-stroke"/>`;
-    }
-    record += `</svg>`;
-    record +=
-      `<span class="k3-rr-ylab" style="top:6%">1st</span>` +
-      `<span class="k3-rr-ylab" style="top:46%">25th</span>` +
-      `<span class="k3-rr-ylab" style="top:82%">50th</span>`;
-    if (row) {
-      record += `<span class="k3-rr-chip" style="left:10%;top:${((rankY(row.rank) / 38) * 100).toFixed(0)}%">${esc(monthName)} · ${ord(row.rank)}</span>`;
-    }
-    for (let k = 0; k < 5; k += 1) {
-      record += `<span class="k3-rr-year" style="left:${10 + k * 22}%">${yearNow + k}</span>`;
-    }
-    record += `</div>`;
-    record +=
-      `<div class="k3-trendcap" style="margin-top:22px"><b>The record starts now.</b> ` +
-      `Penlight saves this ward's standing from today, so this line grows each time you come back.</div>`;
+    await Promise.all(workers);
+    if (live()) drawTrajectory();
+  }
 
-    el("k3-overtime").innerHTML = record + `<div class="k3-multis" id="k3-multis"></div>`;
-
-    // yearly series for this ward, drawn for whichever measures already have one
+  async function loadAvailableYears(wardId) {
     try {
-      const seriesRaw = await api.fetchTimeseries({ areaId: state.wardId });
-      const series = seriesRaw.timeseries || [];
-      const yearly = [];
-      series.forEach((entry) => {
-        const byYear = new Map();
+      const raw = await api.fetchTimeseries({ areaId: wardId });
+      const years = new Set();
+      (raw.timeseries || []).forEach((entry) => {
         (entry.observations || []).forEach((obs) => {
-          const year = (obs.period_end || "").slice(0, 4);
-          if (year) byYear.set(year, obs.value);
+          const year = Number((obs.period_end || "").slice(0, 4));
+          if (year >= EARLIEST_YEAR) years.add(year);
         });
-        if (byYear.size >= 6) {
-          const points = [...byYear.entries()]
-            .map(([year, value]) => [Number(year), Number(value)])
-            .sort((a, b) => a[0] - b[0]);
-          yearly.push({ metricId: entry.metric_id, points });
-        }
       });
-      yearly.sort((a, b) => b.points.length - a.points.length);
-      const chosen = yearly.slice(0, 2);
-      let html = chosen
-        .map((entry) => {
-          const metric = data.metricById.get(entry.metricId);
-          const label = metric ? metric.label : entry.metricId;
-          const first = entry.points[0];
-          const last = entry.points[entry.points.length - 1];
-          return (
-            `<div class="k3-multi"><h6>${esc(label)}</h6>` +
-            `<div class="mv num">${esc(api.formatMetricValue(first[1], metric))} in ${first[0]}, ` +
-            `${esc(api.formatMetricValue(last[1], metric))} in ${last[0]}</div>` +
-            miniChart(entry.points) +
-            `</div>`
-          );
-        })
-        .join("");
-      html +=
-        `<div class="k3-multi ghost"><h6>More coming</h6><div class="mv">as records arrive</div>` +
-        `<div class="slot">each new yearly record<br>gets a chart here</div></div>`;
-      el("k3-multis").innerHTML = html;
+      data.availableYears = [...years].sort((a, b) => a - b);
+      data.wardSeries = raw.timeseries || [];
     } catch (_error) {
-      el("k3-multis").innerHTML =
-        `<div class="k3-multi ghost"><h6>Over the years</h6><div class="mv">history unavailable right now</div>` +
-        `<div class="slot">yearly records appear here</div></div>`;
+      data.availableYears = [];
+      data.wardSeries = [];
     }
+    data.seriesWard = wardId;
+  }
+
+  function drawTrajectory() {
+    const years = rangeYears();
+    const wanted = sampledYears(years);
+    if (!wanted.length) {
+      el("k3-overtime").innerHTML =
+        `<div class="k3-peekhead">${esc(wardName(state.wardId))} over time</div>` +
+        `<div class="k3-trendcap">No year-by-year records for this ward yet. ` +
+        `They appear here as the catalog picks up history.</div>`;
+      renderMultiples();
+      return;
+    }
+
+    // A "rank" built from one measure is that measure's rank, not the rank of
+    // your list, so a year needs at least two of your measures before it earns
+    // a point on the line.
+    const MIN_MEASURES = 2;
+    const points = wanted.map((year) => {
+      const grid = data.years.get(year);
+      if (!grid) return { year, pending: true };
+      const row = scoreRow(state.wardId, state.weights, grid);
+      if (!row || row.used < MIN_MEASURES) {
+        return { year, empty: true, used: row ? row.used : 0, of: Object.keys(state.weights).length };
+      }
+      return { year, rank: row.rank, used: row.used, of: row.of };
+    });
+    const real = points.filter((p) => p.rank);
+
+    const first = wanted[0];
+    const last = wanted[wanted.length - 1];
+    const X = (year) => 8 + ((year - first) / Math.max(1, last - first)) * 90;
+    const Y = (rank) => 7 + ((rank - 1) / 49) * 25;
+
+    let svg = `<svg viewBox="0 0 100 38" preserveAspectRatio="none">`;
+    [1, 25, 50].forEach((rank) => {
+      svg +=
+        `<line x1="7" y1="${Y(rank).toFixed(1)}" x2="99" y2="${Y(rank).toFixed(1)}" ` +
+        `stroke="#00000012" stroke-width="0.5" vector-effect="non-scaling-stroke"/>`;
+    });
+    wanted.forEach((year) => {
+      svg +=
+        `<line x1="${X(year).toFixed(1)}" y1="4" x2="${X(year).toFixed(1)}" y2="34" ` +
+        `stroke="#00000009" stroke-width="0.5" vector-effect="non-scaling-stroke"/>`;
+    });
+    if (real.length > 1) {
+      const path = real.map((p) => `${X(p.year).toFixed(1)},${Y(p.rank).toFixed(1)}`).join(" ");
+      svg +=
+        `<polyline points="${path}" fill="none" stroke="#4c1d95" stroke-width="2.2" ` +
+        `stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>`;
+    }
+    real.forEach((p) => {
+      const cx = X(p.year).toFixed(1);
+      const cy = Y(p.rank).toFixed(1);
+      const isNow = p.year === state.year || (state.year === "latest" && p.year === last);
+      // Zero-length round-capped lines, because a circle under
+      // preserveAspectRatio="none" comes out an ellipse.
+      svg +=
+        `<line x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy}" stroke="#fff" stroke-width="${isNow ? 11 : 8}" ` +
+        `stroke-linecap="round" vector-effect="non-scaling-stroke"/>` +
+        `<line x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy}" stroke="${
+          medal(p.rank) ? medalInk(p.rank) : "#4c1d95"
+        }" stroke-width="${isNow ? 7.5 : 5}" stroke-linecap="round" vector-effect="non-scaling-stroke"/>`;
+    });
+    svg += `</svg>`;
+
+    // A run of years with too little of your list collapses into one chip. Six
+    // dead tiles in a row says nothing that "2017-2023, no records" doesn't.
+    const chips = [];
+    for (let i = 0; i < points.length; i += 1) {
+      const p = points[i];
+      if (p.empty) {
+        let j = i;
+        while (j + 1 < points.length && points[j + 1].empty) j += 1;
+        const from = points[i].year;
+        const to = points[j].year;
+        chips.push(
+          `<span class="k3-yearchip empty">` +
+            `<span class="yr num">${from}${to === from ? "" : `&ndash;${to}`}</span>` +
+            `<span class="rk">&mdash;</span>` +
+            `<span class="cv">too few measures</span></span>`,
+        );
+        i = j;
+        continue;
+      }
+      const active = p.year === state.year;
+      const body = p.pending ? "&middot;&middot;&middot;" : ord(p.rank);
+      const note = p.pending ? "loading" : `${p.used} of ${p.of}`;
+      chips.push(
+        `<button type="button" class="k3-yearchip${active ? " on" : ""}` +
+          `${p.pending ? " pending" : ""}" data-act="year-pick" data-year="${p.year}"` +
+          `${p.pending ? " disabled" : ""}>` +
+          `<span class="yr num">${p.year}</span>` +
+          `<span class="rk num${medalClass(p.rank, "m-")}">${body}</span>` +
+          `<span class="cv num">${note}</span></button>`,
+      );
+    }
+
+    const pending = points.some((p) => p.pending);
+    const oldest = real[0];
+    const newest = real[real.length - 1];
+    let caption;
+    if (pending && real.length < 2) {
+      caption =
+        `<b>Loading ${wanted.length} years&hellip;</b> Each year is scored on the same list ` +
+        `you picked, so the line is your question asked over and over.`;
+    } else if (real.length < 2) {
+      // Thin history is a fact about the list, not a failure. Say which lists
+      // do have depth so the visitor has somewhere to go.
+      const deep = PRESETS.filter((p) =>
+        ["Main Street", "Getting Around", "Housing Squeeze"].includes(p.name),
+      ).map((p) => p.name);
+      caption =
+        `<b>Your list has almost no yearly history.</b> Most of these measures are ` +
+        `point-in-time counts, so there is nothing to trace back. ` +
+        (deep.length ? `${deep.join(", ")} go back to 2002 if you want a long line.` : "");
+    } else {
+      const moved = oldest.rank - newest.rank;
+      const direction =
+        moved > 0 ? `climbed ${moved} places` : moved < 0 ? `slipped ${-moved} places` : "held its place";
+      caption =
+        `<b>${esc(wardName(state.wardId))} ${direction}</b> between ${oldest.year} and ${newest.year} ` +
+        `on your list. ` +
+        (oldest.used === newest.used
+          ? `Both ends rest on ${oldest.used} of your ${oldest.of} measures.`
+          : `${oldest.year} rests on ${oldest.used} of your ${oldest.of} measures and ` +
+            `${newest.year} on ${newest.used}, so the early end is built from less.`);
+    }
+
+    const today = scoreRow(state.wardId, state.weights, data.years.get("latest"));
+    const todayChip =
+      `<button type="button" class="k3-yearchip${state.year === "latest" ? " on" : ""}" ` +
+      `data-act="year-now"><span class="yr">Today</span>` +
+      `<span class="rk num${medalClass(today?.rank, "m-")}">` +
+      `${today ? ord(today.rank) : "&mdash;"}</span></button>`;
+
+    el("k3-overtime").innerHTML =
+      `<div class="k3-timehead">` +
+      `<div class="k3-peekhead">${esc(wardName(state.wardId))} over time</div>` +
+      `<div class="k3-spans">` +
+      SPANS.map(
+        (span, index) =>
+          `<button type="button" class="k3-span${span.years === state.span ? " on" : ""}" ` +
+          `data-act="span" data-idx="${index}">${esc(span.label)}</button>`,
+      ).join("") +
+      `</div></div>` +
+      `<div class="k3-rankrec">${svg}` +
+      `<span class="k3-rr-ylab" style="top:8%">1st</span>` +
+      `<span class="k3-rr-ylab" style="top:44%">25th</span>` +
+      `<span class="k3-rr-ylab" style="top:80%">50th</span></div>` +
+      `<div class="k3-yearchips">${todayChip}${chips.join("")}</div>` +
+      `<div class="k3-trendcap">${caption} Tap a year to read the whole page as of then.</div>` +
+      `<div class="k3-multis" id="k3-multis"></div>`;
+
+    renderMultiples();
+  }
+
+  function medalInk(rank) {
+    return rank === 1 ? "#a8801a" : rank === 2 ? "#7b8494" : rank === 3 ? "#a0602c" : "#4c1d95";
+  }
+
+  // Individual measures that carry their own yearly series, windowed to the
+  // same range as the trajectory above so the two read together.
+  function renderMultiples() {
+    const holder = el("k3-multis");
+    if (!holder) return;
+    const series = data.wardSeries || [];
+    const window = rangeYears();
+    const from = window.length ? window[0] : EARLIEST_YEAR;
+    const yearly = [];
+    series.forEach((entry) => {
+      const byYear = new Map();
+      (entry.observations || []).forEach((obs) => {
+        const year = Number((obs.period_end || "").slice(0, 4));
+        if (year >= from) byYear.set(year, Number(obs.value));
+      });
+      if (byYear.size >= 4) {
+        yearly.push({
+          metricId: entry.metric_id,
+          onList: entry.metric_id in state.weights,
+          points: [...byYear.entries()].sort((a, b) => a[0] - b[0]),
+        });
+      }
+    });
+    // Measures the visitor actually chose come first; the rest fill the row.
+    yearly.sort((a, b) => Number(b.onList) - Number(a.onList) || b.points.length - a.points.length);
+    const chosen = yearly.slice(0, 3);
+    if (!chosen.length) {
+      holder.innerHTML =
+        `<div class="k3-multi ghost"><h6>Measure by measure</h6>` +
+        `<div class="mv">no yearly series in this window</div>` +
+        `<div class="slot">widen the range, or check back<br>as records arrive</div></div>`;
+      return;
+    }
+    holder.innerHTML = chosen
+      .map((entry) => {
+        const metric = data.metricById.get(entry.metricId);
+        const label = metric ? metric.label : entry.metricId;
+        const first = entry.points[0];
+        const last = entry.points[entry.points.length - 1];
+        return (
+          `<div class="k3-multi${entry.onList ? " mine" : ""}"><h6>${esc(label)}` +
+          (entry.onList ? `<span class="tag">on your list</span>` : "") +
+          `</h6>` +
+          `<div class="mv num">${esc(api.formatMetricValue(first[1], metric))} in ${first[0]} → ` +
+          `${esc(api.formatMetricValue(last[1], metric))} in ${last[0]}</div>` +
+          miniChart(entry.points) +
+          `</div>`
+        );
+      })
+      .join("");
   }
 
   function miniChart(points) {
@@ -617,7 +989,7 @@
     const ys = points.map((p) => p[1]);
     const x0 = Math.min(...xs);
     const x1 = Math.max(...xs);
-    const ymax = Math.max(...ys);
+    const ymax = Math.max(...ys, 1e-9);
     const X = (x) => ((x - x0) / Math.max(1, x1 - x0)) * 94 + 3;
     const Y = (y) => 26 - (y / (ymax * 1.08)) * 22;
     const pts = points.map((p) => `${X(p[0]).toFixed(1)},${Y(p[1]).toFixed(1)}`).join(" ");
@@ -643,17 +1015,27 @@
   const PRESETS = window.K3_PRESETS || [];
 
   function applyPreset(preset) {
+    if (!preset) return;
+    const grid = data.years.get("latest") || {};
+    const anywhere = (metricId) =>
+      Object.values(grid).some((wardCells) => metricId in wardCells);
     const weights = {};
     preset.metric_ids.forEach((id) => {
-      if (data.metricById.has(id) && id in (data.cells[state.wardId] || {})) weights[id] = 1;
+      if (data.metricById.has(id) && anywhere(id)) weights[id] = 1;
     });
     if (!Object.keys(weights).length) return;
     state.weights = weights;
     state.edited = true;
+    state.presetName = preset.name;
     state.lastShift = null;
+    state.peekOpen = null;
     render();
-    const row = scoreRow(state.wardId, state.weights);
-    if (row) toast(`${preset.name} · ${wardName(state.wardId)} ranks ${ord(row.rank)} of 50`);
+    const row = state.wardId ? scoreRow(state.wardId, state.weights) : null;
+    toast(
+      row
+        ? `${preset.name} · ${wardName(state.wardId)} ranks ${ord(row.rank)} of 50`
+        : `${preset.name} · ${preset.tagline}`,
+    );
   }
 
   function pill(metricId, onList) {
@@ -664,7 +1046,9 @@
       `<button type="button" class="k3-pill${onList ? " on" : ""}" data-act="${onList ? "remove" : "add"}" ` +
       `data-metric="${esc(metricId)}" title="${esc(metric.description || metric.label)}">` +
       `${esc(metric.label)}` +
-      (standing ? `<span class="rk num">${ord(standing.rank)}</span>` : "") +
+      (standing
+        ? `<span class="rk num${medalClass(standing.rank, "m-")}">${ord(standing.rank)}</span>`
+        : `<span class="rk none">no record</span>`) +
       (onList ? `<span class="x">&#10005;</span>` : "") +
       `</button>`
     );
@@ -674,8 +1058,9 @@
     const row = scoreRow(state.wardId, state.weights);
     const count = Object.keys(state.weights).length;
     el("k3-statusline").textContent =
-      `${wardName(state.wardId)} · ${row ? `${ord(row.rank)} of 50` : "no rank yet"} · based on your ${count}`;
-    el("k3-back-num").textContent = state.wardId;
+      `${wardName(state.wardId)} · ${row ? `${ord(row.rank)} of 50` : "no rank yet"} · ` +
+      `based on your ${count}${state.year === "latest" ? "" : ` · as of ${state.year}`}`;
+    el("k3-back-num").textContent = Number(state.wardId);
 
     let html = "";
     if (PRESETS.length) {
@@ -683,9 +1068,11 @@
         `<div class="k3-listhead"><b>Starting points</b> · tap one to load it</div>` +
         `<div class="k3-pilltray">` +
         PRESETS.map(
-          (p, i) =>
-            `<button type="button" class="k3-preset" data-act="preset" data-idx="${i}" ` +
-            `title="${esc(p.tagline)}">${esc(p.name)}</button>`,
+          (preset, index) =>
+            `<button type="button" class="k3-preset${
+              preset.name === state.presetName ? " on" : ""
+            }" data-act="preset" data-idx="${index}" ` +
+            `title="${esc(preset.tagline)}">${esc(preset.name)}</button>`,
         ).join("") +
         `</div>`;
     }
@@ -711,13 +1098,13 @@
     renderAddMore();
   }
 
-
   function renderAddMore() {
     const query = state.search.trim().toLowerCase();
+    const wardCells = cells()[pad(state.wardId)] || {};
     const groups = new Map();
     data.metrics.forEach((metric) => {
       if (metric.metric_id in state.weights) return;
-      if (!(metric.metric_id in (data.cells[state.wardId] || {}))) return;
+      if (!(metric.metric_id in wardCells)) return;
       if (query && !metric.label.toLowerCase().includes(query)) return;
       const domain = api.formatCategory(metric.category);
       if (!groups.has(domain)) groups.set(domain, []);
@@ -752,6 +1139,7 @@
     if (removed) delete state.weights[metricId];
     else state.weights[metricId] = 1;
     state.edited = true;
+    state.presetName = null;
     state.lastShift = { metricId, from: consequence.from, to: consequence.to, removed };
     state.detailFor = null;
     try {
@@ -780,7 +1168,7 @@
     if (!state.vsId) {
       state.vsId = state.wardId === "43" ? "44" : "43";
     }
-    el("k3-back-num-2").textContent = state.wardId;
+    el("k3-back-num-2").textContent = Number(state.wardId);
     const a = scoreRow(state.wardId, state.weights);
     const b = scoreRow(state.vsId, state.weights);
     el("k3-vs").innerHTML =
@@ -851,9 +1239,9 @@
           `<div class="k3-drow"><div class="k3-dname">${esc(d.metric.label)}</div>` +
           `<div class="k3-dbars">` +
           `<div class="k3-dcell l"><span class="k3-dbar${aLeads ? "" : " lose"}" style="width:${width(d.sa.rank)}%"></span>` +
-          `<span class="k3-dord num${aLeads ? " win-a" : " lose"}">${ord(d.sa.rank)}</span></div>` +
+          `<span class="k3-dord num${aLeads ? " win-a" : " lose"}${medalClass(d.sa.rank, "m-")}">${ord(d.sa.rank)}</span></div>` +
           `<div class="k3-dcell r"><span class="k3-dbar${aLeads ? " lose" : ""}" style="width:${width(d.sb.rank)}%"></span>` +
-          `<span class="k3-dord num${aLeads ? " lose" : " win-b"}">${ord(d.sb.rank)}</span></div>` +
+          `<span class="k3-dord num${aLeads ? " lose" : " win-b"}${medalClass(d.sb.rank, "m-")}">${ord(d.sb.rank)}</span></div>` +
           `</div></div>`
         );
       })
@@ -923,7 +1311,7 @@
     if (!q) return [];
     const results = [];
     data.wards.forEach((ward) => {
-      const num = String(ward.ward_number || ward.ward_id);
+      const num = String(ward.ward_number || Number(ward.ward_id));
       const hoods = (ward.community_area_overlaps || []).map((a) => a.name);
       const numHit = num === q.replace(/^ward\s*/, "");
       const hoodHit = hoods.find((name) => name.toLowerCase().includes(q));
@@ -1031,6 +1419,22 @@
 
   // ---------- events ----------
 
+  async function pickYear(year) {
+    const target = year === "latest" ? "latest" : Number(year);
+    if (target !== "latest" && !data.years.has(target)) {
+      toast(`Loading ${target}…`);
+      const grid = await loadYear(target);
+      if (!grid) {
+        toast(`No records for ${target}.`);
+        return;
+      }
+    }
+    state.year = target;
+    state.peekOpen = null;
+    render();
+    if (target !== "latest") toast(`Reading the whole page as of ${target}.`);
+  }
+
   function onClick(event) {
     const target = event.target.closest("[data-act]");
     if (!target) return;
@@ -1048,6 +1452,12 @@
       state.peekOpen = state.peekOpen === target.dataset.metricbox ? null : target.dataset.metricbox;
       renderWard();
     }
+    if (act === "span") {
+      state.span = SPANS[Number(target.dataset.idx)].years;
+      renderOverTime();
+    }
+    if (act === "year-pick") pickYear(target.dataset.year);
+    if (act === "year-now") pickYear("latest");
     if (act === "add") changeMix(metricId, false);
     if (act === "remove") changeMix(metricId, true);
     if (act === "undo" && state.lastShift) {

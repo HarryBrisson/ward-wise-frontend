@@ -20,7 +20,7 @@
       </div>
 
       <!-- STATE 1: landing -->
-      <section id="k3-landing" class="k3-landing" aria-label="Find your ward">
+      <section id="k3-landing" class="k3-landing k3-view" aria-label="Find your ward">
         <h1>How is your part of Chicago doing?</h1>
         <p class="k3-sub">
           Type where you live and see where your ward stands on parks, libraries,
@@ -33,11 +33,14 @@
         </div>
         <div id="k3-search-results" class="k3-search-results" hidden></div>
         <p class="k3-quiet">Free, no account, all 50 wards.</p>
+        <!-- starting points, right where a first-time visitor lands: picking one
+             recolors the map before they have chosen a ward at all -->
+        <div id="k3-landing-presets" class="k3-landing-presets"></div>
         <p class="k3-or">or tap your ward on the map</p>
       </section>
 
       <!-- STATE 2: their ward -->
-      <section id="k3-ward" class="k3-ward" hidden aria-label="Your ward">
+      <section id="k3-ward" class="k3-ward k3-view" hidden aria-label="Your ward">
         <div id="k3-ward-head"></div>
         <div id="k3-ward-hero"></div>
         <div id="k3-field"></div>
@@ -54,7 +57,7 @@
       </section>
 
       <!-- STATE 3: choose what matters -->
-      <section id="k3-list" class="k3-list" hidden aria-label="Choose what matters">
+      <section id="k3-list" class="k3-list k3-view" hidden aria-label="Choose what matters">
         <h2>What matters to you?</h2>
         <p class="k3-sub">
           Your ward&rsquo;s rank comes from this list. Add anything, remove anything,
@@ -71,7 +74,7 @@
       </section>
 
       <!-- STATE 4: compare -->
-      <section id="k3-compare" class="k3-compare" hidden aria-label="Compare two wards">
+      <section id="k3-compare" class="k3-compare k3-view" hidden aria-label="Compare two wards">
         <div id="k3-vs"></div>
         <div id="k3-verdict"></div>
         <div id="k3-pairfield"></div>
@@ -85,7 +88,17 @@
 
       <!-- the map rides along under every state -->
       <section class="k3-mapwrap" aria-label="Chicago ward map">
-        <div id="k3-map"></div>
+        <div class="k3-mapbox">
+          <div id="k3-map"></div>
+          <!-- Ward outlines drawn from the first paint, so the box shows the
+               shape of the city while the boundaries and tiles are still in
+               flight. Traced from the same geometry the live map uses and
+               simplified to ~14KB; regenerate with scripts/build_outline.py. -->
+          <div id="k3-mapskel" class="k3-mapskel" aria-hidden="true">
+            {% include "_ward_outline.svg" %}
+            <span class="k3-mapskel-note">Drawing Chicago&rsquo;s 50 wards&hellip;</span>
+          </div>
+        </div>
         <div id="k3-maplegend" class="k3-maplegend"></div>
       </section>
 

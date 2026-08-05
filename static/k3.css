@@ -1,40 +1,7 @@
 /* K3: the sequenced explorer. One column, one hue, hairline dividers.
-   Ink, two grays, violet. Orange appears only where it means "behind". */
+   Ink, two grays, violet. Orange appears only where it means "behind".
 
-/* The shared header, restyled to match on this page only. k3.css loads
-   only from k3.html, so /classic, the dictionary, and support keep the
-   original header. Selectors carry extra specificity because styles.css
-   loads after this file in base.html. */
-
-header.site-header {
-  background: #fff;
-  border-bottom: 1px solid #e9ebef;
-  padding: 10px clamp(16px, 4vw, 28px);
-}
-
-.site-header .site-brand,
-.site-header .nav-link { color: #17181c; }
-
-.site-header .brand-mark {
-  border: 1px solid #e9ebef;
-  box-shadow: none;
-}
-
-.site-header .brand-kicker { color: #6f7683; }
-
-.site-header .nav-link {
-  border: 1px solid transparent;
-  color: #6f7683;
-  font-weight: 650;
-}
-
-.site-header .nav-link:hover { color: #17181c; }
-
-.site-header .nav-link.is-active {
-  background: #efeafb;
-  border-color: transparent;
-  color: #4c1d95;
-}
+   The shared header now lives in k3-shell.css so all four routes match. */
 
 .k3-page {
   --ink: #17181c;
@@ -346,32 +313,144 @@ header.site-header {
 
 .k3-seeall:hover { border-color: var(--hue-bright); }
 
-/* over time */
-.k3-rankrec { position: relative; }
-.k3-rankrec svg { display: block; height: 110px; width: 100%; }
+/* ---------- over time: the rank trajectory and its controls ---------- */
+
+.k3-timehead {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.k3-spans { display: flex; flex-wrap: wrap; gap: 4px; }
+
+.k3-span {
+  background: none;
+  border: 1.5px solid var(--hair);
+  border-radius: 99px;
+  color: var(--soft);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 650;
+  padding: 4px 11px;
+  transition: border-color 0.14s ease, color 0.14s ease;
+}
+
+.k3-span:hover { border-color: var(--hue-bright); color: var(--ink); }
+
+.k3-span.on {
+  background: var(--hue-soft);
+  border-color: transparent;
+  color: var(--hue);
+}
+
+.k3-rankrec { margin-top: 8px; position: relative; }
+.k3-rankrec svg { display: block; height: 118px; width: 100%; }
 .k3-rr-ylab { color: var(--soft); font-size: 9.5px; left: 0; position: absolute; }
 
-.k3-rr-chip {
-  background: var(--hue-soft);
-  border-radius: 99px;
-  color: var(--hue);
-  font-size: 10.5px;
-  font-weight: 700;
-  padding: 2px 9px;
-  position: absolute;
-  transform: translate(12px, -50%);
-  white-space: nowrap;
+/* while the first years are still in flight */
+.k3-rankrec.loading {
+  background:
+    linear-gradient(90deg, #f4f5f8 25%, #eceef3 37%, #f4f5f8 63%) 0 0 / 400% 100%;
+  border-radius: 10px;
+  height: 118px;
+  animation: k3-shimmer 1.4s ease-in-out infinite;
 }
 
-.k3-rr-year {
-  bottom: -15px;
+@keyframes k3-shimmer {
+  from { background-position: 100% 0; }
+  to { background-position: 0 0; }
+}
+
+/* one chip per sampled year: the year on top, the rank it produced below */
+.k3-yearchips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 12px;
+}
+
+.k3-yearchip {
+  background: #fff;
+  border: 1.5px solid var(--hair);
+  border-radius: 9px;
+  cursor: pointer;
+  font: inherit;
+  min-width: 52px;
+  padding: 5px 8px 6px;
+  text-align: center;
+  transition: border-color 0.14s ease;
+}
+
+.k3-yearchip .yr {
   color: var(--soft);
-  font-size: 9.5px;
-  position: absolute;
-  transform: translateX(-50%);
+  display: block;
+  font-size: 10px;
+  font-weight: 650;
 }
 
-.k3-trendcap { color: var(--soft); font-size: 11.5px; margin-top: 6px; }
+.k3-yearchip .rk {
+  display: block;
+  font-size: 14px;
+  font-weight: 780;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+/* how many of your measures that year actually had, spelled out under every
+   rank, because coverage grew over the span and the rank moves with it */
+.k3-yearchip .cv {
+  color: #a3a9b4;
+  display: block;
+  font-size: 9px;
+  letter-spacing: 0.01em;
+  line-height: 1.3;
+}
+
+button.k3-yearchip:hover:not(:disabled) { border-color: var(--hue-bright); }
+.k3-yearchip.on { border-color: var(--hue-bright); box-shadow: 0 0 0 1px var(--hue-bright); }
+.k3-yearchip:disabled { cursor: default; }
+.k3-yearchip.pending .rk { color: #c3c8d1; letter-spacing: 0.08em; }
+
+/* a collapsed run of years that never carried enough of the list to rank */
+.k3-yearchip.empty {
+  background: #fafbfc;
+  border-style: dashed;
+  display: block;
+}
+
+.k3-yearchip.empty .rk { color: #c3c8d1; font-size: 13px; }
+.k3-yearchip.empty .cv { color: #b6bcc6; }
+
+/* the "you are reading 2011, not today" banner */
+.k3-timenote {
+  align-items: baseline;
+  background: #fdf6ec;
+  border-radius: 8px;
+  color: #7c4318;
+  display: flex;
+  font-size: 12.5px;
+  font-weight: 650;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 7px 12px;
+}
+
+.k3-timenote button {
+  background: none;
+  border: 0;
+  color: #7c4318;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 750;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.k3-trendcap { color: var(--soft); font-size: 11.5px; margin-top: 10px; }
 .k3-trendcap b { color: var(--ink); font-weight: 650; }
 
 .k3-multis {
@@ -381,11 +460,21 @@ header.site-header {
   margin-top: 30px;
 }
 
-.k3-multi { border-top: 2px solid var(--ink); padding-top: 8px; }
+.k3-multi { border-top: 2px solid var(--hair); padding-top: 8px; }
+.k3-multi.mine { border-top-color: var(--hue); }
 .k3-multi h6 { font-size: 11.5px; font-weight: 700; margin: 0; }
 .k3-multi .mv { color: var(--soft); font-size: 10.5px; margin-top: 1px; }
 .k3-multi svg { display: block; height: 54px; margin-top: 7px; width: 100%; }
 .k3-multi.ghost { border-top: 2px dashed var(--hair); color: var(--soft); }
+
+.k3-multi h6 .tag {
+  color: var(--hue);
+  display: block;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
 
 .k3-multi.ghost .slot {
   align-items: center;
@@ -712,11 +801,63 @@ header.site-header {
 
 .k3-mapwrap { margin-top: 34px; }
 
+.k3-mapbox { position: relative; }
+
 #k3-map {
   border: 1px solid var(--hair);
   border-radius: 12px;
   height: 420px;
   width: 100%;
+}
+
+/* Loading skeleton: the 50 ward outlines, inlined in the template so they are
+   on screen at first paint. They breathe until boundaries and a first screen
+   of tiles are down, then fade out over the live map. */
+.k3-mapskel {
+  align-items: center;
+  background: #fff;
+  border: 1px solid var(--hair);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  inset: 0;
+  justify-content: center;
+  padding: 18px;
+  pointer-events: none;
+  position: absolute;
+  transition: opacity 0.5s ease;
+  z-index: 500;
+}
+
+.k3-mapskel.gone { opacity: 0; }
+
+/* Sized to land where fitBounds puts the real boundaries, so the handoff is a
+   fade rather than a jump. */
+.k3-skel-svg {
+  animation: k3-breathe 1.8s ease-in-out infinite;
+  color: #cfc8e6;
+  height: 100%;
+  max-width: 100%;
+  width: auto;
+}
+
+/* the viewBox is 1000 units tall and renders around 380px, so let the stroke
+   stay a real hairline instead of scaling down to nothing */
+.k3-skel-svg path {
+  stroke-width: 1.2;
+  vector-effect: non-scaling-stroke;
+}
+
+.k3-mapskel-note {
+  bottom: 12px;
+  color: var(--soft);
+  font-size: 11.5px;
+  position: absolute;
+}
+
+@keyframes k3-breathe {
+  0%, 100% { color: #ded9ee; }
+  50% { color: #a99ad0; }
 }
 
 .k3-maplegend { color: var(--soft); font-size: 11.5px; margin-top: 8px; }
@@ -758,10 +899,162 @@ header.site-header {
   z-index: 1200;
 }
 
+/* ---------- podium: gold, silver, bronze for the top three ---------- */
+
+/* Decoration on top of a number that is already spelled out, never the only
+   signal. Inks are darkened off the metal so they clear contrast on white. */
+.k3-page {
+  --gold-ink: #8a6d1f;
+  --gold-wash: #fbf1d2;
+  --gold-edge: #e2c469;
+  --silver-ink: #4a5260;
+  --silver-wash: #eef1f6;
+  --silver-edge: #c3cad6;
+  --bronze-ink: #7c4318;
+  --bronze-wash: #f9e6d6;
+  --bronze-edge: #d9a175;
+}
+
+.m-gold { color: var(--gold-ink); }
+.m-silver { color: var(--silver-ink); }
+.m-bronze { color: var(--bronze-ink); }
+
+/* the big ward rank gets a metal underline rather than a filled slab */
+.k3-hero-big.m-gold,
+.k3-hero-big.m-silver,
+.k3-hero-big.m-bronze { display: inline-block; padding-bottom: 4px; }
+
+.k3-hero-big.m-gold { border-bottom: 4px solid var(--gold-edge); }
+.k3-hero-big.m-silver { border-bottom: 4px solid var(--silver-edge); }
+.k3-hero-big.m-bronze { border-bottom: 4px solid var(--bronze-edge); }
+
+/* Rank boxes wear the medal: a metal sheen with a ribbon stripe on top, so
+   first, second, and third read as a podium at a glance. */
+.k3-rankbox.m-gold,
+.k3-rankbox.m-silver,
+.k3-rankbox.m-bronze {
+  border-top-left-radius: 4px;
+  border-top-right-radius: 4px;
+  padding-top: 14px;
+}
+
+.k3-rankbox.m-gold {
+  background: linear-gradient(168deg, #fffaea, var(--gold-wash));
+  border-color: var(--gold-edge);
+  border-top: 5px solid var(--gold-edge);
+}
+
+.k3-rankbox.m-silver {
+  background: linear-gradient(168deg, #fbfcfe, #e6ebf2);
+  border-color: var(--silver-edge);
+  border-top: 5px solid #b6bfcd;
+}
+
+.k3-rankbox.m-bronze {
+  background: linear-gradient(168deg, #fdf3ea, #f6dcc7);
+  border-color: var(--bronze-edge);
+  border-top: 5px solid #cf9260;
+}
+
+.k3-rankbox.m-gold .ord { color: var(--gold-ink); }
+.k3-rankbox.m-silver .ord { color: var(--silver-ink); }
+.k3-rankbox.m-bronze .ord { color: var(--bronze-ink); }
+.k3-rankbox.m-gold .lbl,
+.k3-rankbox.m-silver .lbl,
+.k3-rankbox.m-bronze .lbl { color: #5d6472; }
+
+/* weakest boxes never take a medal, so the warm rule still wins there */
+.k3-rankbox.weak .ord { color: var(--warm); }
+
+/* the year chips on the trajectory */
+.k3-yearchip .rk.m-gold { color: var(--gold-ink); }
+.k3-yearchip .rk.m-silver { color: var(--silver-ink); }
+.k3-yearchip .rk.m-bronze { color: var(--bronze-ink); }
+
+/* pills: a small metal capsule around the standing */
+.k3-pill .rk.m-gold,
+.k3-pill .rk.m-silver,
+.k3-pill .rk.m-bronze {
+  border-radius: 99px;
+  font-weight: 750;
+  padding: 1px 6px;
+}
+
+.k3-pill .rk.m-gold { background: var(--gold-wash); color: var(--gold-ink); }
+.k3-pill .rk.m-silver { background: var(--silver-wash); color: var(--silver-ink); }
+.k3-pill .rk.m-bronze { background: var(--bronze-wash); color: var(--bronze-ink); }
+.k3-pill .rk.none { color: #b0b6c0; font-size: 10.5px; font-style: italic; }
+
+/* a filled pill inverts, so the metal has to sit on the dark ground */
+.k3-pill.on .rk.m-gold { background: rgb(255 255 255 / 90%); }
+.k3-pill.on .rk.m-silver { background: rgb(255 255 255 / 90%); }
+.k3-pill.on .rk.m-bronze { background: rgb(255 255 255 / 90%); }
+
+/* compare: the winning ordinal keeps its side color unless it medals */
+.k3-dord.m-gold { color: var(--gold-ink); }
+.k3-dord.m-silver { color: var(--silver-ink); }
+.k3-dord.m-bronze { color: var(--bronze-ink); }
+.k3-dord.lose.m-gold,
+.k3-dord.lose.m-silver,
+.k3-dord.lose.m-bronze { opacity: 0.75; }
+
+/* ---------- landing: starting points ---------- */
+
+.k3-landing-presets { margin-top: 30px; }
+
+.k3-lp-head {
+  color: var(--soft);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.k3-pilltray.center { justify-content: center; }
+
+.k3-lp-note {
+  color: var(--soft);
+  font-size: 12px;
+  margin: 10px auto 0;
+  max-width: 46ch;
+}
+
+.k3-lp-note b { color: var(--hue); font-weight: 700; }
+
+.k3-preset.on {
+  background: var(--hue-bright);
+  border-color: var(--hue-bright);
+  color: #fff;
+}
+
+/* ---------- moving between views ---------- */
+
+/* The map lives outside the swapped sections, so it never re-mounts. Only the
+   panel above it changes, and it rises in rather than snapping. */
+.k3-view { animation: none; }
+
+.k3-view.k3-enter {
+  animation: k3-rise 0.26s cubic-bezier(0.22, 0.68, 0.36, 1) both;
+}
+
+@keyframes k3-rise {
+  from { opacity: 0; transform: translateY(7px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .k3-view.k3-enter { animation: none; }
+  .k3-skel-svg { animation: none; }
+  .k3-rankrec.loading { animation: none; }
+  .k3-mapskel { transition: none; }
+  * { scroll-behavior: auto !important; }
+}
+
 @media (max-width: 640px) {
   .k3-multis { grid-template-columns: 1fr; }
   #k3-map { height: 320px; }
   .k3-vs { flex-direction: column; }
   .k3-vs .side { width: 100%; }
   .k3-vs .side.b { text-align: left; }
+  .k3-timehead { flex-direction: column; gap: 4px; }
 }

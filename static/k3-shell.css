@@ -1,0 +1,525 @@
+/* K3 shell: the chrome every page shares, plus the Dictionary and Support
+   restyle. Loads after styles.css and before any page sheet, so the header
+   is identical on all four routes and the two content pages inherit the same
+   ink/hairline/violet system the explorer uses.
+
+   Tokens are namespaced (--k3-*) so nothing in styles.css :root is disturbed
+   and /classic keeps rendering exactly as it did. */
+
+:root {
+  --k3-ink: #17181c;
+  --k3-soft: #6f7683;
+  --k3-hair: #e9ebef;
+  --k3-hue: #4c1d95;
+  --k3-hue-bright: #5b21b6;
+  --k3-hue-soft: #efeafb;
+  --k3-warm: #c2410c;
+}
+
+/* ---------- shared header ---------- */
+
+.site-header {
+  background: #fff;
+  border-bottom: 1px solid var(--k3-hair);
+  color: var(--k3-ink);
+  padding: 10px clamp(16px, 4vw, 28px);
+}
+
+.site-header .site-brand,
+.site-header .nav-link { color: var(--k3-ink); }
+
+.site-header .brand-mark {
+  border: 1px solid var(--k3-hair);
+  box-shadow: none;
+}
+
+.site-header .brand-kicker { color: var(--k3-soft); }
+
+.site-header .nav-link {
+  border: 1px solid transparent;
+  border-radius: 99px;
+  color: var(--k3-soft);
+  font-weight: 650;
+  transition: color 0.14s ease, background-color 0.14s ease;
+}
+
+.site-header .nav-link:hover { color: var(--k3-ink); }
+
+.site-header .nav-link.is-active {
+  background: var(--k3-hue-soft);
+  border-color: transparent;
+  color: var(--k3-hue);
+}
+
+/* ---------- the two content pages ---------- */
+
+/* Scoped to Dictionary and Support so /classic is untouched. */
+body[data-page="dictionary"],
+body[data-page="about"] {
+  background: #fff;
+  color: var(--k3-ink);
+  font-size: 15px;
+  line-height: 1.55;
+  min-height: 100vh;
+}
+
+/* styles.css paints :root beige, which would show through wherever body does
+   not reach (short pages, overscroll). Clear it on these two routes only. */
+html:has(body[data-page="dictionary"]),
+html:has(body[data-page="about"]) { background: #fff; }
+
+body[data-page="dictionary"] .metrics-layout,
+body[data-page="about"] .metrics-layout {
+  gap: 0;
+  max-width: 720px;
+  padding: 0 clamp(16px, 4vw, 28px) 64px;
+}
+
+body[data-page="dictionary"] a,
+body[data-page="about"] a { color: var(--k3-hue-bright); }
+
+/* page title block */
+body[data-page="dictionary"] .metrics-header,
+body[data-page="about"] .metrics-header {
+  background: none;
+  border: 0;
+  box-shadow: none;
+  gap: 0;
+  padding: 46px 0 4px;
+}
+
+body[data-page="dictionary"] .metrics-header h1,
+body[data-page="about"] .metrics-header h1 {
+  font-size: clamp(26px, 4vw, 33px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+body[data-page="dictionary"] .metrics-header p,
+body[data-page="about"] .metrics-header p {
+  color: var(--k3-soft);
+  font-size: 14.5px;
+  margin-top: 12px;
+  max-width: 58ch;
+}
+
+body[data-page="dictionary"] .eyebrow,
+body[data-page="about"] .eyebrow {
+  color: var(--k3-soft);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  margin: 0 0 6px;
+  text-transform: uppercase;
+}
+
+/* panels become hairline-separated bands, not floating cards */
+body[data-page="dictionary"] .panel,
+body[data-page="about"] .panel {
+  background: none;
+  border: 0;
+  border-radius: 0;
+  border-top: 1px solid var(--k3-hair);
+  box-shadow: none;
+  gap: 0;
+  margin: 0;
+  overflow: visible;
+  padding: 26px 0;
+}
+
+body[data-page="dictionary"] .panel h2,
+body[data-page="about"] .panel h2 {
+  font-size: 19px;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+body[data-page="dictionary"] .panel p,
+body[data-page="about"] .panel p {
+  color: var(--k3-soft);
+  font-size: 13.5px;
+  margin: 8px 0 0;
+  max-width: 62ch;
+}
+
+body[data-page="dictionary"] .panel section + section,
+body[data-page="about"] .panel section + section {
+  border-top: 1px solid var(--k3-hair);
+}
+
+/* ---------- Dictionary ---------- */
+
+body[data-page="dictionary"] .metrics-panel { padding: 26px 0; }
+body[data-page="dictionary"] .metric-domain-layout { display: block; }
+
+/* domain jump list: a pill tray, matching the explorer's measure pills */
+body[data-page="dictionary"] .metric-domain-toc {
+  border: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: 0 0 30px;
+  padding: 0;
+  position: static;
+}
+
+body[data-page="dictionary"] .metric-domain-toc .eyebrow {
+  flex: 0 0 100%;
+  margin-bottom: 2px;
+}
+
+body[data-page="dictionary"] .metric-domain-toc-link {
+  align-items: center;
+  background: #fff;
+  border: 1.5px solid var(--k3-hair);
+  border-radius: 99px;
+  color: var(--k3-ink);
+  display: inline-flex;
+  font-size: 12.5px;
+  font-weight: 650;
+  gap: 6px;
+  padding: 6px 12px;
+  text-decoration: none;
+  transition: border-color 0.14s ease;
+}
+
+body[data-page="dictionary"] .metric-domain-toc-link:hover { border-color: var(--k3-hue-bright); }
+
+body[data-page="dictionary"] .metric-domain-toc-link strong {
+  color: var(--k3-soft);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+body[data-page="dictionary"] .metric-domain-panel {
+  background: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0;
+  scroll-margin-top: 18px;
+}
+
+body[data-page="dictionary"] .metric-domain-panel + .metric-domain-panel { margin-top: 34px; }
+
+body[data-page="dictionary"] .metric-domain-heading {
+  border-bottom: 2px solid var(--k3-ink);
+  padding-bottom: 10px;
+}
+
+body[data-page="dictionary"] .metric-domain-heading h4 {
+  font-size: 18px;
+  font-weight: 780;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+body[data-page="dictionary"] .metric-domain-heading p {
+  color: var(--k3-soft);
+  font-size: 13px;
+  margin: 6px 0 0;
+  max-width: 62ch;
+}
+
+body[data-page="dictionary"] .transparency-meta {
+  color: var(--k3-soft);
+  font-size: 11.5px;
+}
+
+body[data-page="dictionary"] .metric-definition-list { display: block; }
+
+/* one measure per hairline row; the definition opens in place */
+body[data-page="dictionary"] .metric-definition-card {
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--k3-hair);
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0;
+}
+
+body[data-page="dictionary"] .metric-definition-summary {
+  cursor: pointer;
+  display: block;
+  list-style: none;
+  padding: 12px 26px 12px 2px;
+  position: relative;
+}
+
+body[data-page="dictionary"] .metric-definition-summary::-webkit-details-marker { display: none; }
+
+body[data-page="dictionary"] .metric-definition-summary::after {
+  color: var(--k3-soft);
+  content: "\203A";
+  font-size: 17px;
+  line-height: 1;
+  position: absolute;
+  right: 4px;
+  top: 13px;
+  transition: transform 0.16s ease;
+}
+
+body[data-page="dictionary"] .metric-definition-card[open] .metric-definition-summary::after {
+  transform: rotate(90deg);
+}
+
+body[data-page="dictionary"] .metric-definition-summary:hover .metric-definition-title { color: var(--k3-hue-bright); }
+
+body[data-page="dictionary"] .metric-definition-heading {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+body[data-page="dictionary"] .metric-definition-title {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+/* Data status stays a status color, just quieter and on the K3 type scale.
+   Populated is the common case, so it reads as neutral rather than a win. */
+body[data-page="dictionary"] .metric-status-badge {
+  border: 0;
+  border-radius: 99px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  padding: 2px 8px;
+  text-transform: uppercase;
+}
+
+body[data-page="dictionary"] .metric-status-badge.is-populated {
+  background: #f1f3f6;
+  color: #5d6472;
+}
+
+body[data-page="dictionary"] .metric-status-badge.is-partially_populated {
+  background: #fdf3e6;
+  color: #8a5a1c;
+}
+
+body[data-page="dictionary"] .metric-status-badge.is-source_pending,
+body[data-page="dictionary"] .metric-status-badge.is-source_unavailable,
+body[data-page="dictionary"] .metric-status-badge.is-ingestion_not_implemented,
+body[data-page="dictionary"] .metric-status-badge.is-zero_records_observed {
+  background: #fdeee7;
+  color: var(--k3-warm);
+}
+
+body[data-page="dictionary"] .metric-definition-summary > span:last-child {
+  color: var(--k3-soft);
+  display: block;
+  font-size: 12.5px;
+  margin-top: 2px;
+  max-width: 66ch;
+}
+
+body[data-page="dictionary"] .metric-definition-body {
+  border-left: 2px solid var(--k3-hue-soft);
+  margin: 0 0 14px;
+  padding: 2px 0 2px 14px;
+}
+
+body[data-page="dictionary"] .metric-definition-body p {
+  color: var(--k3-soft);
+  font-size: 12.5px;
+  margin: 0 0 8px;
+}
+
+body[data-page="dictionary"] .metric-definition-body strong { color: var(--k3-ink); font-weight: 650; }
+
+body[data-page="dictionary"] .metric-definition-meta {
+  display: grid;
+  gap: 10px 20px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  margin: 10px 0 0;
+}
+
+body[data-page="dictionary"] .metric-definition-meta dt {
+  color: var(--k3-soft);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+body[data-page="dictionary"] .metric-definition-meta dd {
+  font-size: 12.5px;
+  margin: 2px 0 0;
+}
+
+body[data-page="dictionary"] .metric-technical-details {
+  border-top: 1px solid var(--k3-hair);
+  margin-top: 12px;
+  padding-top: 8px;
+}
+
+body[data-page="dictionary"] .metric-technical-details summary {
+  color: var(--k3-hue-bright);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+/* the "how the composite works" preamble: a margin note, not a card */
+body[data-page="dictionary"] section.calculation-note {
+  background: none;
+  border: 0;
+  border-left: 2px solid var(--k3-hue-soft);
+  border-radius: 0;
+  box-shadow: none;
+  margin: 22px 0 0;
+  padding: 2px 0 2px 14px;
+}
+
+body[data-page="dictionary"] section.calculation-note p {
+  color: var(--k3-soft);
+  font-size: 12.5px;
+  margin: 0 0 7px;
+  max-width: 62ch;
+}
+
+body[data-page="dictionary"] section.calculation-note p:last-child { margin-bottom: 0; }
+
+body[data-page="dictionary"] .metric-nominator-attribution {
+  color: var(--k3-soft);
+  font-size: 11.5px;
+}
+
+/* ---------- Support ---------- */
+
+body[data-page="about"] .support-cta-heading {
+  align-items: start;
+  display: grid;
+  gap: 14px 22px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+body[data-page="about"] .support-cta {
+  align-self: center;
+  background: #fff;
+  border: 1.5px solid var(--k3-hue-bright);
+  border-radius: 99px;
+  color: var(--k3-hue-bright);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 9px 17px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+body[data-page="about"] .support-cta:hover { background: var(--k3-hue-soft); }
+
+body[data-page="about"] .signifier-see-all a {
+  font-size: 12.5px;
+  font-weight: 650;
+}
+
+body[data-page="about"] .signifier-examples {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  margin-top: 18px;
+}
+
+body[data-page="about"] .signifier-example {
+  border: 1px solid var(--k3-hair);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+body[data-page="about"] .signifier-example img {
+  aspect-ratio: 4 / 3;
+  display: block;
+  object-fit: cover;
+  width: 100%;
+}
+
+/* 50 cells, one per ward; the filled ones have a resident nomination. Violet,
+   not orange, because orange means "behind" everywhere else on the site. */
+body[data-page="about"] .ward-grid {
+  display: grid;
+  gap: 4px;
+  grid-template-columns: repeat(auto-fill, minmax(34px, 1fr));
+  margin-top: 16px;
+}
+
+body[data-page="about"] .ward-cell {
+  align-items: center;
+  background: #f4f5f8;
+  border-radius: 7px;
+  color: #9aa0ab;
+  display: flex;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+  justify-content: center;
+  min-height: 32px;
+}
+
+body[data-page="about"] .ward-cell.is-nominated {
+  background: var(--k3-hue-bright);
+  color: #fff;
+}
+
+body[data-page="about"] .about-progress-count { color: var(--k3-hue); }
+
+body[data-page="about"] .about-progress {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+body[data-page="about"] .about-progress-count {
+  font-size: 32px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+}
+
+body[data-page="about"] .about-progress-of,
+body[data-page="about"] .about-progress-note {
+  color: var(--k3-soft);
+  font-size: 12.5px;
+}
+
+body[data-page="about"] .about-progress-bar {
+  background: var(--k3-hair);
+  border-radius: 99px;
+  flex: 0 0 100%;
+  height: 6px;
+  overflow: hidden;
+}
+
+body[data-page="about"] .about-progress-bar > * {
+  background: var(--k3-hue-bright);
+  display: block;
+  height: 100%;
+}
+
+body[data-page="about"] .about-metric-growth { margin-top: 18px; }
+body[data-page="about"] .about-growth-head { font-size: 13px; font-weight: 650; }
+body[data-page="about"] .about-growth-axis { color: var(--k3-soft); font-size: 10.5px; }
+
+/* the growth line takes its stroke from currentColor */
+body[data-page="about"] .about-sparkline { color: var(--k3-hue); }
+body[data-page="about"] .spark-band { fill: rgb(76 29 149 / 7%); }
+
+/* Hover targets, not marks: under preserveAspectRatio="none" these circles
+   stretch into smears, so they stay invisible until pointed at. */
+body[data-page="about"] .spark-dot { fill: transparent; }
+body[data-page="about"] .spark-dot:hover { fill: var(--k3-hue); }
+
+body[data-page="about"] .about-metric-now { color: var(--k3-hue); font-weight: 700; }
+body[data-page="about"] .about-error { color: var(--k3-warm); font-size: 12.5px; }
+
+@media (max-width: 640px) {
+  body[data-page="about"] .support-cta-heading { grid-template-columns: minmax(0, 1fr); }
+  body[data-page="about"] .support-cta { justify-self: start; }
+}
