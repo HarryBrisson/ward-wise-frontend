@@ -1,6 +1,41 @@
 /* K3: the sequenced explorer. One column, one hue, hairline dividers.
    Ink, two grays, violet. Orange appears only where it means "behind". */
 
+/* The shared header, restyled to match on this page only. k3.css loads
+   only from k3.html, so /classic, the dictionary, and support keep the
+   original header. Selectors carry extra specificity because styles.css
+   loads after this file in base.html. */
+
+header.site-header {
+  background: #fff;
+  border-bottom: 1px solid #e9ebef;
+  padding: 10px clamp(16px, 4vw, 28px);
+}
+
+.site-header .site-brand,
+.site-header .nav-link { color: #17181c; }
+
+.site-header .brand-mark {
+  border: 1px solid #e9ebef;
+  box-shadow: none;
+}
+
+.site-header .brand-kicker { color: #6f7683; }
+
+.site-header .nav-link {
+  border: 1px solid transparent;
+  color: #6f7683;
+  font-weight: 650;
+}
+
+.site-header .nav-link:hover { color: #17181c; }
+
+.site-header .nav-link.is-active {
+  background: #efeafb;
+  border-color: transparent;
+  color: #4c1d95;
+}
+
 .k3-page {
   --ink: #17181c;
   --soft: #6f7683;
@@ -294,15 +329,22 @@
 }
 
 .k3-seeall {
-  background: none;
-  border: 0;
+  background: #fff;
+  border: 1.5px solid var(--hair);
+  border-radius: 10px;
   color: var(--hue-bright);
   cursor: pointer;
+  display: block;
   font: inherit;
-  font-size: 12.5px;
-  font-weight: 650;
-  padding: 11px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+  margin-top: 14px;
+  padding: 11px 16px;
+  text-align: center;
+  width: 100%;
 }
+
+.k3-seeall:hover { border-color: var(--hue-bright); }
 
 /* over time */
 .k3-rankrec { position: relative; }
