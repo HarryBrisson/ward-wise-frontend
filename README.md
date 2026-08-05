@@ -24,7 +24,7 @@ will eventually move into their own APIs repo.
 ```
 
 That's the whole setup: a venv, Flask, and `requests`. Then open
-<http://localhost:1838>. You get the real site with real Chicago data — no AWS credentials,
+<http://localhost:1837>. You get the real site with real Chicago data — no AWS credentials,
 no data pipeline, no database.
 
 ## How it works
@@ -38,7 +38,7 @@ GET /dictionary  ->  templates/dictionary.html
 GET /api/metrics ->  https://penlight.wardwise.org/api/metrics
 ```
 
-To develop against a local backend instead:
+To develop against a local backend instead — 1838 is the port the upstream Penlight app runs on:
 
 ```bash
 PENLIGHT_API_BASE=http://localhost:1838 ./run.sh
@@ -49,7 +49,7 @@ PENLIGHT_API_BASE=http://localhost:1838 ./run.sh
 | `PENLIGHT_API_BASE` | `https://penlight.wardwise.org` | Where `/api/*` is forwarded |
 | `PENLIGHT_SITE_BASE` | `https://penlight.wardwise.org` | Where out-of-scope links point |
 | `PROXY_ALLOW_WRITES` | `0` | `1` forwards POSTs upstream instead of stubbing them |
-| `PORT` | `1838` | Matches upstream's local port |
+| `PORT` | `1837` | The year Chicago was incorporated |
 
 **Writes are stubbed by default.** The map view POSTs an analytics event on every metric toggle;
 clicking around locally shouldn't write rows into production, so the proxy acknowledges those

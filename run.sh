@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Start the Penlight frontend on http://localhost:1838.
+# Start the Penlight frontend on http://localhost:1837.
 #
 #   ./run.sh                                          # against the live API
-#   PENLIGHT_API_BASE=http://localhost:1838 ./run.sh   # against a local backend
+#   PENLIGHT_API_BASE=http://localhost:1838 ./run.sh   # against a local backend (upstream's port)
 set -euo pipefail
 
 cd "$(dirname "$0")"
@@ -17,6 +17,6 @@ source .venv/bin/activate
 pip install --quiet --upgrade pip
 pip install --quiet -r requirements.txt
 
-echo "Penlight frontend on http://localhost:${PORT:-1838}"
+echo "Penlight frontend on http://localhost:${PORT:-1837}"
 echo "API: ${PENLIGHT_API_BASE:-https://penlight.wardwise.org}"
 exec python server.py

@@ -9,7 +9,7 @@ Environment:
   PENLIGHT_API_BASE   where /api/* is forwarded   (default: https://penlight.wardwise.org)
   PENLIGHT_SITE_BASE  where out-of-scope links go (default: https://penlight.wardwise.org)
   PROXY_ALLOW_WRITES  1 to forward POSTs upstream (default: 0, stubbed — see proxy())
-  PORT                default 1838, matching upstream's local port
+  PORT                default 1837, the year Chicago was incorporated
 """
 
 from __future__ import annotations
@@ -110,4 +110,4 @@ def proxy(api_path: str):
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 1838)), debug=True)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 1837)), debug=True)

@@ -4,7 +4,7 @@ Penlight is a volunteer civic-data project. This repo exists so that improving t
 and experience doesn't require setting up a data pipeline or holding AWS credentials.
 
 ```bash
-./run.sh          # http://localhost:1838, real data, no credentials
+./run.sh          # http://localhost:1837, real data, no credentials
 ```
 
 ## Good first issues
