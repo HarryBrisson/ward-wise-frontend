@@ -722,6 +722,42 @@
 
   let trajectoryToken = 0;
 
+  // Each year is its own matrix, so a full range is a couple of megabytes. That
+  // is fine to spend on a chart somebody is looking at and wasteful otherwise,
+  // so the fetches wait until the section is near the viewport. Once a visitor
+  // has scrolled there, later ranges load straight away.
+  let overTimeSeen = false;
+  let overTimeWait = null;
+
+  function whenOverTimeVisible() {
+    if (overTimeSeen) return Promise.resolve();
+    // Plain geometry rather than IntersectionObserver: an observer in a
+    // backgrounded tab can go quiet, and a chart stuck on "loading" forever is
+    // a worse failure than a scroll listener.
+    const near = () => {
+      const box = el("k3-overtime").getBoundingClientRect();
+      return box.top < window.innerHeight + 400 && box.bottom > -400;
+    };
+    if (near()) {
+      overTimeSeen = true;
+      return Promise.resolve();
+    }
+    if (overTimeWait) return overTimeWait;
+    overTimeWait = new Promise((resolve) => {
+      const check = () => {
+        if (!near()) return;
+        overTimeSeen = true;
+        overTimeWait = null;
+        window.removeEventListener("scroll", check);
+        window.removeEventListener("resize", check);
+        resolve();
+      };
+      window.addEventListener("scroll", check, { passive: true });
+      window.addEventListener("resize", check);
+    });
+    return overTimeWait;
+  }
+
   async function renderOverTime() {
     const token = (trajectoryToken += 1);
     const wardId = state.wardId;
@@ -738,6 +774,8 @@
       if (!live()) return;
     }
     drawTrajectory();
+    await whenOverTimeVisible();
+    if (!live()) return;
 
     // Three at a time: enough to feel quick, gentle enough on the API. Each
     // year that lands redraws, so the line fills in rather than popping.
