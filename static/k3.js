@@ -873,22 +873,72 @@
     return results.slice(0, 6);
   }
 
+  let suggestTimer = null;
+  let suggestSeq = 0;
+  let addressSuggestions = [];
+
   function renderSearchResults(query) {
     const box = el("k3-search-results");
-    const results = matchWards(query);
-    if (!results.length) {
+    const locals = matchWards(query);
+    const rows = [];
+    locals.forEach((r) => {
+      rows.push(
+        `<button type="button" data-act="pick-ward" data-ward="${esc(r.ward.ward_id)}">` +
+          `${esc(r.ward.display_name)}<span class="hood">${esc(r.why)}</span></button>`,
+      );
+    });
+    addressSuggestions.forEach((s, index) => {
+      rows.push(
+        `<button type="button" data-act="pick-addr" data-idx="${index}">` +
+          `&#9906; ${esc(s.label)}<span class="hood">${esc(s.extra)}</span></button>`,
+      );
+    });
+    if (!rows.length) {
       box.hidden = query.trim().length < 2;
-      box.innerHTML = `<button type="button" disabled>No match yet, try a neighborhood name or a ward number.</button>`;
+      box.innerHTML = `<button type="button" disabled>No match yet, keep typing an address, a neighborhood, or a ward number.</button>`;
       return;
     }
     box.hidden = false;
-    box.innerHTML = results
-      .map(
-        (r) =>
-          `<button type="button" data-act="pick-ward" data-ward="${esc(r.ward.ward_id)}">` +
-          `${esc(r.ward.display_name)}<span class="hood">${esc(r.why)}</span></button>`,
-      )
-      .join("");
+    box.innerHTML = rows.join("");
+  }
+
+  // google-style autofill: local matches render instantly, address
+  // suggestions stream in behind them, debounced and sequence-guarded
+  function scheduleSuggestions(query) {
+    clearTimeout(suggestTimer);
+    if (query.trim().length < 3) {
+      addressSuggestions = [];
+      renderSearchResults(query);
+      return;
+    }
+    renderSearchResults(query);
+    suggestTimer = setTimeout(async () => {
+      const seq = ++suggestSeq;
+      try {
+        const result = await api.fetchJson(
+          `/geocode/suggest?q=${encodeURIComponent(query)}`,
+          "Suggestions unavailable.",
+        );
+        if (seq !== suggestSeq) return; // a newer keystroke superseded this one
+        addressSuggestions = result.suggestions || [];
+        renderSearchResults(query);
+      } catch (_error) {
+        /* suggestions are best-effort, submit still resolves the address */
+      }
+    }, 280);
+  }
+
+  function pickAddress(index) {
+    const suggestion = addressSuggestions[index];
+    if (!suggestion) return;
+    const wardId = wardAtPoint(suggestion.lat, suggestion.lon);
+    el("k3-search-results").hidden = true;
+    if (wardId) {
+      selectWard(wardId);
+      toast(`${suggestion.label} is in ${wardName(wardId)}`);
+    } else {
+      toast("That spot is outside Chicago's 50 wards.");
+    }
   }
 
   // ---------- events ----------
@@ -900,6 +950,7 @@
     const rowNode = target.closest("[data-metric]");
     const metricId = rowNode ? rowNode.dataset.metric : null;
     if (act === "pick-ward") selectWard(target.dataset.ward);
+    if (act === "pick-addr") pickAddress(Number(target.dataset.idx));
     if (act === "open-list") {
       state.view = "list";
       render();
@@ -964,14 +1015,15 @@
       }
     });
     const search = el("k3-search");
-    search.addEventListener("input", () => renderSearchResults(search.value));
-    // neighborhood and ward-number matches win instantly; anything else,
-    // like a street address, goes through the geocoder
+    search.addEventListener("input", () => scheduleSuggestions(search.value));
+    // submit order: a neighborhood or ward-number match, then the top
+    // address suggestion, then a one-shot geocode of whatever was typed
     const go = () => {
       const query = search.value.trim();
       if (!query) return;
       const first = matchWards(query)[0];
       if (first) selectWard(first.ward.ward_id);
+      else if (addressSuggestions.length) pickAddress(0);
       else geocodeAndGo(query);
     };
     search.addEventListener("keydown", (event) => {

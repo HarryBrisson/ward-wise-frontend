@@ -86,6 +86,60 @@ def about():
 # Chicago bounding box for Nominatim, so "Clark St" resolves here and not Iowa.
 CHICAGO_VIEWBOX = "-87.95,42.03,-87.50,41.62"
 
+# The same box in Photon's order (min lon, min lat, max lon, max lat).
+CHICAGO_BBOX = "-87.95,41.62,-87.50,42.03"
+
+
+@app.get("/geocode/suggest")
+def geocode_suggest():
+    """Address autocomplete via Photon, komoot's OSM geocoder.
+
+    Photon is built for search-as-you-type, which Nominatim's usage policy
+    explicitly is not, so the two share the work: Photon suggests while the
+    visitor types, Nominatim resolves a full one-shot query on submit.
+    Proxied for the same reasons as /geocode.
+    """
+    query = (request.args.get("q") or "").strip()
+    if len(query) < 3:
+        return jsonify({"suggestions": []})
+    try:
+        response = requests.get(
+            "https://photon.komoot.io/api/",
+            params={
+                "q": query,
+                "limit": 6,
+                "lat": 41.85,
+                "lon": -87.65,
+                "bbox": CHICAGO_BBOX,
+                "layer": ["house", "street"],
+            },
+            headers={
+                "User-Agent": "ward-wise-frontend (https://github.com/HarryBrisson/ward-wise-frontend)",
+            },
+            timeout=6,
+        )
+        features = response.json().get("features", [])
+    except requests.RequestException as error:
+        return jsonify({"error": f"Suggestions failed: {error}"}), 502
+    suggestions = []
+    for feature in features:
+        props = feature.get("properties", {})
+        lon, lat = feature["geometry"]["coordinates"]
+        street = props.get("street") or ""
+        number = props.get("housenumber") or ""
+        label = f"{number} {street}".strip() if street else (props.get("name") or "")
+        if not label:
+            continue
+        suggestions.append(
+            {
+                "label": label,
+                "extra": props.get("district") or props.get("city") or "",
+                "lat": lat,
+                "lon": lon,
+            }
+        )
+    return jsonify({"suggestions": suggestions[:6]})
+
 
 @app.get("/geocode")
 def geocode():
