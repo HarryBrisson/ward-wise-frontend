@@ -892,7 +892,7 @@
     addressSuggestions.forEach((s, index) => {
       rows.push(
         `<button type="button" data-act="pick-addr" data-idx="${index}">` +
-          `&#9906; ${esc(s.label)}<span class="hood">${esc(s.extra)}</span></button>`,
+          `&#9906; ${esc(s.label)}${s.extra ? `<span class="hood">${esc(s.extra)}</span>` : ""}</button>`,
       );
     });
     if (suggestPending && !addressSuggestions.length) {
@@ -946,16 +946,24 @@
     }, 160);
   }
 
-  function pickAddress(index) {
+  async function pickAddress(index) {
     const suggestion = addressSuggestions[index];
     if (!suggestion) return;
-    const wardId = wardAtPoint(suggestion.lat, suggestion.lon);
     el("k3-search-results").hidden = true;
-    if (wardId) {
-      selectWard(wardId);
-      toast(`${suggestion.label} is in ${wardName(wardId)}`);
-    } else {
-      toast("That spot is outside Chicago's 50 wards.");
+    try {
+      const result = await api.fetchJson(
+        `/geocode/resolve?text=${encodeURIComponent(suggestion.label)}&key=${encodeURIComponent(suggestion.key || "")}`,
+        "Address lookup is unavailable right now.",
+      );
+      const wardId = result.match ? wardAtPoint(result.match.lat, result.match.lon) : null;
+      if (wardId) {
+        selectWard(wardId);
+        toast(`${suggestion.label} is in ${wardName(wardId)}`);
+      } else {
+        toast("That spot is outside Chicago's 50 wards.");
+      }
+    } catch (error) {
+      toast(error.message);
     }
   }
 

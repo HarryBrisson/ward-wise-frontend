@@ -95,63 +95,79 @@ CHICAGO_VIEWBOX = "-87.95,42.03,-87.50,41.62"
 CHICAGO_BBOX = "-87.95,41.62,-87.50,42.03"
 
 
+# The City of Chicago's own address locator, the authority on what addresses
+# exist here. Free public ArcGIS endpoint, no key.
+CHICAGO_GEOCODER = (
+    "https://gisapps.chicago.gov/arcgis/rest/services/Chicago_Addresses/GeocodeServer"
+)
+
+GEOCODER_HEADERS = {
+    "User-Agent": "ward-wise-frontend (https://github.com/HarryBrisson/ward-wise-frontend)",
+}
+
+
 @app.get("/geocode/suggest")
 def geocode_suggest():
-    """Address autocomplete via Photon, komoot's OSM geocoder.
+    """Address autocomplete from the City of Chicago's own geocoder.
 
-    Photon is built for search-as-you-type, which Nominatim's usage policy
-    explicitly is not, so the two share the work: Photon suggests while the
-    visitor types, Nominatim resolves a full one-shot query on submit.
-    Proxied for the same reasons as /geocode.
+    The city's locator knows every address point in Chicago, so 550 N Saint
+    Clair completes on the first try, which the OSM geocoders could not do.
+    Suggestions return a text plus a magicKey; /geocode/resolve turns the
+    picked one into coordinates.
     """
     query = (request.args.get("q") or "").strip()
     if len(query) < 3:
         return jsonify({"suggestions": []})
     try:
         response = HTTP.get(
-            "https://photon.komoot.io/api/",
-            params={
-                "q": query,
-                "limit": 6,
-                "lat": 41.85,
-                "lon": -87.65,
-                "bbox": CHICAGO_BBOX,
-                "layer": ["house", "street"],
-            },
-            headers={
-                "User-Agent": "ward-wise-frontend (https://github.com/HarryBrisson/ward-wise-frontend)",
-            },
+            f"{CHICAGO_GEOCODER}/suggest",
+            params={"text": query, "f": "json", "maxSuggestions": 6},
+            headers=GEOCODER_HEADERS,
             timeout=6,
         )
-        features = response.json().get("features", [])
+        raw = response.json().get("suggestions", [])
     except requests.RequestException as error:
         return jsonify({"error": f"Suggestions failed: {error}"}), 502
-    suggestions = []
-    seen = set()
-    for feature in features:
-        props = feature.get("properties", {})
-        lon, lat = feature["geometry"]["coordinates"]
-        street = props.get("street") or ""
-        number = props.get("housenumber") or ""
-        label = f"{number} {street}".strip() if street else (props.get("name") or "")
-        if not label:
-            continue
-        # Photon returns the same street once per OSM segment and the same
-        # address as both a building and a range. One label, one row; the
-        # lat/lon bias means the first occurrence is the nearest one.
-        key = label.lower()
-        if key in seen:
-            continue
-        seen.add(key)
-        suggestions.append(
-            {
-                "label": label,
-                "extra": props.get("district") or props.get("city") or "",
-                "lat": lat,
-                "lon": lon,
-            }
-        )
+    suggestions = [
+        {"label": item["text"], "key": item["magicKey"]}
+        for item in raw
+        if item.get("text") and not item.get("isCollection")
+    ]
     return jsonify({"suggestions": suggestions[:6]})
+
+
+@app.get("/geocode/resolve")
+def geocode_resolve():
+    """Turn a picked suggestion into WGS84 coordinates via the city locator."""
+    text = (request.args.get("text") or "").strip()
+    key = (request.args.get("key") or "").strip()
+    if not text:
+        return jsonify({"error": "Missing text."}), 400
+    params = {"SingleLine": text, "outSR": 4326, "maxLocations": 1, "f": "json"}
+    if key:
+        params["magicKey"] = key
+    try:
+        response = HTTP.get(
+            f"{CHICAGO_GEOCODER}/findAddressCandidates",
+            params=params,
+            headers=GEOCODER_HEADERS,
+            timeout=6,
+        )
+        candidates = response.json().get("candidates", [])
+    except requests.RequestException as error:
+        return jsonify({"error": f"Address lookup failed: {error}"}), 502
+    if not candidates:
+        return jsonify({"match": None})
+    top = candidates[0]
+    return jsonify(
+        {
+            "match": {
+                "lat": top["location"]["y"],
+                "lon": top["location"]["x"],
+                "label": top.get("address", text),
+            }
+        }
+    )
 
 
 @app.get("/geocode")
