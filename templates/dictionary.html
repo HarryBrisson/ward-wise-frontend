@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Metric dictionary — Ward Wise Penlight{% endblock %}
+
+{% block content %}
+  <main class="metrics-layout">
+    <div class="metrics-header panel-heading">
+      <p class="eyebrow">Ward Wise Penlight</p>
+      <h1>Metric dictionary</h1>
+      <p>
+        Every measure on the map: what it counts, where the data comes from, which years it
+        covers, and how it enters the composite. Grouped by wellbeing domain.
+      </p>
+    </div>
+
+    <section class="panel metrics-panel">
+      {# metric_details.js self-initializes on #metrics-content and fetches /api/metrics. #}
+      <div id="metrics-content" class="metric-transparency-content" data-is-admin="false">
+        <p>Loading metrics…</p>
+      </div>
+    </section>
+  </main>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='common.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='metric_icons.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='metric_details.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='dictionary.js', v=asset_version) }}"></script>
+{% endblock %}

@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Ward Wise Penlight{% endblock %}</title>
+    {% block head %}{% endblock %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css', v=asset_version) }}">
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="site-brand" href="{{ url_for('index') }}" aria-label="Ward Wise Penlight home">
+        <span class="brand-mark" aria-hidden="true">
+          <img class="brand-logo" src="{{ url_for('static', filename='logo.png') }}" alt="">
+        </span>
+        <span class="brand-copy">
+          <span class="brand-kicker">Ward Wise</span>
+          <span class="brand-name">Penlight</span>
+        </span>
+      </a>
+      <nav class="site-nav" aria-label="Main navigation">
+        <a class="nav-link{% if request.endpoint == 'index' %} is-active{% endif %}" href="{{ url_for('index') }}">Explore</a>
+        <a class="nav-link{% if request.endpoint == 'dictionary' %} is-active{% endif %}" href="{{ url_for('dictionary') }}">Dictionary</a>
+        <a class="nav-link{% if request.endpoint == 'about' %} is-active{% endif %}" href="{{ url_for('about') }}">Support</a>
+      </nav>
+    </header>
+
+    {% block content %}{% endblock %}
+
+    {% block scripts %}{% endblock %}
+  </body>
+</html>

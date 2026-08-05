@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block title %}Support — Ward Wise Penlight{% endblock %}
+
+{% block content %}
+  <main class="metrics-layout about-layout">
+    <div class="metrics-header panel-heading">
+      <p class="eyebrow">Ward Wise Penlight</p>
+      <h1>Support Penlight</h1>
+      <p>
+        Penlight is a civic-data project built at
+        <a href="https://chihacknight.org/" rel="noopener">Chi Hack Night</a> that turns open data
+        into neighborhood wellbeing metrics anyone can explore, weight, and compare. It grows
+        through residents — here's how to help.
+      </p>
+    </div>
+
+    <section class="panel about-panel">
+      <div class="panel-heading support-cta-heading">
+        <div>
+          <p class="eyebrow">Our goal</p>
+          <h2>A metric nominated from every ward</h2>
+          <p>
+            The best measures come from residents: parking difficulty, water-fountain lead, the
+            lakefront, 311 responsiveness — all started as nominations. We're working toward a
+            resident nomination from all 50 Chicago wards; your ward gets the credit on the map.
+          </p>
+        </div>
+        <a class="support-link support-cta" href="{{ live_url('/suggest-metric') }}">Nominate a metric &rarr;</a>
+      </div>
+      <div id="about-nominations" class="about-nominations"><p>Loading nominations…</p></div>
+    </section>
+
+    <section class="panel about-panel">
+      <div class="panel-heading support-cta-heading">
+        <div>
+          <p class="eyebrow">Visual signifiers</p>
+          <h2>Put your area on the map</h2>
+          <p>
+            Every ward, neighborhood, and &chi;GRID shows a photo of a real place
+            <strong>inside it</strong> — with its source, license, and attribution. Know the spot
+            that captures yours? Submit it — reviewed submissions appear with credit to you.
+          </p>
+        </div>
+        <a class="support-link support-cta" href="{{ live_url('/suggest-photo') }}">Submit a photo &rarr;</a>
+      </div>
+      {# Filled by about.js — upstream rendered these server-side, which made the page
+         read civic data (and, in prod, S3) on every request. #}
+      <div id="signifier-examples" class="signifier-examples" hidden></div>
+      <p class="signifier-see-all"><a href="{{ live_url('/signifiers') }}">See all visual signifiers and their provenance &rarr;</a></p>
+    </section>
+
+    <section class="panel about-panel">
+      <div class="panel-heading support-cta-heading">
+        <div>
+          <p class="eyebrow">Your block</p>
+          <h2>Host a participatory audit</h2>
+          <p>
+            Gather your neighbors and ask: what does wellbeing actually mean on our blocks? Which
+            measures matter here, and how much? Those answers become your neighborhood's own
+            wellbeing index — a shared equation you can hold up to your government, year after
+            year, to judge its performance against what your community actually values.
+          </p>
+        </div>
+        <a class="support-link support-cta" href="{{ live_url('/suggest-metric') }}">Send us what your neighbors chose &rarr;</a>
+      </div>
+    </section>
+
+    <section class="panel about-panel">
+      <div class="panel-heading support-cta-heading">
+        <div>
+          <p class="eyebrow">Beyond Chicago</p>
+          <h2>Bring Penlight to your city</h2>
+          <p>
+            Open data and open source travel well. We're actively exploring Columbus, Madison,
+            Cincinnati, New York, and Los Angeles — if you want neighborhood wellbeing metrics
+            where you live, raise your hand.
+          </p>
+        </div>
+        <a class="support-link support-cta" href="{{ live_url('/your-city') }}">Tell us about your city &rarr;</a>
+      </div>
+    </section>
+
+    <section class="panel about-panel">
+      <div class="panel-heading support-cta-heading">
+        <div>
+          <p class="eyebrow">In person</p>
+          <h2>Come to Chi Hack Night</h2>
+          <p>
+            Tuesday evenings — Chicago's weekly gathering for people who use data and technology
+            in the public interest. Penlight is built there; come say hi. No technical background
+            needed.
+          </p>
+        </div>
+        <a class="support-link support-cta" href="https://chihacknight.org/" rel="noopener">chihacknight.org &rarr;</a>
+      </div>
+    </section>
+
+    <section class="panel about-panel">
+      <div class="panel-heading support-cta-heading">
+        <div>
+          <p class="eyebrow">Developers</p>
+          <h2>Build on the data</h2>
+          <p>
+            Every number here is available through a small read-only API — one ward's metrics in
+            context, and the dictionary that explains them. Keys are free; tell us what you're making.
+          </p>
+        </div>
+        <a class="support-link support-cta" href="{{ live_url('/api-docs') }}">Read the API docs &rarr;</a>
+      </div>
+    </section>
+
+    <section class="panel about-panel">
+      <div class="panel-heading">
+        <p class="eyebrow">Since 2026-05-15</p>
+        <h2>Metrics we track over time</h2>
+        <p>We launched with 20 metrics for the Bean's 20th birthday and have grown the catalog — and our representation across the city — since.</p>
+      </div>
+      <div id="about-metric-growth" class="about-metric-growth"><p>Loading history…</p></div>
+    </section>
+  </main>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='common.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='about.js', v=asset_version) }}"></script>
+{% endblock %}
