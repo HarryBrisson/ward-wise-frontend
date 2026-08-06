@@ -1,10 +1,10 @@
-// Seven starting points for politically engaged residents. Each one loads a
-// mix of measures aimed at a question people actually argue about at ward
-// nights: housing cost, safety, aldermanic performance, kids, getting around,
-// local business, and environment. Drafted through nine single-lens passes
-// over the full catalog and organized down to seven, every metric id
-// validated against the live catalog. Names stay to two words, taglines
-// under twelve.
+// Nine starting points. Seven aim at questions people argue about at ward
+// nights (housing cost, safety, aldermanic performance, kids, getting around,
+// local business, environment) and two are broader lanes anyone cares about
+// whatever their politics (health, and what there is to do). Drafted through
+// nine single-lens passes over the full catalog, every metric id validated
+// against the live catalog, and no two lists share more than one measure.
+// Names stay to two words, taglines under twelve.
 window.K3_PRESETS = [
   {
     name: "Housing Squeeze",
@@ -93,6 +93,32 @@ window.K3_PRESETS = [
       "park_acres_per_10000_residents",
       "garden_count",
       "c311_tree_debris_days",
+    ],
+  },
+  {
+    name: "Staying Healthy",
+    tagline: "How healthy people are and what is nearby to keep them that way",
+    metric_ids: [
+      "poor_or_fair_health_pct",
+      "uninsured_pct",
+      "physical_inactivity_pct",
+      "mental_health_providers_per_10000_residents",
+      "fitness_places_per_10000_residents",
+      "licensed_grocery_stores_per_10000_residents",
+      "park_fountain_lead_flagged_pct",
+    ],
+  },
+  {
+    name: "Things To Do",
+    tagline: "Museums, music, late nights, and places worth walking to",
+    metric_ids: [
+      "arts_culture_count",
+      "museum_count",
+      "licensed_amusement_venues_per_10000_residents",
+      "licensed_music_dance_per_10000_residents",
+      "third_places_per_10000_residents",
+      "open_late_per_10000_residents",
+      "places_of_interest_count",
     ],
   },
 ];

@@ -667,6 +667,32 @@ button.k3-yearchip:hover:not(:disabled) { border-color: var(--hue-bright); }
 
 .k3-preset:hover { border-color: var(--hue-bright); }
 
+/* ---------- pick a list before there is a rank to show ---------- */
+
+/* The compare and share rows are about a result, so they wait for one. */
+.k3-ward[data-choosing="yes"] .k3-ctas,
+.k3-ward[data-choosing="yes"] .k3-sumrow { display: none; }
+
+.k3-ask { margin-top: 22px; }
+
+.k3-ask h3 {
+  font-size: 20px;
+  font-weight: 780;
+  letter-spacing: -0.015em;
+  margin: 0;
+}
+
+.k3-ask p {
+  color: var(--soft);
+  font-size: 13.5px;
+  margin: 8px 0 0;
+  max-width: 54ch;
+}
+
+.k3-ask .k3-pilltray { margin-top: 16px; }
+.k3-ask .k3-preset { font-size: 13.5px; padding: 8px 15px; }
+.k3-ask .k3-seeall { margin-top: 18px; }
+
 /* ---------- the mix bar: what is being counted, and the alternatives ------- */
 
 .k3-mixbar {

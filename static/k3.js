@@ -54,6 +54,10 @@
     openDomains: new Set(),
     detailFor: null,
     search: "",
+    // A rank means nothing until you know what it is a rank of, so opening a
+    // ward asks for a list before it shows one. Set by picking any list, by
+    // editing the measures, or by arriving on a link that already carries one.
+    mixChosen: false,
     presetName: null, // which starting point is loaded, for the highlighted pill
     peekOpen: null,
     picking: null,
@@ -261,6 +265,7 @@
       if (Object.keys(weights).length) {
         state.weights = weights;
         state.edited = true;
+        state.mixChosen = true; // a shared link already carries a choice
       }
     }
   }
@@ -540,6 +545,7 @@
     if (state.presetName === "Your list") return; // the custom chip is a label
     state.weights = { ...STARTER };
     state.edited = false;
+    state.mixChosen = true;
     state.presetName = null;
     state.lastShift = null;
     state.peekOpen = null;
@@ -548,7 +554,42 @@
     if (row) toast(`Starter set · ${wardName(state.wardId)} ranks ${ord(row.rank)} of 50`);
   }
 
+  // Before a list is picked there is no rank to show, only the question. The
+  // pills are the same ones that appear afterwards, so the control a visitor
+  // learns here is the one they keep using.
+  function renderChooser() {
+    const hoods = wardHoods(state.wardId);
+    el("k3-ward-head").innerHTML =
+      `<div class="k3-wardname">${esc(wardName(state.wardId))}` +
+      (hoods ? `<span>${esc(hoods)}</span>` : "") +
+      `</div>`;
+    el("k3-ward-hero").innerHTML =
+      `<div class="k3-ask"><h3>What should we measure it on?</h3>` +
+      `<p>Pick one to see where ${esc(wardName(state.wardId))} stands. You can switch ` +
+      `lists any time, and add or drop individual measures once you are in.</p>` +
+      `<div class="k3-pilltray">` +
+      `<button type="button" class="k3-preset" data-act="starter" ` +
+      `title="five everyday measures, ${esc(STARTER_SENTENCE)}">Starter set</button>` +
+      PRESETS.map(
+        (preset, index) =>
+          `<button type="button" class="k3-preset" data-act="preset" data-idx="${index}" ` +
+          `title="${esc(preset.tagline)}">${esc(preset.name)}</button>`,
+      ).join("") +
+      `</div>` +
+      `<button type="button" class="k3-seeall" data-act="open-list">` +
+      `Or build your own from everything we measure ›</button></div>`;
+    ["k3-field", "k3-peek", "k3-overtime"].forEach((id) => {
+      el(id).innerHTML = "";
+    });
+    el("k3-ward-mix").innerHTML = "";
+  }
+
   function renderWard() {
+    el("k3-ward").dataset.choosing = state.mixChosen ? "no" : "yes";
+    if (!state.mixChosen) {
+      renderChooser();
+      return;
+    }
     const row = scoreRow(state.wardId, state.weights);
     const hoods = wardHoods(state.wardId);
     el("k3-ward-head").innerHTML =
@@ -1116,6 +1157,7 @@
     if (!Object.keys(weights).length) return;
     state.weights = weights;
     state.edited = true;
+    state.mixChosen = true;
     state.presetName = preset.name;
     state.lastShift = null;
     state.peekOpen = null;
@@ -1220,6 +1262,7 @@
     if (removed) delete state.weights[metricId];
     else state.weights[metricId] = 1;
     state.edited = true;
+    state.mixChosen = true; // building a list by hand is a choice like any other
     state.presetName = null;
     state.lastShift = { metricId, from: consequence.from, to: consequence.to, removed };
     state.detailFor = null;
