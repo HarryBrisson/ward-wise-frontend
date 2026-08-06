@@ -422,20 +422,17 @@
 
   // ---------- view switching ----------
 
+  // Tapping the map while comparing swaps out the second ward, which is the
+  // obvious reading of that gesture. Anywhere else it opens the ward.
   function selectWard(wardId) {
     const id = pad(wardId);
-    if (state.picking === "b") {
+    if (state.view === "compare" && id !== pad(state.wardId)) {
       state.vsId = id;
-      state.picking = null;
-      state.view = "compare";
-    } else if (state.picking === "a") {
-      state.wardId = id;
-      state.picking = null;
-      state.view = "compare";
     } else {
       state.wardId = id;
-      state.view = "ward";
+      if (state.view !== "compare") state.view = "ward";
     }
+    state.peekOpen = null;
     render();
   }
 
@@ -505,6 +502,52 @@
 
   // ---------- state 2: their ward ----------
 
+  // Which set of measures the page is counting right now, by name. Every view
+  // that shows a rank shows this, because the rank is meaningless without it.
+  function activeMix() {
+    if (!state.edited) {
+      return { name: "Starter set", tagline: `five everyday measures, ${STARTER_SENTENCE}` };
+    }
+    const preset = PRESETS.find((p) => p.name === state.presetName);
+    return preset || { name: "Your list", tagline: "the measures you picked", custom: true };
+  }
+
+  // The starter set is a chip like any other, so getting back to it is one tap
+  // rather than a reload.
+  function mixTray(withEdit) {
+    const mix = activeMix();
+    const chip = (name, tagline, index) =>
+      `<button type="button" class="k3-preset${name === mix.name ? " on" : ""}" ` +
+      `data-act="${index === null ? "starter" : "preset"}"` +
+      `${index === null ? "" : ` data-idx="${index}"`} title="${esc(tagline)}">${esc(name)}</button>`;
+    return (
+      `<div class="k3-mixbar">` +
+      `<div class="k3-mixhead">Counting <b>${esc(mix.name)}</b>` +
+      `<span>${Object.keys(state.weights).length} measures</span></div>` +
+      (withEdit
+        ? `<button type="button" class="k3-linkbtn" data-act="open-list">edit this list ›</button>`
+        : "") +
+      `</div>` +
+      `<div class="k3-pilltray">` +
+      (mix.custom ? chip("Your list", "the measures you picked", null) : "") +
+      chip("Starter set", `five everyday measures, ${STARTER_SENTENCE}`, null) +
+      PRESETS.map((preset, index) => chip(preset.name, preset.tagline, index)).join("") +
+      `</div>`
+    );
+  }
+
+  function applyStarter() {
+    if (state.presetName === "Your list") return; // the custom chip is a label
+    state.weights = { ...STARTER };
+    state.edited = false;
+    state.presetName = null;
+    state.lastShift = null;
+    state.peekOpen = null;
+    render();
+    const row = state.wardId ? scoreRow(state.wardId, state.weights) : null;
+    if (row) toast(`Starter set · ${wardName(state.wardId)} ranks ${ord(row.rank)} of 50`);
+  }
+
   function renderWard() {
     const row = scoreRow(state.wardId, state.weights);
     const hoods = wardHoods(state.wardId);
@@ -523,21 +566,22 @@
       .filter((item) => item.metric && item.standing);
     const ahead = standings.filter((item) => item.standing.rank <= 25).length;
 
-    const mixNoun = state.edited
-      ? `the <b>${active.length} things on your list</b>`
-      : `the <b>starter set</b>, five everyday measures counted equally, ${STARTER_SENTENCE}. A starting point, not a verdict`;
+    const mix = activeMix();
     const missing = active.length - standings.length;
     el("k3-ward-hero").innerHTML =
       `<div class="k3-hero-big num${medalClass(row?.rank, "m-")}">${row ? ord(row.rank) : "?"}` +
       `<small>of 50 wards</small></div>` +
-      `<div class="k3-starter">on ${mixNoun}. ${esc(wardName(state.wardId))} is ahead of the ` +
-      `city median on ${ahead} of the ${standings.length}.` +
+      `<div class="k3-starter">on <b>${esc(mix.name)}</b>, ` +
+      `${esc(mix.tagline.charAt(0).toLowerCase() + mix.tagline.slice(1))}. ` +
+      `${esc(wardName(state.wardId))} is ahead of the city median on ${ahead} of the ` +
+      `${standings.length}.` +
       (missing > 0
         ? ` ${missing === 1 ? "One measure has" : `${missing} measures have`} no record for ` +
           `${yearLabel(state.year)}, so ${missing === 1 ? "it is" : "they are"} left out.`
         : "") +
       `</div>`;
 
+    el("k3-ward-mix").innerHTML = mixTray(true);
     renderField(row);
     renderPeek(standings);
     renderOverTime();
@@ -1052,6 +1096,9 @@
   // catalog at render time, so a missing measure degrades gracefully.
   const PRESETS = window.K3_PRESETS || [];
 
+  // Which wards share a border, precomputed by scripts/build_map_assets.py.
+  const NEIGHBORS = window.K3_NEIGHBORS || {};
+
   function applyPreset(preset) {
     if (!preset) return;
     const grid = data.years.get("latest") || {};
@@ -1102,17 +1149,8 @@
 
     let html = "";
     if (PRESETS.length) {
-      html +=
-        `<div class="k3-listhead"><b>Starting points</b> · tap one to load it</div>` +
-        `<div class="k3-pilltray">` +
-        PRESETS.map(
-          (preset, index) =>
-            `<button type="button" class="k3-preset${
-              preset.name === state.presetName ? " on" : ""
-            }" data-act="preset" data-idx="${index}" ` +
-            `title="${esc(preset.tagline)}">${esc(preset.name)}</button>`,
-        ).join("") +
-        `</div>`;
+      html += `<div class="k3-listhead"><b>Starting points</b> · tap one to load it</div>`;
+      html += mixTray(false);
     }
     html +=
       `<div class="k3-listhead"><b>On your list</b> · ${count} · tap a pill to remove it</div>` +
@@ -1202,22 +1240,81 @@
 
   // ---------- state 4: compare ----------
 
+  // Every ward, as a native dropdown. Native because it is one tap on a phone,
+  // keyboard-navigable for free, and needs no popup code of ours.
+  // Option labels stay short, because a closed select shows the selected
+  // option's own text and a long one truncates to nothing useful. The
+  // neighborhoods go on their own line underneath.
+  function wardSelect(side, selectedId) {
+    const options = data.wards
+      .map((ward) => {
+        const id = pad(ward.ward_id);
+        return `<option value="${id}"${id === selectedId ? " selected" : ""}>${esc(wardName(id))}</option>`;
+      })
+      .join("");
+    const hoods = wardHoods(selectedId);
+    return (
+      `<select class="k3-wardsel" data-side="${side}" ` +
+      `aria-label="Choose the ${side === "a" ? "first" : "second"} ward">${options}</select>` +
+      (hoods ? `<div class="hood">${esc(hoods)}</div>` : "")
+    );
+  }
+
+  // Comparisons worth one tap: who borders you, who is just ahead and just
+  // behind on this list, and who leads the city.
+  function quickPicks() {
+    const ranked = computeScores(state.weights);
+    const mine = ranked.find((r) => r.wardId === pad(state.wardId));
+    const picks = [];
+    const add = (wardId, label) => {
+      if (!wardId || wardId === pad(state.wardId) || picks.some((p) => p.id === wardId)) return;
+      picks.push({ id: wardId, label });
+    };
+    if (mine) {
+      const above = ranked.find((r) => r.rank === mine.rank - 1);
+      const below = ranked.find((r) => r.rank === mine.rank + 1);
+      if (above) add(above.wardId, `just ahead · ${ord(above.rank)}`);
+      if (below) add(below.wardId, `just behind · ${ord(below.rank)}`);
+    }
+    const leader = ranked.find((r) => r.rank === 1);
+    if (leader) add(leader.wardId, "city leader · 1st");
+    (NEIGHBORS[pad(state.wardId)] || []).forEach((id) => add(id, "next to you"));
+    return picks;
+  }
+
   function renderCompare() {
-    if (!state.vsId) {
-      state.vsId = state.wardId === "43" ? "44" : "43";
+    // Default to the ward one place ahead of yours, which is the comparison
+    // somebody actually wants, rather than a hardcoded pair.
+    if (!state.vsId || state.vsId === pad(state.wardId)) {
+      const ranked = computeScores(state.weights);
+      const mine = ranked.find((r) => r.wardId === pad(state.wardId));
+      const near = mine
+        ? ranked.find((r) => r.rank === mine.rank - 1) || ranked.find((r) => r.rank === mine.rank + 1)
+        : null;
+      state.vsId = near ? near.wardId : (NEIGHBORS[pad(state.wardId)] || ["01"])[0];
     }
     el("k3-back-num-2").textContent = Number(state.wardId);
     const a = scoreRow(state.wardId, state.weights);
     const b = scoreRow(state.vsId, state.weights);
     el("k3-vs").innerHTML =
+      mixTray(false) +
       `<div class="k3-vs">` +
-      `<div class="side a"><div class="wn">${esc(wardName(state.wardId))}</div>` +
-      `<div class="wr num">${a ? `${ord(a.rank)} of 50` : "no rank"}</div>` +
-      `<button type="button" class="sw" data-act="swap-a">${esc(wardHoods(state.wardId) || "")} · change</button></div>` +
-      `<span class="mid">VS</span>` +
-      `<div class="side b"><div class="wn">${esc(wardName(state.vsId))}</div>` +
-      `<div class="wr num">${b ? `${ord(b.rank)} of 50` : "no rank"}</div>` +
-      `<button type="button" class="sw" data-act="swap-b">${esc(wardHoods(state.vsId) || "")} · change</button></div>` +
+      `<div class="side a">${wardSelect("a", pad(state.wardId))}` +
+      `<div class="wr num">${a ? `${ord(a.rank)} of 50` : "no rank"}</div></div>` +
+      `<button type="button" class="k3-swapsides" data-act="flip" ` +
+      `title="Swap sides" aria-label="Swap the two wards">&#8646;</button>` +
+      `<div class="side b">${wardSelect("b", pad(state.vsId))}` +
+      `<div class="wr num">${b ? `${ord(b.rank)} of 50` : "no rank"}</div></div>` +
+      `</div>` +
+      `<div class="k3-quickpick"><span class="l">Or compare with</span>` +
+      quickPicks()
+        .map(
+          (pick) =>
+            `<button type="button" class="k3-qp${pick.id === pad(state.vsId) ? " on" : ""}" ` +
+            `data-act="pick-vs" data-ward="${pick.id}">${esc(wardName(pick.id))}` +
+            `<span>${esc(pick.label)}</span></button>`,
+        )
+        .join("") +
       `</div>`;
 
     const duels = Object.keys(state.weights)
@@ -1486,6 +1583,18 @@
       render();
     }
     if (act === "preset") applyPreset(PRESETS[Number(target.dataset.idx)]);
+    if (act === "starter") applyStarter();
+    if (act === "pick-vs") {
+      state.vsId = pad(target.dataset.ward);
+      render();
+    }
+    if (act === "flip") {
+      const held = state.wardId;
+      state.wardId = pad(state.vsId);
+      state.vsId = held;
+      state.peekOpen = null;
+      render();
+    }
     if (act === "rankbox") {
       state.peekOpen = state.peekOpen === target.dataset.metricbox ? null : target.dataset.metricbox;
       renderWard();
@@ -1511,18 +1620,28 @@
       else state.openDomains.add(domain);
       renderAddMore();
     }
-    if (act === "swap-a" || act === "swap-b") {
-      // reuse the landing picker rather than a blocking dialog: the next ward
-      // chosen lands in whichever compare slot asked for it
-      state.picking = act === "swap-a" ? "a" : "b";
-      state.view = "landing";
-      render();
-      el("k3-search").focus();
+  }
+
+  function onChange(event) {
+    const select = event.target.closest(".k3-wardsel");
+    if (!select) return;
+    const picked = pad(select.value);
+    // Choosing the ward that is already on the other side swaps the two rather
+    // than comparing a ward with itself.
+    if (select.dataset.side === "a") {
+      if (picked === pad(state.vsId)) state.vsId = state.wardId;
+      state.wardId = picked;
+    } else {
+      if (picked === pad(state.wardId)) state.wardId = state.vsId;
+      state.vsId = picked;
     }
+    state.peekOpen = null;
+    render();
   }
 
   function wire() {
     el("k3-app").addEventListener("click", onClick);
+    el("k3-app").addEventListener("change", onChange);
     el("k3-change-ward").addEventListener("click", () => {
       state.view = "landing";
       render();

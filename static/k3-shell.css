@@ -28,9 +28,21 @@
 .site-header .site-brand,
 .site-header .nav-link { color: var(--k3-ink); }
 
+/* The mark is now a self-contained SVG in the site's own violet, so it needs
+   no white plate, no border, and no crop box around it. */
 .site-header .brand-mark {
-  border: 1px solid var(--k3-hair);
+  background: none;
+  border: 0;
   box-shadow: none;
+  height: 34px;
+  overflow: visible;
+  width: 34px;
+}
+
+.site-header .brand-logo {
+  height: 34px;
+  transform: none;
+  width: 34px;
 }
 
 .site-header .brand-kicker { color: var(--k3-soft); }
@@ -503,18 +515,108 @@ body[data-page="about"] .about-progress-bar > * {
   height: 100%;
 }
 
+/* ---------- the catalog growth chart ---------- */
+
 body[data-page="about"] .about-metric-growth { margin-top: 18px; }
-body[data-page="about"] .about-growth-head { font-size: 13px; font-weight: 650; }
-body[data-page="about"] .about-growth-axis { color: var(--k3-soft); font-size: 10.5px; }
 
-/* the growth line takes its stroke from currentColor */
-body[data-page="about"] .about-sparkline { color: var(--k3-hue); }
-body[data-page="about"] .spark-band { fill: rgb(76 29 149 / 7%); }
+body[data-page="about"] .about-growth-head {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  justify-content: space-between;
+}
 
-/* Hover targets, not marks: under preserveAspectRatio="none" these circles
-   stretch into smears, so they stay invisible until pointed at. */
-body[data-page="about"] .spark-dot { fill: transparent; }
-body[data-page="about"] .spark-dot:hover { fill: var(--k3-hue); }
+body[data-page="about"] .about-growth-axis {
+  color: var(--k3-soft);
+  font-size: 11.5px;
+  margin-top: 8px;
+  max-width: 58ch;
+}
+
+body[data-page="about"] .about-growth-plot { margin-top: 14px; position: relative; }
+
+body[data-page="about"] .about-sparkline {
+  display: block;
+  height: auto;
+  overflow: visible;
+  width: 100%;
+}
+
+/* grid and axes stay recessive, they orient rather than compete */
+body[data-page="about"] .spark-grid { stroke: #eceef2; stroke-width: 1; }
+body[data-page="about"] .spark-tick { stroke: #f3f4f7; stroke-width: 1; }
+
+body[data-page="about"] .spark-ylab,
+body[data-page="about"] .spark-xlab {
+  fill: #9aa0ab;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+body[data-page="about"] .spark-area { fill: rgb(76 29 149 / 8%); }
+
+body[data-page="about"] .spark-line {
+  stroke: var(--k3-hue);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.5;
+}
+
+/* only the days that added a real batch carry a marker */
+body[data-page="about"] .spark-dot.is-add {
+  fill: #fff;
+  stroke: var(--k3-hue);
+  stroke-width: 2;
+}
+
+body[data-page="about"] .spark-now-halo { fill: #fff; }
+body[data-page="about"] .spark-now { fill: var(--k3-hue); }
+
+body[data-page="about"] .spark-nowlab {
+  fill: var(--k3-hue);
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+}
+
+/* crosshair on hover. SVG has no `hidden` attribute of its own, so the
+   attribute selector is what actually takes it off screen. */
+body[data-page="about"] .spark-cursor[hidden] { display: none; }
+
+body[data-page="about"] .spark-cursor-rule {
+  stroke: var(--k3-hue);
+  stroke-dasharray: 3 3;
+  stroke-width: 1;
+}
+
+body[data-page="about"] .spark-cursor-dot {
+  fill: var(--k3-hue);
+  stroke: #fff;
+  stroke-width: 2;
+}
+
+/* invisible hover targets spanning the plot height */
+body[data-page="about"] .spark-band { fill: transparent; }
+
+body[data-page="about"] .spark-tip {
+  background: var(--k3-ink);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 11.5px;
+  line-height: 1.4;
+  padding: 6px 10px;
+  pointer-events: none;
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 12px));
+  white-space: nowrap;
+  z-index: 3;
+}
+
+body[data-page="about"] .spark-tip.below { transform: translate(-50%, 14px); }
+body[data-page="about"] .spark-tip-date { color: rgb(255 255 255 / 62%); font-size: 10.5px; }
+body[data-page="about"] .spark-tip-head { font-weight: 650; }
+body[data-page="about"] .spark-tip-empty { color: rgb(255 255 255 / 72%); }
 
 body[data-page="about"] .about-metric-now { color: var(--k3-hue); font-weight: 700; }
 body[data-page="about"] .about-error { color: var(--k3-warm); font-size: 12.5px; }

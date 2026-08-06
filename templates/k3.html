@@ -43,6 +43,9 @@
       <section id="k3-ward" class="k3-ward k3-view" hidden aria-label="Your ward">
         <div id="k3-ward-head"></div>
         <div id="k3-ward-hero"></div>
+        <!-- which list the rank above is built from, and every other one, so
+             switching is a tap rather than a trip to another screen -->
+        <div id="k3-ward-mix"></div>
         <div id="k3-field"></div>
         <div class="k3-ctas">
           <button type="button" id="k3-open-list" class="k3-cta">Choose what matters</button>
@@ -93,7 +96,7 @@
           <!-- Ward outlines drawn from the first paint, so the box shows the
                shape of the city while the boundaries and tiles are still in
                flight. Traced from the same geometry the live map uses and
-               simplified to ~14KB; regenerate with scripts/build_outline.py. -->
+               simplified to ~14KB. Regenerate with scripts/build_map_assets.py. -->
           <div id="k3-mapskel" class="k3-mapskel" aria-hidden="true">
             {% include "_ward_outline.svg" %}
             <span class="k3-mapskel-note">Drawing Chicago&rsquo;s 50 wards&hellip;</span>
@@ -111,5 +114,6 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="{{ url_for('static', filename='common.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='k3-presets.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='ward-neighbors.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='k3.js', v=asset_version) }}"></script>
 {% endblock %}
