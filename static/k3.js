@@ -625,10 +625,14 @@
     ranked.forEach((r) => {
       const x = pct(r.score).toFixed(1);
       const me = r.wardId === state.wardId;
+      // Each line is a ward, so each line says which one on hover. SVG elements
+      // carry datasets and answer closest(), so the same delegated handler
+      // covers this chart and the compare strips.
       ticks +=
         `<line x1="${x}" y1="${me ? 8 : 22}" x2="${x}" y2="34" ` +
         `stroke="${me ? "#4c1d95" : tickColor(pct(r.score) / 100)}" ` +
         `stroke-width="${me ? 3 : 1.6}" vector-effect="non-scaling-stroke"` +
+        ` data-wardtick data-tip="${tipFor(r.wardId, r.rank, "on your list")}"` +
         `${me ? "" : ' opacity="0.85"'}/>`;
     });
 
@@ -653,7 +657,8 @@
       `<div class="k3-fieldlabels"><span class="lo">behind</span>` +
       `<span>every line is one ward</span><span class="hi">ahead</span></div>` +
       `<div class="k3-fieldcap">The hill shows where wards bunch up. ` +
-      `<b>${esc(wardName(state.wardId))} is the pinned line.</b></div></div>`;
+      `<b>${esc(wardName(state.wardId))} is the pinned line.</b> ` +
+      `Hover any line to see which ward it is.</div></div>`;
   }
 
   // one measure, all 50 wards on its real value scale, so closeness is
@@ -1347,24 +1352,51 @@
     }
     el("k3-verdict").innerHTML = `<div class="k3-verdict">${verdict}</div>`;
 
+    // The overall standing, drawn in exactly the same vocabulary as the
+    // per-measure strips below it and boxed, so it reads as the headline
+    // rather than as a bigger version of the same thing.
     const ranked = computeScores(state.weights);
     const scores = ranked.map((r) => r.score);
     const min = Math.min(...scores);
     const span = Math.max(1e-9, Math.max(...scores) - min);
-    const pct = (s) => ((s - min) / span) * 100;
-    let strip = `<svg viewBox="0 0 100 20" preserveAspectRatio="none">`;
-    ranked.forEach((r) => {
-      if (r.wardId === state.wardId || r.wardId === state.vsId) return;
-      strip += `<line x1="${pct(r.score).toFixed(1)}" y1="6" x2="${pct(r.score).toFixed(1)}" y2="20" stroke="#d5d8df" stroke-width="1.4" vector-effect="non-scaling-stroke"/>`;
-    });
-    if (b) strip += `<line x1="${pct(b.score).toFixed(1)}" y1="1" x2="${pct(b.score).toFixed(1)}" y2="20" stroke="#ea580c" stroke-width="3" vector-effect="non-scaling-stroke"/>`;
-    if (a) strip += `<line x1="${pct(a.score).toFixed(1)}" y1="1" x2="${pct(a.score).toFixed(1)}" y2="20" stroke="#5b21b6" stroke-width="3" vector-effect="non-scaling-stroke"/>`;
-    strip += `</svg>`;
+    const pct = (score) => (((score - min) / span) * 96 + 2);
+    const xa = a ? pct(a.score) : 0;
+    const xb = b ? pct(b.score) : 0;
+    const ticks = ranked
+      .map(
+        (row) =>
+          `<span class="k3-stick" style="left:${pct(row.score).toFixed(2)}%" ` +
+          `data-wardtick data-tip="${tipFor(row.wardId, row.rank, "on your list")}"></span>`,
+      )
+      .join("");
+    const crowded = Math.abs(xa - xb) < 13;
+    const push = crowded ? 7 : 0;
+    const aFirst = xa <= xb;
+    const clamp = (x) => Math.min(94, Math.max(6, x));
     el("k3-pairfield").innerHTML =
-      strip +
+      `<div class="k3-mainchart"><div class="k3-mainhead">Overall` +
+      `<span>every mark is one ward, placed by how it scores on your list</span></div>` +
+      `<div class="k3-stripviz">` +
+      (a
+        ? `<span class="k3-stag a num" style="left:${clamp(xa + (aFirst ? -push : push)).toFixed(2)}%">${ord(a.rank)}</span>`
+        : "") +
+      (b
+        ? `<span class="k3-stag b num" style="left:${clamp(xb + (aFirst ? push : -push)).toFixed(2)}%">${ord(b.rank)}</span>`
+        : "") +
+      `<span class="k3-sbase"></span>${ticks}` +
+      (a
+        ? `<span class="k3-spin a" style="left:${xa.toFixed(2)}%" data-wardtick ` +
+          `data-tip="${tipFor(state.wardId, a.rank, "on your list")}"></span>`
+        : "") +
+      (b
+        ? `<span class="k3-spin b" style="left:${xb.toFixed(2)}%" data-wardtick ` +
+          `data-tip="${tipFor(state.vsId, b.rank, "on your list")}"></span>`
+        : "") +
+      `</div>` +
+      `<div class="k3-stripends"><span>furthest behind</span><span>best in the city</span></div>` +
       `<div class="k3-pairkey"><span class="ka">▎ ${esc(wardName(state.wardId))}</span>` +
       `<span class="kb">▎ ${esc(wardName(state.vsId))}</span>` +
-      `<span>every thin line is another ward</span></div>`;
+      `<span>hover any mark for that ward</span></div></div>`;
 
     // One strip per measure: all 50 wards spread across that measure's real
     // scale with both wards pinned. Two bars mirrored from a centreline made
@@ -1379,24 +1411,40 @@
       .join("");
   }
 
-  // Every ward's value and score for one measure, plus the two we care about.
+  // Tooltip body for one mark. Stored on the element as an attribute, so the
+  // hover handler is a lookup rather than a re-render.
+  function tipFor(wardId, rank, detail) {
+    const hoods = wardHoods(wardId);
+    return esc(
+      `<b>${wardName(wardId)}</b>` +
+        `<span>${ord(rank)} of 50${detail ? ` · ${detail}` : ""}</span>` +
+        (hoods ? `<span class="h">${hoods}</span>` : ""),
+    );
+  }
+
+  // Every ward's value and score for one measure, carrying the ward id so each
+  // mark can say who it is.
   function fieldFor(metricId) {
-    const values = [];
+    const entries = [];
     let sa2 = null;
     let sb2 = null;
     Object.entries(cells()).forEach(([wid, wardCells]) => {
       const cell = wardCells[metricId];
       if (!cell) return;
-      values.push(cell.v);
+      entries.push({ wardId: wid, v: cell.v, s: cell.s });
       if (wid === pad(state.wardId)) sa2 = cell.s;
       if (wid === pad(state.vsId)) sb2 = cell.s;
     });
-    if (!values.length || sa2 === null || sb2 === null) return {};
-    return { values, sa2, sb2 };
+    if (!entries.length || sa2 === null || sb2 === null) return {};
+    entries.sort((p, q) => q.s - p.s);
+    entries.forEach((entry, index) => {
+      entry.rank = index + 1;
+    });
+    return { entries, values: entries.map((e) => e.v), sa2, sb2 };
   }
 
   function fieldStrip(duel) {
-    const { metric, sa, sb, values } = duel;
+    const { metric, sa, sb, values, entries } = duel;
     const vmin = Math.min(...values);
     const vmax = Math.max(...values);
     const span = Math.max(1e-9, vmax - vmin);
@@ -1407,12 +1455,19 @@
     const tied = Math.abs(xa - xb) < 1;
     // A tie would hide one pin completely under the other, so the two merge
     // into a single split marker instead of one silently disappearing.
+    const tipA = tipFor(state.wardId, sa.rank, api.formatMetricValue(sa.value, metric));
+    const tipB = tipFor(state.vsId, sb.rank, api.formatMetricValue(sb.value, metric));
     const pins = tied
-      ? `<span class="k3-spin tie" style="left:${((xa + xb) / 2).toFixed(2)}%"></span>`
-      : `<span class="k3-spin a" style="left:${xa.toFixed(2)}%"></span>` +
-        `<span class="k3-spin b" style="left:${xb.toFixed(2)}%"></span>`;
-    const ticks = values
-      .map((value) => `<span class="k3-stick" style="left:${X(value).toFixed(2)}%"></span>`)
+      ? `<span class="k3-spin tie" style="left:${((xa + xb) / 2).toFixed(2)}%" ` +
+        `data-wardtick data-tip="${tipA}"></span>`
+      : `<span class="k3-spin a" style="left:${xa.toFixed(2)}%" data-wardtick data-tip="${tipA}"></span>` +
+        `<span class="k3-spin b" style="left:${xb.toFixed(2)}%" data-wardtick data-tip="${tipB}"></span>`;
+    const ticks = entries
+      .map(
+        (entry) =>
+          `<span class="k3-stick" style="left:${X(entry.v).toFixed(2)}%" data-wardtick ` +
+          `data-tip="${tipFor(entry.wardId, entry.rank, api.formatMetricValue(entry.v, metric))}"></span>`,
+      )
       .join("");
     const close = Math.abs(xa - xb) < 2.5;
     const leader = sa.rank < sb.rank ? wardName(state.wardId) : wardName(state.vsId);
@@ -1704,9 +1759,62 @@
     render();
   }
 
+  // Hover any mark on any chart and it says which ward it is. One delegated
+  // handler over the whole app, because every chart marks its wards the same
+  // way, and the tooltip is fixed-positioned so no chart needs its own maths.
+  function wireTicks() {
+    const app = el("k3-app");
+    const tip = el("k3-tip");
+    let held = null;
+
+    function place(event) {
+      const box = tip.getBoundingClientRect();
+      const x = Math.min(window.innerWidth - box.width - 8, Math.max(8, event.clientX - box.width / 2));
+      // Flip below the cursor when there is no room above it.
+      const above = event.clientY - box.height - 14;
+      tip.style.left = `${x}px`;
+      tip.style.top = `${above > 8 ? above : event.clientY + 18}px`;
+    }
+
+    function open(mark, event) {
+      if (held === mark) return;
+      if (held) held.classList.remove("hot");
+      held = mark;
+      mark.classList.add("hot");
+      tip.innerHTML = mark.dataset.tip;
+      tip.hidden = false;
+      place(event);
+    }
+
+    function close() {
+      if (held) held.classList.remove("hot");
+      held = null;
+      tip.hidden = true;
+    }
+
+    app.addEventListener("pointerover", (event) => {
+      const mark = event.target.closest("[data-wardtick]");
+      if (mark) open(mark, event);
+    });
+    app.addEventListener("pointermove", (event) => {
+      if (!tip.hidden) place(event);
+    });
+    app.addEventListener("pointerout", (event) => {
+      if (event.target.closest("[data-wardtick]")) close();
+    });
+    // Touch has no hover, so a tap opens it and the next tap anywhere closes it.
+    app.addEventListener("pointerdown", (event) => {
+      const mark = event.target.closest("[data-wardtick]");
+      if (mark) open(mark, event);
+      else close();
+    });
+    window.addEventListener("scroll", close, { passive: true });
+  }
+
   function wire() {
     el("k3-app").addEventListener("click", onClick);
     el("k3-app").addEventListener("change", onChange);
+    wireTicks();
     el("k3-change-ward").addEventListener("click", () => {
       state.view = "landing";
       render();

@@ -987,21 +987,88 @@ button.k3-yearchip:hover:not(:disabled) { border-color: var(--hue-bright); }
 
 .k3-duelcap { color: var(--soft); font-size: 11.5px; margin-top: 16px; }
 
-/* pair field strip on compare */
-.k3-pairfield { margin-top: 20px; position: relative; }
-.k3-pairfield svg { display: block; height: 34px; width: 100%; }
+/* The overall standing. Same size and vocabulary as the measure strips, boxed
+   so it reads as the headline rather than as a bigger version of them. */
+.k3-pairfield { margin-top: 20px; }
+
+.k3-mainchart {
+  border: 1.5px solid var(--ink);
+  border-radius: 14px;
+  padding: 14px 16px 13px;
+}
+
+.k3-mainhead {
+  align-items: baseline;
+  color: var(--ink);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 11px;
+  font-weight: 700;
+  gap: 4px 10px;
+  justify-content: space-between;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.k3-mainhead span {
+  color: var(--soft);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
 
 .k3-pairkey {
   color: var(--soft);
   display: flex;
+  flex-wrap: wrap;
   font-size: 10.5px;
-  gap: 16px;
+  gap: 4px 16px;
   justify-content: center;
-  margin-top: 6px;
+  margin-top: 9px;
 }
 
 .k3-pairkey .ka { color: #5b21b6; font-weight: 700; }
 .k3-pairkey .kb { color: #c2410c; font-weight: 700; }
+
+/* ---------- hovering a ward mark ---------- */
+
+/* A 1.5px line is not a hit target, so every mark carries an invisible pad. */
+.k3-stick::before,
+.k3-spin::before {
+  content: "";
+  inset: -7px -6px;
+  position: absolute;
+}
+
+.k3-stick,
+.k3-spin { cursor: pointer; }
+.k3-stick.hot { background: var(--ink); width: 2.5px; }
+.k3-spin.hot { box-shadow: 0 0 0 2px #fff, 0 0 0 3.5px currentcolor; }
+.k3-spin.a.hot { color: var(--hue); }
+.k3-spin.b.hot { color: #c2410c; }
+
+/* the ward view's field chart marks its wards the same way */
+[data-wardtick] { cursor: pointer; }
+line[data-wardtick].hot { stroke: #17181c !important; stroke-width: 3.5 !important; opacity: 1 !important; }
+
+.k3-tip {
+  background: var(--ink);
+  border-radius: 9px;
+  color: #fff;
+  font-size: 12px;
+  left: 0;
+  line-height: 1.4;
+  padding: 7px 11px;
+  pointer-events: none;
+  position: fixed;
+  top: 0;
+  white-space: nowrap;
+  z-index: 1300;
+}
+
+.k3-tip b { display: block; font-size: 12.5px; font-weight: 700; }
+.k3-tip span { color: rgb(255 255 255 / 78%); display: block; font-size: 11px; }
+.k3-tip span.h { color: rgb(255 255 255 / 55%); font-size: 10.5px; }
 
 /* ---------- map ---------- */
 
