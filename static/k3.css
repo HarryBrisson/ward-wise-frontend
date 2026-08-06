@@ -906,21 +906,86 @@ button.k3-yearchip:hover:not(:disabled) { border-color: var(--hue-bright); }
 .k3-verdict .ca { color: #5b21b6; }
 .k3-verdict .cb { color: #c2410c; }
 
+/* ---------- compare: one strip per measure, on the real scale ---------- */
+
 .k3-duel { margin-top: 22px; }
-.k3-drow { margin-bottom: 13px; }
-.k3-dname { color: var(--soft); font-size: 11.5px; margin-bottom: 4px; text-align: center; }
-.k3-dbars { align-items: center; display: grid; grid-template-columns: 1fr 1fr; }
-.k3-dcell { align-items: center; display: flex; gap: 7px; }
-.k3-dcell.l { flex-direction: row-reverse; }
-.k3-dbar { border-radius: 99px; height: 15px; }
-.k3-dcell.l .k3-dbar { background: #5b21b6; border-right: 2px solid #fff; }
-.k3-dcell.r .k3-dbar { background: #ea580c; border-left: 2px solid #fff; }
-.k3-dbar.lose { opacity: 0.28; }
-.k3-dord { font-size: 12px; font-weight: 750; white-space: nowrap; }
-.k3-dord.win-a { color: #5b21b6; }
-.k3-dord.win-b { color: #c2410c; }
-.k3-dord.lose { color: var(--soft); font-weight: 550; }
-.k3-duelcap { color: var(--soft); font-size: 11.5px; margin-top: 12px; }
+.k3-strip { padding: 15px 0 17px; }
+.k3-strip + .k3-strip { border-top: 1px solid var(--hair); }
+
+.k3-striphead {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  justify-content: space-between;
+}
+
+.k3-striphead .nm { font-size: 13.5px; font-weight: 650; }
+.k3-striphead .dir { color: #a3a9b4; font-size: 10.5px; }
+
+.k3-stripviz { height: 30px; margin-top: 20px; position: relative; }
+
+.k3-sbase {
+  background: var(--hair);
+  bottom: 4px;
+  height: 1px;
+  left: 0;
+  position: absolute;
+  right: 0;
+}
+
+/* one thin mark per ward, placed by what it actually measures */
+.k3-stick {
+  background: #d5d8df;
+  bottom: 4px;
+  height: 13px;
+  position: absolute;
+  transform: translateX(-50%);
+  width: 1.5px;
+}
+
+.k3-spin {
+  border-radius: 1.5px;
+  bottom: 4px;
+  height: 24px;
+  position: absolute;
+  transform: translateX(-50%);
+  width: 3px;
+}
+
+.k3-spin.a { background: var(--hue); }
+.k3-spin.b { background: #ea580c; }
+
+/* identical values: one pin split down the middle, so neither ward vanishes */
+.k3-spin.tie {
+  background: linear-gradient(90deg, var(--hue) 0 50%, #ea580c 50% 100%);
+  width: 5px;
+}
+
+.k3-stag {
+  font-size: 10.5px;
+  font-weight: 750;
+  position: absolute;
+  top: -16px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.k3-stag.a { color: var(--hue); }
+.k3-stag.b { color: #c2410c; }
+
+.k3-stripends {
+  color: #a3a9b4;
+  display: flex;
+  font-size: 10px;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+.k3-stripcap { color: var(--soft); font-size: 11.5px; margin-top: 9px; }
+.k3-stripcap b { color: var(--ink); font-weight: 650; }
+
+.k3-duelcap { color: var(--soft); font-size: 11.5px; margin-top: 16px; }
 
 /* pair field strip on compare */
 .k3-pairfield { margin-top: 20px; position: relative; }

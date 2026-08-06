@@ -1366,21 +1366,86 @@
       `<span class="kb">▎ ${esc(wardName(state.vsId))}</span>` +
       `<span>every thin line is another ward</span></div>`;
 
-    const width = (rank) => (((50 - rank) / 49) * 88 + 8).toFixed(1);
+    // One strip per measure: all 50 wards spread across that measure's real
+    // scale with both wards pinned. Two bars mirrored from a centreline made
+    // you flip one in your head, and neither told you whether the gap was a
+    // chasm or a rounding error. A real scale cannot hide that.
     el("k3-duel").innerHTML = duels
-      .map((d) => {
-        const aLeads = d.sa.rank < d.sb.rank;
-        return (
-          `<div class="k3-drow"><div class="k3-dname">${esc(d.metric.label)}</div>` +
-          `<div class="k3-dbars">` +
-          `<div class="k3-dcell l"><span class="k3-dbar${aLeads ? "" : " lose"}" style="width:${width(d.sa.rank)}%"></span>` +
-          `<span class="k3-dord num${aLeads ? " win-a" : " lose"}${medalClass(d.sa.rank, "m-")}">${ord(d.sa.rank)}</span></div>` +
-          `<div class="k3-dcell r"><span class="k3-dbar${aLeads ? " lose" : ""}" style="width:${width(d.sb.rank)}%"></span>` +
-          `<span class="k3-dord num${aLeads ? " lose" : " win-b"}${medalClass(d.sb.rank, "m-")}">${ord(d.sb.rank)}</span></div>` +
-          `</div></div>`
-        );
-      })
+      .map((duel) => ({ ...duel, ...fieldFor(duel.metric.metric_id) }))
+      .filter((duel) => duel.values)
+      // biggest real difference first, so the chart leads with the finding
+      .sort((p, q) => Math.abs(q.sa2 - q.sb2) - Math.abs(p.sa2 - p.sb2))
+      .map(fieldStrip)
       .join("");
+  }
+
+  // Every ward's value and score for one measure, plus the two we care about.
+  function fieldFor(metricId) {
+    const values = [];
+    let sa2 = null;
+    let sb2 = null;
+    Object.entries(cells()).forEach(([wid, wardCells]) => {
+      const cell = wardCells[metricId];
+      if (!cell) return;
+      values.push(cell.v);
+      if (wid === pad(state.wardId)) sa2 = cell.s;
+      if (wid === pad(state.vsId)) sb2 = cell.s;
+    });
+    if (!values.length || sa2 === null || sb2 === null) return {};
+    return { values, sa2, sb2 };
+  }
+
+  function fieldStrip(duel) {
+    const { metric, sa, sb, values } = duel;
+    const vmin = Math.min(...values);
+    const vmax = Math.max(...values);
+    const span = Math.max(1e-9, vmax - vmin);
+    const X = (value) => ((value - vmin) / span) * 96 + 2;
+    const fmt = (value) => esc(api.formatMetricValue(value, metric));
+    const xa = X(sa.value);
+    const xb = X(sb.value);
+    const tied = Math.abs(xa - xb) < 1;
+    // A tie would hide one pin completely under the other, so the two merge
+    // into a single split marker instead of one silently disappearing.
+    const pins = tied
+      ? `<span class="k3-spin tie" style="left:${((xa + xb) / 2).toFixed(2)}%"></span>`
+      : `<span class="k3-spin a" style="left:${xa.toFixed(2)}%"></span>` +
+        `<span class="k3-spin b" style="left:${xb.toFixed(2)}%"></span>`;
+    const ticks = values
+      .map((value) => `<span class="k3-stick" style="left:${X(value).toFixed(2)}%"></span>`)
+      .join("");
+    const close = Math.abs(xa - xb) < 2.5;
+    const leader = sa.rank < sb.rank ? wardName(state.wardId) : wardName(state.vsId);
+    const best = Math.max(...values.map((v) => (metric.direction === "lower" ? -v : v)));
+    const bestValue = metric.direction === "lower" ? -best : best;
+    const caption = close
+      ? `<b>Effectively tied.</b> ${esc(leader)} is ahead on paper, ` +
+        `but the two sit almost on top of each other.`
+      : `<b>${esc(leader)} leads</b>, and the space between the two pins is the whole of it.`;
+    const bestWords =
+      bestValue !== sa.value && bestValue !== sb.value
+        ? ` The city&rsquo;s best is ${fmt(bestValue)}.`
+        : "";
+    // Labels shove apart when the two pins land close, each away from the
+    // other rather than in a fixed direction, since either ward can be on the
+    // left depending on the measure.
+    const crowded = Math.abs(xa - xb) < 13;
+    const push = crowded ? 7 : 0;
+    const aFirst = xa <= xb;
+    const la = Math.min(94, Math.max(6, xa + (aFirst ? -push : push)));
+    const lb = Math.min(94, Math.max(6, xb + (aFirst ? push : -push)));
+    return (
+      `<div class="k3-strip"><div class="k3-striphead">` +
+      `<span class="nm">${esc(metric.label)}</span>` +
+      `<span class="dir">${metric.direction === "lower" ? "lower is better" : "higher is better"}</span>` +
+      `</div><div class="k3-stripviz">` +
+      `<span class="k3-stag a num" style="left:${la.toFixed(2)}%">${fmt(sa.value)}</span>` +
+      `<span class="k3-stag b num" style="left:${lb.toFixed(2)}%">${fmt(sb.value)}</span>` +
+      `<span class="k3-sbase"></span>${ticks}${pins}</div>` +
+      `<div class="k3-stripends"><span class="num">${fmt(vmin)}</span>` +
+      `<span class="num">${fmt(vmax)}</span></div>` +
+      `<div class="k3-stripcap">${caption}${bestWords}</div></div>`
+    );
   }
 
   // ---------- address lookup ----------
