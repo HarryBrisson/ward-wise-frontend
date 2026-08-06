@@ -73,17 +73,26 @@ themselves; static assets are cache-busted by mtime.
 server.py               views + /api/* proxy
 templates/
   base.html             layout: header, nav, stylesheet
-  explorer.html         map view
+  k3.html               the explorer at / — four views, one map
+  explorer.html         the older map view, still at /classic
   dictionary.html       metric dictionary
   about.html            support page
+  _ward_outline.svg     50 ward paths, inlined so the map box is never blank
 static/
   common.js             WardWiseExplorer — the API client, formatters, shared year math
-  explorer.js           the map view (2,100 lines: Leaflet, choropleth, weights, modals)
-  metric_details.js     renders the dictionary
+  k3.js                 the explorer: scoring, ranks, time machine, compare
+  k3.css                the explorer's design system
+  k3-shell.css          the shared header, plus the Dictionary and Support pages
+  k3-presets.js         the starting-point lists, plain data
+  k3-dictionary.js      the metric dictionary: search, grouping, deep links
+  ward-neighbors.js     which wards border which, generated
+  explorer.js           the older map view (2,100 lines: Leaflet, choropleth, weights, modals)
+  metric_details.js     per-metric facts shared by the dictionary and /classic
   metric_icons.js       one inline SVG per metric
   about.js              support page
-  dictionary.js         dictionary deep-links
-  styles.css            everything
+  styles.css            everything the older view uses
+scripts/
+  build_map_assets.py   regenerates the map outline and the neighbor list
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) — including a list of good first issues.

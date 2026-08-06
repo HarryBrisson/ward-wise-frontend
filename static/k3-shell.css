@@ -163,243 +163,418 @@ body[data-page="about"] .panel section + section {
 
 /* ---------- Dictionary ---------- */
 
-body[data-page="dictionary"] .metrics-panel { padding: 26px 0; }
-body[data-page="dictionary"] .metric-domain-layout { display: block; }
+/* Rows carry a caption on the right, so the column is a little wider than the
+   Support page's reading measure. */
+body[data-page="dictionary"] .metrics-layout { max-width: 780px; }
 
-/* domain jump list: a pill tray, matching the explorer's measure pills */
-body[data-page="dictionary"] .metric-domain-toc {
+/* how a rank gets made, as a margin note rather than a card */
+body[data-page="dictionary"] .dict-note {
+  border-left: 2px solid var(--k3-hue-soft);
+  color: var(--k3-soft);
+  font-size: 12.5px;
+  margin: 22px 0 0;
+  max-width: 66ch;
+  padding: 2px 0 2px 14px;
+}
+
+/* ---------- the controls ---------- */
+
+/* Sticky, because opening Physical environment puts 34 rows between you and
+   the search box. */
+body[data-page="dictionary"] .dict-bar {
+  background: #fff;
+  border-bottom: 1px solid var(--k3-hair);
+  margin-top: 26px;
+  padding: 12px 0 11px;
+  position: sticky;
+  top: 0;
+  z-index: 6;
+}
+
+body[data-page="dictionary"] .dict-searchrow { position: relative; }
+
+body[data-page="dictionary"] #dict-search {
+  background: #fff;
+  border: 1px solid var(--k3-hair);
+  border-radius: 10px;
+  color: var(--k3-ink);
+  font: inherit;
+  font-size: 14.5px;
+  padding: 10px 62px 10px 13px;
+  width: 100%;
+}
+
+body[data-page="dictionary"] #dict-search:focus {
+  border-color: var(--k3-hue-bright);
+  box-shadow: 0 0 0 3px var(--k3-hue-soft);
+  outline: none;
+}
+
+body[data-page="dictionary"] #dict-search::placeholder { color: #9aa1ad; }
+
+body[data-page="dictionary"] #dict-clear {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+body[data-page="dictionary"] .dict-linkbtn {
+  background: none;
   border: 0;
+  color: var(--k3-hue-bright);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  padding: 0;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 3px;
+}
+
+body[data-page="dictionary"] .dict-linkbtn:hover { color: var(--k3-hue); }
+
+body[data-page="dictionary"] .dict-knobs {
   display: flex;
   flex-wrap: wrap;
-  gap: 7px;
-  margin: 0 0 30px;
-  padding: 0;
-  position: static;
+  gap: 6px 20px;
+  margin-top: 10px;
 }
 
-body[data-page="dictionary"] .metric-domain-toc .eyebrow {
-  flex: 0 0 100%;
-  margin-bottom: 2px;
-}
-
-body[data-page="dictionary"] .metric-domain-toc-link {
+body[data-page="dictionary"] .dict-knob {
   align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+body[data-page="dictionary"] .dict-knoblab {
+  color: var(--k3-soft);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  margin-right: 2px;
+  text-transform: uppercase;
+}
+
+body[data-page="dictionary"] .dict-knob button {
   background: #fff;
-  border: 1.5px solid var(--k3-hair);
+  border: 1px solid var(--k3-hair);
   border-radius: 99px;
-  color: var(--k3-ink);
-  display: inline-flex;
+  color: var(--k3-soft);
+  cursor: pointer;
+  font: inherit;
   font-size: 12.5px;
   font-weight: 650;
-  gap: 6px;
-  padding: 6px 12px;
-  text-decoration: none;
-  transition: border-color 0.14s ease;
+  padding: 4px 11px;
+  transition: color 0.14s ease, border-color 0.14s ease, background-color 0.14s ease;
 }
 
-body[data-page="dictionary"] .metric-domain-toc-link:hover { border-color: var(--k3-hue-bright); }
+body[data-page="dictionary"] .dict-knob button:hover {
+  border-color: var(--k3-hue-bright);
+  color: var(--k3-ink);
+}
 
-body[data-page="dictionary"] .metric-domain-toc-link strong {
+body[data-page="dictionary"] .dict-knob button.is-on {
+  background: var(--k3-hue-soft);
+  border-color: transparent;
+  color: var(--k3-hue);
+}
+
+body[data-page="dictionary"] .dict-tally {
+  align-items: baseline;
   color: var(--k3-soft);
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
+  display: flex;
+  font-size: 12px;
+  justify-content: space-between;
+  margin: 13px 0 2px;
 }
 
-body[data-page="dictionary"] .metric-domain-panel {
-  background: none;
-  border: 0;
-  border-radius: 0;
-  box-shadow: none;
-  padding: 0;
-  scroll-margin-top: 18px;
-}
+/* ---------- groups ---------- */
 
-body[data-page="dictionary"] .metric-domain-panel + .metric-domain-panel { margin-top: 34px; }
+body[data-page="dictionary"] .dict-group { border-top: 1px solid var(--k3-hair); }
+body[data-page="dictionary"] .dict-group:last-child { border-bottom: 1px solid var(--k3-hair); }
 
-body[data-page="dictionary"] .metric-domain-heading {
-  border-bottom: 2px solid var(--k3-ink);
-  padding-bottom: 10px;
-}
-
-body[data-page="dictionary"] .metric-domain-heading h4 {
-  font-size: 18px;
-  font-weight: 780;
-  letter-spacing: -0.01em;
-  margin: 0;
-}
-
-body[data-page="dictionary"] .metric-domain-heading p {
-  color: var(--k3-soft);
-  font-size: 13px;
-  margin: 6px 0 0;
-  max-width: 62ch;
-}
-
-body[data-page="dictionary"] .transparency-meta {
-  color: var(--k3-soft);
-  font-size: 11.5px;
-}
-
-body[data-page="dictionary"] .metric-definition-list { display: block; }
-
-/* one measure per hairline row; the definition opens in place */
-body[data-page="dictionary"] .metric-definition-card {
-  background: none;
-  border: 0;
-  border-bottom: 1px solid var(--k3-hair);
-  border-radius: 0;
-  box-shadow: none;
-  padding: 0;
-}
-
-body[data-page="dictionary"] .metric-definition-summary {
+body[data-page="dictionary"] .dict-group > summary {
+  align-items: baseline;
   cursor: pointer;
-  display: block;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
   list-style: none;
-  padding: 12px 26px 12px 2px;
+  padding: 15px 24px 15px 0;
   position: relative;
 }
 
-body[data-page="dictionary"] .metric-definition-summary::-webkit-details-marker { display: none; }
+body[data-page="dictionary"] .dict-group > summary::-webkit-details-marker { display: none; }
 
-body[data-page="dictionary"] .metric-definition-summary::after {
+body[data-page="dictionary"] .dict-group > summary::after {
   color: var(--k3-soft);
   content: "\203A";
-  font-size: 17px;
+  font-size: 18px;
   line-height: 1;
   position: absolute;
-  right: 4px;
-  top: 13px;
+  right: 2px;
+  top: 16px;
   transition: transform 0.16s ease;
 }
 
-body[data-page="dictionary"] .metric-definition-card[open] .metric-definition-summary::after {
-  transform: rotate(90deg);
+body[data-page="dictionary"] .dict-group[open] > summary::after { transform: rotate(90deg); }
+
+body[data-page="dictionary"] .dict-group > summary:hover .dict-grouptitle { color: var(--k3-hue-bright); }
+
+body[data-page="dictionary"] .dict-groupmain { display: block; }
+
+body[data-page="dictionary"] .dict-grouptitle {
+  display: block;
+  font-size: 16px;
+  font-weight: 750;
+  letter-spacing: -0.01em;
 }
 
-body[data-page="dictionary"] .metric-definition-summary:hover .metric-definition-title { color: var(--k3-hue-bright); }
+body[data-page="dictionary"] .dict-groupblurb {
+  color: var(--k3-soft);
+  display: block;
+  font-size: 12.5px;
+  margin-top: 3px;
+  max-width: 60ch;
+}
 
-body[data-page="dictionary"] .metric-definition-heading {
-  align-items: center;
+body[data-page="dictionary"] .dict-groupcount {
+  background: #f4f5f8;
+  border-radius: 99px;
+  color: #5d6472;
+  flex: none;
+  font-size: 11.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  padding: 3px 9px;
+}
+
+body[data-page="dictionary"] .dict-group[open] .dict-groupcount {
+  background: var(--k3-hue-soft);
+  color: var(--k3-hue);
+}
+
+body[data-page="dictionary"] .dict-rows {
+  border-top: 1px solid var(--k3-hair);
+  margin: 0 0 6px;
+  padding-left: 2px;
+}
+
+/* ---------- one measure per row ---------- */
+
+body[data-page="dictionary"] .dict-row + .dict-row { border-top: 1px solid #f3f4f7; }
+
+body[data-page="dictionary"] .dict-row > summary {
+  align-items: baseline;
+  cursor: pointer;
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  gap: 14px;
+  justify-content: space-between;
+  list-style: none;
+  padding: 11px 22px 11px 0;
+  position: relative;
 }
 
-body[data-page="dictionary"] .metric-definition-title {
+body[data-page="dictionary"] .dict-row > summary::-webkit-details-marker { display: none; }
+
+body[data-page="dictionary"] .dict-row > summary::after {
+  color: #b6bcc7;
+  content: "\203A";
+  font-size: 15px;
+  line-height: 1;
+  position: absolute;
+  right: 4px;
+  top: 12px;
+  transition: transform 0.16s ease;
+}
+
+body[data-page="dictionary"] .dict-row[open] > summary::after { transform: rotate(90deg); }
+
+body[data-page="dictionary"] .dict-row > summary:hover .dict-rowname { color: var(--k3-hue-bright); }
+
+body[data-page="dictionary"] .dict-rowmain { display: block; min-width: 0; }
+
+body[data-page="dictionary"] .dict-rowname {
+  display: block;
   font-size: 14px;
   font-weight: 700;
 }
 
-/* Data status stays a status color, just quieter and on the K3 type scale.
-   Populated is the common case, so it reads as neutral rather than a win. */
-body[data-page="dictionary"] .metric-status-badge {
-  border: 0;
-  border-radius: 99px;
-  font-size: 9.5px;
-  font-weight: 700;
-  letter-spacing: 0.07em;
-  padding: 2px 8px;
-  text-transform: uppercase;
-}
-
-body[data-page="dictionary"] .metric-status-badge.is-populated {
-  background: #f1f3f6;
-  color: #5d6472;
-}
-
-body[data-page="dictionary"] .metric-status-badge.is-partially_populated {
-  background: #fdf3e6;
-  color: #8a5a1c;
-}
-
-body[data-page="dictionary"] .metric-status-badge.is-source_pending,
-body[data-page="dictionary"] .metric-status-badge.is-source_unavailable,
-body[data-page="dictionary"] .metric-status-badge.is-ingestion_not_implemented,
-body[data-page="dictionary"] .metric-status-badge.is-zero_records_observed {
-  background: #fdeee7;
-  color: var(--k3-warm);
-}
-
-body[data-page="dictionary"] .metric-definition-summary > span:last-child {
+body[data-page="dictionary"] .dict-rowdesc {
   color: var(--k3-soft);
   display: block;
   font-size: 12.5px;
   margin-top: 2px;
+  max-width: 62ch;
+}
+
+body[data-page="dictionary"] .dict-rowside {
+  align-items: center;
+  display: flex;
+  flex: none;
+  gap: 7px;
+}
+
+body[data-page="dictionary"] .dict-rowfam {
+  color: #99a0ac;
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+/* Only the exceptions are badged: the eleven measures that do not reach all
+   fifty wards. A chip on the other 160 would say nothing. */
+body[data-page="dictionary"] .dict-gap {
+  background: #fdf3e6;
+  border-radius: 99px;
+  color: #8a5a1c;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+
+body[data-page="dictionary"] .dict-row mark {
+  background: #fbf0c4;
+  border-radius: 2px;
+  color: inherit;
+  padding: 0 1px;
+}
+
+body[data-page="dictionary"] .dict-row.is-found {
+  animation: dict-flash 2.2s ease;
+}
+
+@keyframes dict-flash {
+  0%, 55% { background: #fbf6dd; }
+  100% { background: transparent; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body[data-page="dictionary"] .dict-row.is-found { animation: none; }
+  body[data-page="dictionary"] .dict-group > summary::after,
+  body[data-page="dictionary"] .dict-row > summary::after { transition: none; }
+}
+
+/* ---------- the opened entry ---------- */
+
+/* A left rule ties the opened entry to the row it came from, which matters
+   when it opens in the middle of thirty other rows. */
+body[data-page="dictionary"] .dict-body {
+  border-left: 2px solid var(--k3-hue-soft);
+  margin: 0 0 4px;
+  padding: 3px 0 17px 14px;
+}
+
+body[data-page="dictionary"] .dict-body p {
+  color: var(--k3-soft);
+  font-size: 13px;
+  margin: 0 0 9px;
   max-width: 66ch;
 }
 
-body[data-page="dictionary"] .metric-definition-body {
-  border-left: 2px solid var(--k3-hue-soft);
-  margin: 0 0 14px;
-  padding: 2px 0 2px 14px;
-}
+body[data-page="dictionary"] .dict-body b { color: var(--k3-ink); font-weight: 700; }
 
-body[data-page="dictionary"] .metric-definition-body p {
-  color: var(--k3-soft);
-  font-size: 12.5px;
-  margin: 0 0 8px;
-}
-
-body[data-page="dictionary"] .metric-definition-body strong { color: var(--k3-ink); font-weight: 650; }
-
-body[data-page="dictionary"] .metric-definition-meta {
+body[data-page="dictionary"] .dict-meta {
+  border-top: 1px solid var(--k3-hair);
   display: grid;
-  gap: 10px 20px;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  margin: 10px 0 0;
+  gap: 10px 22px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  margin: 12px 0 0;
+  padding-top: 12px;
 }
 
-body[data-page="dictionary"] .metric-definition-meta dt {
+body[data-page="dictionary"] .dict-meta dt {
   color: var(--k3-soft);
   font-size: 10.5px;
   font-weight: 700;
   letter-spacing: 0.08em;
+  margin: 0 0 2px;
   text-transform: uppercase;
 }
 
-body[data-page="dictionary"] .metric-definition-meta dd {
+body[data-page="dictionary"] .dict-meta dd {
+  color: var(--k3-ink);
   font-size: 12.5px;
-  margin: 2px 0 0;
+  margin: 0;
 }
 
-body[data-page="dictionary"] .metric-technical-details {
-  border-top: 1px solid var(--k3-hair);
-  margin-top: 12px;
-  padding-top: 8px;
+body[data-page="dictionary"] .dict-meta code {
+  background: #f4f5f8;
+  border-radius: 4px;
+  color: #4b525f;
+  font-size: 11.5px;
+  padding: 1px 5px;
 }
 
-body[data-page="dictionary"] .metric-technical-details summary {
-  color: var(--k3-hue-bright);
-  cursor: pointer;
+body[data-page="dictionary"] .dict-inlists {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 4px 0 2px;
+}
+
+/* Deliberately not the uppercase eyebrow the meta grid uses, so this reads as
+   a sentence about the measure rather than one more field. */
+body[data-page="dictionary"] .dict-inlists span {
+  color: var(--k3-soft);
+  font-size: 12.5px;
+}
+
+body[data-page="dictionary"] .dict-chip {
+  background: var(--k3-hue-soft);
+  border-radius: 99px;
+  color: var(--k3-hue);
   font-size: 12px;
   font-weight: 650;
+  padding: 3px 10px;
+  text-decoration: none;
 }
 
-/* the "how the composite works" preamble: a margin note, not a card */
-body[data-page="dictionary"] section.calculation-note {
-  background: none;
-  border: 0;
-  border-left: 2px solid var(--k3-hue-soft);
-  border-radius: 0;
-  box-shadow: none;
-  margin: 22px 0 0;
-  padding: 2px 0 2px 14px;
-}
+body[data-page="dictionary"] .dict-chip:hover { background: #e4dcfa; }
 
-body[data-page="dictionary"] section.calculation-note p {
-  color: var(--k3-soft);
-  font-size: 12.5px;
-  margin: 0 0 7px;
-  max-width: 62ch;
-}
-
-body[data-page="dictionary"] section.calculation-note p:last-child { margin-bottom: 0; }
-
-body[data-page="dictionary"] .metric-nominator-attribution {
+body[data-page="dictionary"] .dict-nom {
   color: var(--k3-soft);
   font-size: 11.5px;
+  margin-top: 11px;
+}
+
+body[data-page="dictionary"] .dict-jump { margin: 18px 0 0; }
+
+body[data-page="dictionary"] .dict-jump a {
+  font-size: 12.5px;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+body[data-page="dictionary"] .dict-jump a:hover { text-decoration: underline; }
+
+body[data-page="dictionary"] .dict-empty {
+  color: var(--k3-soft);
+  font-size: 13.5px;
+  padding: 28px 0;
+}
+
+body[data-page="dictionary"] .dict-empty b { color: var(--k3-ink); }
+
+@media (max-width: 620px) {
+  /* Six pills wrapping onto three lines would put a 150px bar above every
+     screen of a phone. One scrolling line keeps the labels and the height. */
+  body[data-page="dictionary"] .dict-knobs {
+    flex-wrap: nowrap;
+    gap: 16px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  body[data-page="dictionary"] .dict-knobs::-webkit-scrollbar { display: none; }
+  body[data-page="dictionary"] .dict-knob { flex: none; flex-wrap: nowrap; }
+  body[data-page="dictionary"] .dict-knob button { white-space: nowrap; }
+  body[data-page="dictionary"] .dict-rowfam { display: none; }
+  body[data-page="dictionary"] .dict-groupblurb { max-width: none; }
+  body[data-page="dictionary"] .dict-meta { gap: 10px 16px; }
 }
 
 /* ---------- Support ---------- */
