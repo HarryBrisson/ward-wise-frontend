@@ -1,0 +1,1359 @@
+/* K3: the sequenced explorer. One column, one hue, hairline dividers.
+   Ink, two grays, violet. Orange appears only where it means "behind".
+
+   The shared header now lives in k3-shell.css so all four routes match. */
+
+.k3-page {
+  --ink: #17181c;
+  --soft: #6f7683;
+  --hair: #e9ebef;
+  --hue: #4c1d95;
+  --hue-bright: #5b21b6;
+  --hue-soft: #efeafb;
+  --warm: #c2410c;
+  background: #fff;
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 1.55;
+  min-height: 100vh;
+}
+
+.k3-app {
+  margin: 0 auto;
+  max-width: 720px;
+  padding: 0 clamp(16px, 4vw, 28px) 56px;
+}
+
+.k3-app .num { font-variant-numeric: tabular-nums; }
+
+.k3-linkbtn {
+  background: none;
+  border: 0;
+  color: var(--hue-bright);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  padding: 0;
+}
+
+.k3-context {
+  border-bottom: 1px solid var(--hair);
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  padding: 12px 0;
+}
+
+/* display:flex beats the hidden attribute, so say it explicitly */
+.k3-context[hidden],
+.k3-app [hidden] { display: none; }
+
+.k3-context-ward { font-size: 13px; font-weight: 650; }
+
+/* ---------- landing ---------- */
+
+.k3-landing { padding: 56px 0 30px; text-align: center; }
+
+.k3-landing h1 {
+  font-size: clamp(26px, 4vw, 33px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  margin: 0 auto;
+  max-width: 22ch;
+}
+
+.k3-sub {
+  color: var(--soft);
+  font-size: 14.5px;
+  margin: 12px 0 0;
+  max-width: 48ch;
+}
+
+.k3-landing .k3-sub { margin-left: auto; margin-right: auto; }
+
+.k3-bigsearch {
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+  display: flex;
+  margin: 26px auto 0;
+  max-width: 460px;
+  overflow: hidden;
+}
+
+.k3-bigsearch input {
+  border: 0;
+  flex: 1;
+  font: inherit;
+  font-size: 15px;
+  min-width: 0;
+  outline-offset: -2px;
+  padding: 13px 16px;
+}
+
+.k3-bigsearch button {
+  background: var(--hue-bright);
+  border: 0;
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 13px 18px;
+}
+
+.k3-search-results {
+  background: #fff;
+  border: 1px solid var(--hair);
+  border-radius: 10px;
+  box-shadow: 0 12px 30px rgb(20 20 30 / 10%);
+  margin: 8px auto 0;
+  max-width: 460px;
+  text-align: left;
+}
+
+.k3-search-results button {
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--hair);
+  cursor: pointer;
+  display: block;
+  font: inherit;
+  font-size: 14px;
+  padding: 10px 14px;
+  text-align: left;
+  width: 100%;
+}
+
+.k3-search-results button:last-child { border-bottom: 0; }
+.k3-search-results button:hover,
+.k3-search-results button:focus-visible { background: var(--hue-soft); }
+.k3-search-results .hood { color: var(--soft); font-size: 12px; margin-left: 8px; }
+
+.k3-quiet { color: var(--soft); font-size: 12px; margin-top: 10px; }
+.k3-or { color: var(--soft); font-size: 12px; margin: 26px 0 4px; }
+
+/* ---------- ward view ---------- */
+
+.k3-ward { padding-top: 26px; }
+
+.k3-wardname { font-size: 23px; font-weight: 800; letter-spacing: -0.015em; }
+.k3-wardname span { color: var(--soft); font-size: 14px; font-weight: 500; margin-left: 9px; }
+
+.k3-hero-big {
+  font-size: 40px;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.05;
+  margin-top: 16px;
+}
+
+.k3-hero-big small {
+  color: var(--soft);
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: 0;
+  margin-left: 10px;
+}
+
+.k3-starter {
+  color: var(--soft);
+  font-size: 13.5px;
+  line-height: 1.6;
+  margin-top: 10px;
+  max-width: 58ch;
+}
+
+.k3-starter b { color: var(--ink); font-weight: 650; }
+
+/* the field: density hill + colored ticks + you-pin */
+.k3-field { margin-top: 24px; }
+.k3-fieldviz { position: relative; }
+.k3-fieldviz svg { display: block; height: 74px; width: 100%; }
+
+.k3-youpin {
+  background: var(--hue);
+  border-radius: 99px;
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 750;
+  padding: 2px 9px;
+  position: absolute;
+  top: -4px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.k3-youpin::after {
+  border-left: 1.5px solid var(--hue);
+  content: "";
+  height: 58px;
+  left: 50%;
+  position: absolute;
+  top: 100%;
+}
+
+.k3-medflag {
+  bottom: -16px;
+  color: var(--soft);
+  font-size: 9.5px;
+  position: absolute;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.k3-fieldlabels {
+  color: var(--soft);
+  display: flex;
+  font-size: 10.5px;
+  justify-content: space-between;
+  margin-top: 22px;
+}
+
+.k3-fieldlabels .lo { color: var(--warm); font-weight: 650; }
+.k3-fieldlabels .hi { color: var(--hue); font-weight: 650; }
+
+.k3-fieldcap { color: var(--soft); font-size: 11.5px; margin-top: 7px; }
+.k3-fieldcap b { color: var(--hue); font-weight: 700; }
+
+.k3-ctas { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
+
+.k3-cta {
+  background: #fff;
+  border: 1.5px solid var(--hue-bright);
+  border-radius: 99px;
+  color: var(--hue-bright);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 700;
+  padding: 9px 18px;
+}
+
+.k3-cta.ghost { border-color: var(--hair); color: var(--soft); font-weight: 600; }
+
+/* strongest / weakest rows with position rails */
+.k3-peekhead {
+  color: var(--soft);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  margin: 22px 0 2px;
+  text-transform: uppercase;
+}
+
+.k3-mrow {
+  align-items: center;
+  border-bottom: 1px solid var(--hair);
+  display: grid;
+  gap: 0 14px;
+  grid-template-columns: 1fr auto 64px;
+  padding: 10px 2px;
+}
+
+.k3-mrow .nm { font-size: 13.5px; }
+.k3-mrow .val { color: var(--soft); font-size: 12.5px; text-align: right; white-space: nowrap; }
+.k3-mrow .rk { font-size: 13px; font-weight: 700; text-align: right; white-space: nowrap; }
+
+.k3-rail {
+  background: var(--hair);
+  border-radius: 99px;
+  grid-column: 1 / -1;
+  height: 4px;
+  margin-top: 7px;
+  position: relative;
+}
+
+.k3-rail .medt {
+  background: #9aa0ab;
+  height: 10px;
+  left: 50%;
+  position: absolute;
+  top: -3px;
+  width: 1.5px;
+}
+
+.k3-rail .pt {
+  background: var(--hue);
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1.5px var(--hue);
+  height: 11px;
+  position: absolute;
+  top: -3.5px;
+  transform: translateX(-50%);
+  width: 11px;
+}
+
+.k3-railends {
+  color: var(--soft);
+  display: flex;
+  font-size: 9.5px;
+  grid-column: 1 / -1;
+  justify-content: space-between;
+  margin-top: 3px;
+}
+
+.k3-seeall {
+  background: #fff;
+  border: 1.5px solid var(--hair);
+  border-radius: 10px;
+  color: var(--hue-bright);
+  cursor: pointer;
+  display: block;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  margin-top: 14px;
+  padding: 11px 16px;
+  text-align: center;
+  width: 100%;
+}
+
+.k3-seeall:hover { border-color: var(--hue-bright); }
+
+/* ---------- over time: the rank trajectory and its controls ---------- */
+
+.k3-timehead {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.k3-spans { display: flex; flex-wrap: wrap; gap: 4px; }
+
+.k3-span {
+  background: none;
+  border: 1.5px solid var(--hair);
+  border-radius: 99px;
+  color: var(--soft);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 650;
+  padding: 4px 11px;
+  transition: border-color 0.14s ease, color 0.14s ease;
+}
+
+.k3-span:hover { border-color: var(--hue-bright); color: var(--ink); }
+
+.k3-span.on {
+  background: var(--hue-soft);
+  border-color: transparent;
+  color: var(--hue);
+}
+
+.k3-rankrec { margin-top: 8px; position: relative; }
+.k3-rankrec svg { display: block; height: 118px; width: 100%; }
+.k3-rr-ylab { color: var(--soft); font-size: 9.5px; left: 0; position: absolute; }
+
+/* while the first years are still in flight */
+.k3-rankrec.loading {
+  background:
+    linear-gradient(90deg, #f4f5f8 25%, #eceef3 37%, #f4f5f8 63%) 0 0 / 400% 100%;
+  border-radius: 10px;
+  height: 118px;
+  animation: k3-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes k3-shimmer {
+  from { background-position: 100% 0; }
+  to { background-position: 0 0; }
+}
+
+/* one chip per sampled year: the year on top, the rank it produced below */
+.k3-yearchips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 12px;
+}
+
+.k3-yearchip {
+  background: #fff;
+  border: 1.5px solid var(--hair);
+  border-radius: 9px;
+  cursor: pointer;
+  font: inherit;
+  min-width: 52px;
+  padding: 5px 8px 6px;
+  text-align: center;
+  transition: border-color 0.14s ease;
+}
+
+.k3-yearchip .yr {
+  color: var(--soft);
+  display: block;
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.k3-yearchip .rk {
+  display: block;
+  font-size: 14px;
+  font-weight: 780;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+/* how many of your measures that year actually had, spelled out under every
+   rank, because coverage grew over the span and the rank moves with it */
+.k3-yearchip .cv {
+  color: #a3a9b4;
+  display: block;
+  font-size: 9px;
+  letter-spacing: 0.01em;
+  line-height: 1.3;
+}
+
+button.k3-yearchip:hover:not(:disabled) { border-color: var(--hue-bright); }
+.k3-yearchip.on { border-color: var(--hue-bright); box-shadow: 0 0 0 1px var(--hue-bright); }
+.k3-yearchip:disabled { cursor: default; }
+.k3-yearchip.pending .rk { color: #c3c8d1; letter-spacing: 0.08em; }
+
+/* a collapsed run of years that never carried enough of the list to rank */
+.k3-yearchip.empty {
+  background: #fafbfc;
+  border-style: dashed;
+  display: block;
+}
+
+.k3-yearchip.empty .rk { color: #c3c8d1; font-size: 13px; }
+.k3-yearchip.empty .cv { color: #b6bcc6; }
+
+/* the "you are reading 2011, not today" banner */
+.k3-timenote {
+  align-items: baseline;
+  background: #fdf6ec;
+  border-radius: 8px;
+  color: #7c4318;
+  display: flex;
+  font-size: 12.5px;
+  font-weight: 650;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 7px 12px;
+}
+
+.k3-timenote button {
+  background: none;
+  border: 0;
+  color: #7c4318;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 750;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.k3-trendcap { color: var(--soft); font-size: 11.5px; margin-top: 10px; }
+.k3-trendcap b { color: var(--ink); font-weight: 650; }
+
+.k3-multis {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, 1fr);
+  margin-top: 30px;
+}
+
+.k3-multi { border-top: 2px solid var(--hair); padding-top: 8px; }
+.k3-multi.mine { border-top-color: var(--hue); }
+.k3-multi h6 { font-size: 11.5px; font-weight: 700; margin: 0; }
+.k3-multi .mv { color: var(--soft); font-size: 10.5px; margin-top: 1px; }
+.k3-multi svg { display: block; height: 54px; margin-top: 7px; width: 100%; }
+.k3-multi.ghost { border-top: 2px dashed var(--hair); color: var(--soft); }
+
+.k3-multi h6 .tag {
+  color: var(--hue);
+  display: block;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.k3-multi.ghost .slot {
+  align-items: center;
+  border: 1.5px dashed var(--hair);
+  border-radius: 8px;
+  color: #a3a9b4;
+  display: flex;
+  font-size: 10.5px;
+  height: 54px;
+  justify-content: center;
+  margin-top: 7px;
+  text-align: center;
+}
+
+.k3-sumrow {
+  align-items: baseline;
+  border-top: 1px solid var(--hair);
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+  margin-top: 22px;
+  padding: 13px 2px;
+}
+
+.k3-sumrow .l { font-size: 13px; font-weight: 650; }
+
+/* ---------- choose what matters ---------- */
+
+.k3-list { padding-top: 26px; }
+.k3-list h2 { font-size: 21px; font-weight: 800; letter-spacing: -0.015em; margin: 0; }
+
+.k3-statusline {
+  background: var(--hue-soft);
+  border-radius: 8px;
+  color: var(--hue);
+  font-size: 12.5px;
+  font-weight: 650;
+  margin-top: 16px;
+  padding: 8px 13px;
+}
+
+.k3-listhead {
+  color: var(--soft);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  margin: 24px 0 2px;
+  text-transform: uppercase;
+}
+
+.k3-listhead b { color: var(--ink); }
+
+.k3-lrow {
+  align-items: center;
+  border-bottom: 1px solid var(--hair);
+  display: grid;
+  gap: 0 14px;
+  grid-template-columns: 1fr auto auto;
+  padding: 11px 2px;
+}
+
+.k3-lrow .nm { font-size: 13.5px; }
+.k3-lrow .st { color: var(--soft); font-size: 12.5px; text-align: right; white-space: nowrap; }
+
+.k3-lrow .btn {
+  background: none;
+  border: 0;
+  color: var(--hue-bright);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  justify-self: end;
+  padding: 0;
+  white-space: nowrap;
+}
+
+.k3-lrow .btn.quiet { color: var(--soft); font-weight: 600; }
+
+.k3-detail {
+  color: var(--soft);
+  font-size: 12.5px;
+  grid-column: 1 / -1;
+  line-height: 1.55;
+  max-width: 58ch;
+  padding-top: 5px;
+}
+
+.k3-justrow {
+  background: var(--hue-soft);
+  border-radius: 6px;
+  color: var(--hue);
+  font-size: 12px;
+  font-weight: 650;
+  grid-column: 1 / -1;
+  margin-top: 7px;
+  padding: 6px 10px;
+}
+
+.k3-justrow button {
+  background: none;
+  border: 0;
+  color: var(--hue);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 750;
+  margin-left: 6px;
+  padding: 0;
+}
+
+.k3-listsearch { margin-top: 26px; }
+
+.k3-listsearch input {
+  border: 1.5px solid var(--hair);
+  border-radius: 10px;
+  font: inherit;
+  font-size: 13.5px;
+  padding: 9px 13px;
+  width: 100%;
+}
+
+.k3-domfold {
+  align-items: baseline;
+  border-bottom: 1px solid var(--hair);
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 12px 2px;
+}
+
+.k3-domfold h5 { font-size: 15px; font-weight: 750; margin: 0; }
+.k3-domfold span { color: var(--soft); font-size: 12px; }
+
+.k3-domfold .toggle {
+  background: none;
+  border: 0;
+  color: var(--hue-bright);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 650;
+  padding: 0;
+}
+
+.k3-list .k3-cta { margin-top: 26px; }
+
+/* ---------- pills: the whole list speaks in chips ---------- */
+
+.k3-pilltray { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
+
+.k3-pill {
+  align-items: center;
+  background: #fff;
+  border: 1.5px solid var(--hair);
+  border-radius: 99px;
+  color: var(--ink);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 650;
+  gap: 6px;
+  padding: 6px 12px;
+}
+
+.k3-pill .rk { color: var(--soft); font-size: 11px; font-weight: 600; }
+.k3-pill:hover { border-color: var(--hue-bright); }
+
+.k3-pill.on {
+  background: var(--hue-bright);
+  border-color: var(--hue-bright);
+  color: #fff;
+}
+
+.k3-pill.on .rk { color: rgb(255 255 255 / 75%); }
+.k3-pill.on .x { font-size: 13px; font-weight: 700; opacity: 0.8; }
+
+.k3-preset {
+  background: var(--hue-soft);
+  border: 1.5px solid transparent;
+  border-radius: 99px;
+  color: var(--hue);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 6px 13px;
+}
+
+.k3-preset:hover { border-color: var(--hue-bright); }
+
+/* ---------- pick a list before there is a rank to show ---------- */
+
+/* The compare and share rows are about a result, so they wait for one. */
+.k3-ward[data-choosing="yes"] .k3-ctas,
+.k3-ward[data-choosing="yes"] .k3-sumrow { display: none; }
+
+.k3-ask { margin-top: 22px; }
+
+.k3-ask h3 {
+  font-size: 20px;
+  font-weight: 780;
+  letter-spacing: -0.015em;
+  margin: 0;
+}
+
+.k3-ask p {
+  color: var(--soft);
+  font-size: 13.5px;
+  margin: 8px 0 0;
+  max-width: 54ch;
+}
+
+.k3-ask .k3-pilltray { margin-top: 16px; }
+.k3-ask .k3-preset { font-size: 13.5px; padding: 8px 15px; }
+.k3-ask .k3-seeall { margin-top: 18px; }
+
+/* ---------- the mix bar: what is being counted, and the alternatives ------- */
+
+.k3-mixbar {
+  align-items: baseline;
+  border-top: 1px solid var(--hair);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: space-between;
+  margin-top: 22px;
+  padding-top: 12px;
+}
+
+.k3-mixhead {
+  color: var(--soft);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.k3-mixhead b { color: var(--ink); }
+
+.k3-mixhead span {
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  margin-left: 8px;
+  text-transform: none;
+}
+
+/* on the list and compare views the bar is the first thing on the screen, so
+   it needs no rule above it */
+.k3-list .k3-mixbar,
+.k3-compare .k3-mixbar { border-top: 0; margin-top: 0; padding-top: 0; }
+
+.k3-compare .k3-pilltray { margin-bottom: 18px; }
+
+/* ---------- compare: picking the two wards ---------- */
+
+/* One SVG caret rather than two clipped gradients, which never quite meet at
+   fractional pixel positions. */
+.k3-wardsel {
+  appearance: none;
+  background-color: transparent;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M0 0h10L5 6z' fill='%23ffffff'/%3E%3C/svg%3E");
+  background-position: right 1px center;
+  background-repeat: no-repeat;
+  background-size: 10px 6px;
+  border: 0;
+  border-bottom: 1.5px solid rgb(255 255 255 / 45%);
+  border-radius: 0;
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  max-width: 100%;
+  padding: 0 20px 4px 0;
+  width: 100%;
+}
+
+.k3-wardsel:hover { border-bottom-color: #fff; }
+.k3-wardsel:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+
+/* the dropdown itself renders on the OS surface, so it needs its own ink */
+.k3-wardsel option { background: #fff; color: var(--ink); font-size: 14px; }
+
+.k3-vs .side .hood {
+  font-size: 11px;
+  margin-top: 5px;
+  opacity: 0.82;
+}
+
+.k3-vs .side.b .k3-wardsel {
+  background-position: left 1px center;
+  padding: 0 0 4px 20px;
+  text-align: right;
+}
+
+/* the caret is drawn on the left over there, so nudge the native text with it */
+.k3-vs .side.b .k3-wardsel option { text-align: right; }
+
+.k3-swapsides {
+  align-self: center;
+  background: #fff;
+  border: 1.5px solid var(--hair);
+  border-radius: 50%;
+  color: var(--soft);
+  cursor: pointer;
+  flex: 0 0 auto;
+  font-size: 16px;
+  height: 34px;
+  line-height: 1;
+  padding: 0;
+  width: 34px;
+}
+
+.k3-swapsides:hover { border-color: var(--hue-bright); color: var(--hue-bright); }
+
+.k3-quickpick {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.k3-quickpick .l {
+  color: var(--soft);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  margin-right: 4px;
+  text-transform: uppercase;
+}
+
+.k3-qp {
+  background: #fff;
+  border: 1.5px solid var(--hair);
+  border-radius: 9px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 650;
+  line-height: 1.25;
+  padding: 5px 11px 6px;
+  text-align: left;
+  transition: border-color 0.14s ease;
+}
+
+.k3-qp span {
+  color: var(--soft);
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.k3-qp:hover { border-color: var(--hue-bright); }
+.k3-qp.on { border-color: var(--warm); box-shadow: 0 0 0 1px var(--warm); }
+
+.k3-pillgrid { display: flex; flex-wrap: wrap; gap: 7px; padding: 10px 0 16px; }
+
+/* ---------- rank boxes: the number is the display ---------- */
+
+.k3-rankboxes {
+  display: grid;
+  gap: 9px;
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  margin-top: 8px;
+}
+
+.k3-rankbox {
+  background: #fff;
+  border: 1.5px solid var(--hair);
+  border-radius: 12px;
+  cursor: pointer;
+  font: inherit;
+  padding: 12px 10px 10px;
+  text-align: center;
+}
+
+.k3-rankbox .ord {
+  display: block;
+  font-size: 27px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.k3-rankbox .lbl {
+  color: var(--soft);
+  display: block;
+  font-size: 11px;
+  font-weight: 650;
+  margin-top: 5px;
+}
+
+.k3-rankbox:hover { border-color: var(--hue-bright); }
+.k3-rankbox.open { border-color: var(--hue-bright); box-shadow: 0 0 0 1px var(--hue-bright); }
+.k3-rankbox.weak .ord { color: var(--warm); }
+
+.k3-relative {
+  border: 1.5px solid var(--hue-bright);
+  border-radius: 12px;
+  margin-top: 9px;
+  padding: 14px 16px 12px;
+}
+
+.k3-relative h6 { font-size: 12.5px; font-weight: 750; margin: 0; }
+.k3-relative .relviz { margin-top: 14px; position: relative; }
+.k3-relative svg { display: block; height: 46px; width: 100%; }
+
+.k3-relative .youtag,
+.k3-relative .toptag {
+  font-size: 10px;
+  font-weight: 700;
+  position: absolute;
+  top: -8px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.k3-relative .youtag { color: var(--hue); }
+.k3-relative .toptag { color: var(--soft); }
+.k3-relative .relcap { color: var(--soft); font-size: 11.5px; margin-top: 8px; }
+.k3-relative .relcap b { color: var(--ink); font-weight: 650; }
+
+/* ---------- compare ---------- */
+
+.k3-compare { padding-top: 26px; }
+
+.k3-vs { align-items: center; display: flex; gap: 12px; }
+
+.k3-vs .side { border-radius: 12px; color: #fff; flex: 1; min-width: 0; padding: 14px 16px; }
+.k3-vs .side.a { background: linear-gradient(135deg, #5b21b6, #7c3aed); }
+.k3-vs .side.b { background: linear-gradient(135deg, #c2410c, #ea580c); text-align: right; }
+.k3-vs .side .wn { font-size: 19px; font-weight: 800; letter-spacing: -0.01em; }
+.k3-vs .side .wr { font-size: 12.5px; opacity: 0.9; }
+
+.k3-vs .side .sw {
+  background: none;
+  border: 0;
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 10px;
+  margin-top: 5px;
+  opacity: 0.78;
+  padding: 0;
+}
+
+.k3-vs .mid { color: var(--soft); font-size: 11px; font-weight: 700; }
+
+.k3-verdict { font-size: 14.5px; margin-top: 16px; }
+.k3-verdict b { font-weight: 720; }
+.k3-verdict .ca { color: #5b21b6; }
+.k3-verdict .cb { color: #c2410c; }
+
+/* ---------- compare: one strip per measure, on the real scale ---------- */
+
+.k3-duel { margin-top: 22px; }
+.k3-strip { padding: 15px 0 17px; }
+.k3-strip + .k3-strip { border-top: 1px solid var(--hair); }
+
+.k3-striphead {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  justify-content: space-between;
+}
+
+.k3-striphead .nm { font-size: 13.5px; font-weight: 650; }
+.k3-striphead .dir { color: #a3a9b4; font-size: 10.5px; }
+
+.k3-stripviz { height: 30px; margin-top: 20px; position: relative; }
+
+.k3-sbase {
+  background: var(--hair);
+  bottom: 4px;
+  height: 1px;
+  left: 0;
+  position: absolute;
+  right: 0;
+}
+
+/* one thin mark per ward, placed by what it actually measures */
+.k3-stick {
+  background: #d5d8df;
+  bottom: 4px;
+  height: 13px;
+  position: absolute;
+  transform: translateX(-50%);
+  width: 1.5px;
+}
+
+.k3-spin {
+  border-radius: 1.5px;
+  bottom: 4px;
+  height: 24px;
+  position: absolute;
+  transform: translateX(-50%);
+  width: 3px;
+}
+
+.k3-spin.a { background: var(--hue); }
+.k3-spin.b { background: #ea580c; }
+
+/* identical values: one pin split down the middle, so neither ward vanishes */
+.k3-spin.tie {
+  background: linear-gradient(90deg, var(--hue) 0 50%, #ea580c 50% 100%);
+  width: 5px;
+}
+
+.k3-stag {
+  font-size: 10.5px;
+  font-weight: 750;
+  position: absolute;
+  top: -16px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.k3-stag.a { color: var(--hue); }
+.k3-stag.b { color: #c2410c; }
+
+.k3-stripends {
+  color: #a3a9b4;
+  display: flex;
+  font-size: 10px;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+.k3-stripcap { color: var(--soft); font-size: 11.5px; margin-top: 9px; }
+.k3-stripcap b { color: var(--ink); font-weight: 650; }
+
+.k3-duelcap { color: var(--soft); font-size: 11.5px; margin-top: 16px; }
+
+/* The overall standing. Same size and vocabulary as the measure strips, boxed
+   so it reads as the headline rather than as a bigger version of them. */
+.k3-pairfield { margin-top: 20px; }
+
+.k3-mainchart {
+  border: 1.5px solid var(--ink);
+  border-radius: 14px;
+  padding: 14px 16px 13px;
+}
+
+.k3-mainhead {
+  align-items: baseline;
+  color: var(--ink);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 11px;
+  font-weight: 700;
+  gap: 4px 10px;
+  justify-content: space-between;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.k3-mainhead span {
+  color: var(--soft);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+
+.k3-pairkey {
+  color: var(--soft);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 10.5px;
+  gap: 4px 16px;
+  justify-content: center;
+  margin-top: 9px;
+}
+
+.k3-pairkey .ka { color: #5b21b6; font-weight: 700; }
+.k3-pairkey .kb { color: #c2410c; font-weight: 700; }
+
+/* ---------- hovering a ward mark ---------- */
+
+/* A 1.5px line is not a hit target, so every mark carries an invisible pad. */
+.k3-stick::before,
+.k3-spin::before {
+  content: "";
+  inset: -7px -6px;
+  position: absolute;
+}
+
+.k3-stick,
+.k3-spin { cursor: pointer; }
+.k3-stick.hot { background: var(--ink); width: 2.5px; }
+.k3-spin.hot { box-shadow: 0 0 0 2px #fff, 0 0 0 3.5px currentcolor; }
+.k3-spin.a.hot { color: var(--hue); }
+.k3-spin.b.hot { color: #c2410c; }
+
+/* the ward view's field chart marks its wards the same way */
+[data-wardtick] { cursor: pointer; }
+line[data-wardtick].hot { stroke: #17181c !important; stroke-width: 3.5 !important; opacity: 1 !important; }
+
+.k3-tip {
+  background: var(--ink);
+  border-radius: 9px;
+  color: #fff;
+  font-size: 12px;
+  left: 0;
+  line-height: 1.4;
+  padding: 7px 11px;
+  pointer-events: none;
+  position: fixed;
+  top: 0;
+  white-space: nowrap;
+  z-index: 1300;
+}
+
+.k3-tip b { display: block; font-size: 12.5px; font-weight: 700; }
+.k3-tip span { color: rgb(255 255 255 / 78%); display: block; font-size: 11px; }
+.k3-tip span.h { color: rgb(255 255 255 / 55%); font-size: 10.5px; }
+
+/* ---------- map ---------- */
+
+.k3-mapwrap { margin-top: 34px; }
+
+.k3-mapbox { position: relative; }
+
+#k3-map {
+  border: 1px solid var(--hair);
+  border-radius: 12px;
+  height: 420px;
+  width: 100%;
+}
+
+/* Loading skeleton: the 50 ward outlines, inlined in the template so they are
+   on screen at first paint. They breathe until boundaries and a first screen
+   of tiles are down, then fade out over the live map. */
+.k3-mapskel {
+  align-items: center;
+  background: #fff;
+  border: 1px solid var(--hair);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  inset: 0;
+  justify-content: center;
+  padding: 18px;
+  pointer-events: none;
+  position: absolute;
+  transition: opacity 0.5s ease;
+  z-index: 500;
+}
+
+.k3-mapskel.gone { opacity: 0; }
+
+/* Sized to land where fitBounds puts the real boundaries, so the handoff is a
+   fade rather than a jump. */
+.k3-skel-svg {
+  animation: k3-breathe 1.8s ease-in-out infinite;
+  color: #cfc8e6;
+  height: 100%;
+  max-width: 100%;
+  width: auto;
+}
+
+/* the viewBox is 1000 units tall and renders around 380px, so let the stroke
+   stay a real hairline instead of scaling down to nothing */
+.k3-skel-svg path {
+  stroke-width: 1.2;
+  vector-effect: non-scaling-stroke;
+}
+
+.k3-mapskel-note {
+  bottom: 12px;
+  color: var(--soft);
+  font-size: 11.5px;
+  position: absolute;
+}
+
+@keyframes k3-breathe {
+  0%, 100% { color: #ded9ee; }
+  50% { color: #a99ad0; }
+}
+
+.k3-maplegend { color: var(--soft); font-size: 11.5px; margin-top: 8px; }
+.k3-maplegend b { color: var(--ink); font-weight: 650; }
+
+.k3-legendbar {
+  background: linear-gradient(90deg, #eee9fa, #2e1065);
+  border-radius: 99px;
+  display: inline-block;
+  height: 10px;
+  margin: 0 8px;
+  vertical-align: middle;
+  width: 90px;
+}
+
+.k3-ward-label { background: none; border: 0; box-shadow: none; }
+
+.k3-ward-label span {
+  color: #2a2438;
+  font-size: 10px;
+  font-weight: 700;
+  text-shadow: 0 0 3px #fff, 0 0 3px #fff;
+}
+
+.k3-ward-label span.lite { color: #f4f0fb; text-shadow: 0 0 3px #2e1065, 0 0 3px #2e1065; }
+
+/* ---------- toast ---------- */
+
+.k3-toast {
+  background: var(--ink);
+  border-radius: 99px;
+  bottom: 22px;
+  color: #fff;
+  font-size: 13px;
+  left: 50%;
+  padding: 9px 18px;
+  position: fixed;
+  transform: translateX(-50%);
+  z-index: 1200;
+}
+
+/* ---------- podium: gold, silver, bronze for the top three ---------- */
+
+/* Decoration on top of a number that is already spelled out, never the only
+   signal. Inks are darkened off the metal so they clear contrast on white. */
+.k3-page {
+  --gold-ink: #8a6d1f;
+  --gold-wash: #fbf1d2;
+  --gold-edge: #e2c469;
+  --silver-ink: #4a5260;
+  --silver-wash: #eef1f6;
+  --silver-edge: #c3cad6;
+  --bronze-ink: #7c4318;
+  --bronze-wash: #f9e6d6;
+  --bronze-edge: #d9a175;
+}
+
+.m-gold { color: var(--gold-ink); }
+.m-silver { color: var(--silver-ink); }
+.m-bronze { color: var(--bronze-ink); }
+
+/* the big ward rank gets a metal underline rather than a filled slab */
+.k3-hero-big.m-gold,
+.k3-hero-big.m-silver,
+.k3-hero-big.m-bronze { display: inline-block; padding-bottom: 4px; }
+
+.k3-hero-big.m-gold { border-bottom: 4px solid var(--gold-edge); }
+.k3-hero-big.m-silver { border-bottom: 4px solid var(--silver-edge); }
+.k3-hero-big.m-bronze { border-bottom: 4px solid var(--bronze-edge); }
+
+/* Rank boxes wear the medal: a metal sheen with a ribbon stripe on top, so
+   first, second, and third read as a podium at a glance. */
+.k3-rankbox.m-gold,
+.k3-rankbox.m-silver,
+.k3-rankbox.m-bronze {
+  border-top-left-radius: 4px;
+  border-top-right-radius: 4px;
+  padding-top: 14px;
+}
+
+.k3-rankbox.m-gold {
+  background: linear-gradient(168deg, #fffaea, var(--gold-wash));
+  border-color: var(--gold-edge);
+  border-top: 5px solid var(--gold-edge);
+}
+
+.k3-rankbox.m-silver {
+  background: linear-gradient(168deg, #fbfcfe, #e6ebf2);
+  border-color: var(--silver-edge);
+  border-top: 5px solid #b6bfcd;
+}
+
+.k3-rankbox.m-bronze {
+  background: linear-gradient(168deg, #fdf3ea, #f6dcc7);
+  border-color: var(--bronze-edge);
+  border-top: 5px solid #cf9260;
+}
+
+.k3-rankbox.m-gold .ord { color: var(--gold-ink); }
+.k3-rankbox.m-silver .ord { color: var(--silver-ink); }
+.k3-rankbox.m-bronze .ord { color: var(--bronze-ink); }
+.k3-rankbox.m-gold .lbl,
+.k3-rankbox.m-silver .lbl,
+.k3-rankbox.m-bronze .lbl { color: #5d6472; }
+
+/* weakest boxes never take a medal, so the warm rule still wins there */
+.k3-rankbox.weak .ord { color: var(--warm); }
+
+/* the year chips on the trajectory */
+.k3-yearchip .rk.m-gold { color: var(--gold-ink); }
+.k3-yearchip .rk.m-silver { color: var(--silver-ink); }
+.k3-yearchip .rk.m-bronze { color: var(--bronze-ink); }
+
+/* pills: a small metal capsule around the standing */
+.k3-pill .rk.m-gold,
+.k3-pill .rk.m-silver,
+.k3-pill .rk.m-bronze {
+  border-radius: 99px;
+  font-weight: 750;
+  padding: 1px 6px;
+}
+
+.k3-pill .rk.m-gold { background: var(--gold-wash); color: var(--gold-ink); }
+.k3-pill .rk.m-silver { background: var(--silver-wash); color: var(--silver-ink); }
+.k3-pill .rk.m-bronze { background: var(--bronze-wash); color: var(--bronze-ink); }
+.k3-pill .rk.none { color: #b0b6c0; font-size: 10.5px; font-style: italic; }
+
+/* a filled pill inverts, so the metal has to sit on the dark ground */
+.k3-pill.on .rk.m-gold { background: rgb(255 255 255 / 90%); }
+.k3-pill.on .rk.m-silver { background: rgb(255 255 255 / 90%); }
+.k3-pill.on .rk.m-bronze { background: rgb(255 255 255 / 90%); }
+
+/* compare: the winning ordinal keeps its side color unless it medals */
+.k3-dord.m-gold { color: var(--gold-ink); }
+.k3-dord.m-silver { color: var(--silver-ink); }
+.k3-dord.m-bronze { color: var(--bronze-ink); }
+.k3-dord.lose.m-gold,
+.k3-dord.lose.m-silver,
+.k3-dord.lose.m-bronze { opacity: 0.75; }
+
+/* ---------- landing: starting points ---------- */
+
+.k3-landing-presets { margin-top: 30px; }
+
+.k3-lp-head {
+  color: var(--soft);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.k3-pilltray.center { justify-content: center; }
+
+.k3-lp-note {
+  color: var(--soft);
+  font-size: 12px;
+  margin: 10px auto 0;
+  max-width: 46ch;
+}
+
+.k3-lp-note b { color: var(--hue); font-weight: 700; }
+
+.k3-preset.on {
+  background: var(--hue-bright);
+  border-color: var(--hue-bright);
+  color: #fff;
+}
+
+/* ---------- moving between views ---------- */
+
+/* The map lives outside the swapped sections, so it never re-mounts. Only the
+   panel above it changes, and it rises in rather than snapping. */
+.k3-view { animation: none; }
+
+.k3-view.k3-enter {
+  animation: k3-rise 0.26s cubic-bezier(0.22, 0.68, 0.36, 1) both;
+}
+
+@keyframes k3-rise {
+  from { opacity: 0; transform: translateY(7px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .k3-view.k3-enter { animation: none; }
+  .k3-skel-svg { animation: none; }
+  .k3-rankrec.loading { animation: none; }
+  .k3-mapskel { transition: none; }
+  * { scroll-behavior: auto !important; }
+}
+
+@media (max-width: 640px) {
+  .k3-multis { grid-template-columns: 1fr; }
+  #k3-map { height: 320px; }
+  .k3-vs { flex-direction: column; }
+  .k3-vs .side { width: 100%; }
+  .k3-vs .side.b { text-align: left; }
+  .k3-timehead { flex-direction: column; gap: 4px; }
+}

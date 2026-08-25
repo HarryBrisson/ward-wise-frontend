@@ -30,6 +30,11 @@ HOP_BY_HOP = {"content-encoding", "content-length", "transfer-encoding", "connec
 
 app = Flask(__name__)
 
+# One keep-alive session for every upstream call. Reusing the TCP and TLS
+# connection saves a few hundred milliseconds per request, which is the
+# difference between autocomplete feeling live and feeling laggy.
+HTTP = requests.Session()
+
 STATIC_DIR = Path(app.static_folder)
 
 # Cache-bust static assets: one version per change = newest mtime among css/js, so editing
@@ -54,6 +59,13 @@ def inject_globals():
 
 @app.get("/")
 def index():
+    # K3: the sequenced explorer (landing -> your ward -> choose -> compare).
+    # The pre-K3 explorer stays reachable at /classic while the redesign settles.
+    return render_template("k3.html")
+
+
+@app.get("/classic")
+def classic():
     return render_template("explorer.html")
 
 
@@ -74,6 +86,134 @@ def about():
     return render_template("about.html")
 
 
+# --- Geocoding ---------------------------------------------------------------
+
+# Chicago bounding box for Nominatim, so "Clark St" resolves here and not Iowa.
+CHICAGO_VIEWBOX = "-87.95,42.03,-87.50,41.62"
+
+# The same box in Photon's order (min lon, min lat, max lon, max lat).
+CHICAGO_BBOX = "-87.95,41.62,-87.50,42.03"
+
+
+# The City of Chicago's own address locator, the authority on what addresses
+# exist here. Free public ArcGIS endpoint, no key.
+CHICAGO_GEOCODER = (
+    "https://gisapps.chicago.gov/arcgis/rest/services/Chicago_Addresses/GeocodeServer"
+)
+
+GEOCODER_HEADERS = {
+    "User-Agent": "ward-wise-frontend (https://github.com/HarryBrisson/ward-wise-frontend)",
+}
+
+
+@app.get("/geocode/suggest")
+def geocode_suggest():
+    """Address autocomplete from the City of Chicago's own geocoder.
+
+    The city's locator knows every address point in Chicago, so 550 N Saint
+    Clair completes on the first try, which the OSM geocoders could not do.
+    Suggestions return a text plus a magicKey; /geocode/resolve turns the
+    picked one into coordinates.
+    """
+    query = (request.args.get("q") or "").strip()
+    if len(query) < 3:
+        return jsonify({"suggestions": []})
+    try:
+        response = HTTP.get(
+            f"{CHICAGO_GEOCODER}/suggest",
+            params={"text": query, "f": "json", "maxSuggestions": 6},
+            headers=GEOCODER_HEADERS,
+            timeout=6,
+        )
+        raw = response.json().get("suggestions", [])
+    except requests.RequestException as error:
+        return jsonify({"error": f"Suggestions failed: {error}"}), 502
+    suggestions = [
+        {"label": item["text"], "key": item["magicKey"]}
+        for item in raw
+        if item.get("text") and not item.get("isCollection")
+    ]
+    return jsonify({"suggestions": suggestions[:6]})
+
+
+@app.get("/geocode/resolve")
+def geocode_resolve():
+    """Turn a picked suggestion into WGS84 coordinates via the city locator."""
+    text = (request.args.get("text") or "").strip()
+    key = (request.args.get("key") or "").strip()
+    if not text:
+        return jsonify({"error": "Missing text."}), 400
+    params = {"SingleLine": text, "outSR": 4326, "maxLocations": 1, "f": "json"}
+    if key:
+        params["magicKey"] = key
+    try:
+        response = HTTP.get(
+            f"{CHICAGO_GEOCODER}/findAddressCandidates",
+            params=params,
+            headers=GEOCODER_HEADERS,
+            timeout=6,
+        )
+        candidates = response.json().get("candidates", [])
+    except requests.RequestException as error:
+        return jsonify({"error": f"Address lookup failed: {error}"}), 502
+    if not candidates:
+        return jsonify({"match": None})
+    top = candidates[0]
+    return jsonify(
+        {
+            "match": {
+                "lat": top["location"]["y"],
+                "lon": top["location"]["x"],
+                "label": top.get("address", text),
+            }
+        }
+    )
+
+
+@app.get("/geocode")
+def geocode():
+    """Resolve a street address to coordinates via OpenStreetMap's Nominatim.
+
+    Proxied server-side rather than called from the browser so the request
+    carries a proper User-Agent per the Nominatim usage policy, and so the
+    frontend stays same-origin. The ward lookup itself happens client-side
+    against the ward boundaries the page already holds.
+    """
+    query = (request.args.get("q") or "").strip()
+    if not query:
+        return jsonify({"error": "Missing query."}), 400
+    try:
+        response = HTTP.get(
+            "https://nominatim.openstreetmap.org/search",
+            params={
+                "q": f"{query}, Chicago, Illinois",
+                "format": "jsonv2",
+                "limit": 1,
+                "viewbox": CHICAGO_VIEWBOX,
+                "bounded": 1,
+            },
+            headers={
+                "User-Agent": "ward-wise-frontend (https://github.com/HarryBrisson/ward-wise-frontend)",
+            },
+            timeout=8,
+        )
+        results = response.json()
+    except requests.RequestException as error:
+        return jsonify({"error": f"Geocoding failed: {error}"}), 502
+    if not results:
+        return jsonify({"match": None})
+    top = results[0]
+    return jsonify(
+        {
+            "match": {
+                "lat": float(top["lat"]),
+                "lon": float(top["lon"]),
+                "label": top.get("display_name", query),
+            }
+        }
+    )
+
+
 # --- API proxy ---------------------------------------------------------------
 
 @app.route("/api/<path:api_path>", methods=["GET", "POST"])
@@ -90,7 +230,7 @@ def proxy(api_path: str):
 
     upstream = f"{API_BASE}/api/{api_path}"
     try:
-        response = requests.request(
+        response = HTTP.request(
             request.method,
             upstream,
             params=request.args,

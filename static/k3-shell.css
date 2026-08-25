@@ -1,0 +1,802 @@
+/* K3 shell: the chrome every page shares, plus the Dictionary and Support
+   restyle. Loads after styles.css and before any page sheet, so the header
+   is identical on all four routes and the two content pages inherit the same
+   ink/hairline/violet system the explorer uses.
+
+   Tokens are namespaced (--k3-*) so nothing in styles.css :root is disturbed
+   and /classic keeps rendering exactly as it did. */
+
+:root {
+  --k3-ink: #17181c;
+  --k3-soft: #6f7683;
+  --k3-hair: #e9ebef;
+  --k3-hue: #4c1d95;
+  --k3-hue-bright: #5b21b6;
+  --k3-hue-soft: #efeafb;
+  --k3-warm: #c2410c;
+}
+
+/* ---------- shared header ---------- */
+
+.site-header {
+  background: #fff;
+  border-bottom: 1px solid var(--k3-hair);
+  color: var(--k3-ink);
+  padding: 10px clamp(16px, 4vw, 28px);
+}
+
+.site-header .site-brand,
+.site-header .nav-link { color: var(--k3-ink); }
+
+/* The mark is now a self-contained SVG in the site's own violet, so it needs
+   no white plate, no border, and no crop box around it. */
+.site-header .brand-mark {
+  background: none;
+  border: 0;
+  box-shadow: none;
+  height: 34px;
+  overflow: visible;
+  width: 34px;
+}
+
+.site-header .brand-logo {
+  height: 34px;
+  transform: none;
+  width: 34px;
+}
+
+.site-header .brand-kicker { color: var(--k3-soft); }
+
+.site-header .nav-link {
+  border: 1px solid transparent;
+  border-radius: 99px;
+  color: var(--k3-soft);
+  font-weight: 650;
+  transition: color 0.14s ease, background-color 0.14s ease;
+}
+
+.site-header .nav-link:hover { color: var(--k3-ink); }
+
+.site-header .nav-link.is-active {
+  background: var(--k3-hue-soft);
+  border-color: transparent;
+  color: var(--k3-hue);
+}
+
+/* ---------- the two content pages ---------- */
+
+/* Scoped to Dictionary and Support so /classic is untouched. */
+body[data-page="dictionary"],
+body[data-page="about"] {
+  background: #fff;
+  color: var(--k3-ink);
+  font-size: 15px;
+  line-height: 1.55;
+  min-height: 100vh;
+}
+
+/* styles.css paints :root beige, which would show through wherever body does
+   not reach (short pages, overscroll). Clear it on these two routes only. */
+html:has(body[data-page="dictionary"]),
+html:has(body[data-page="about"]) { background: #fff; }
+
+body[data-page="dictionary"] .metrics-layout,
+body[data-page="about"] .metrics-layout {
+  gap: 0;
+  max-width: 720px;
+  padding: 0 clamp(16px, 4vw, 28px) 64px;
+}
+
+body[data-page="dictionary"] a,
+body[data-page="about"] a { color: var(--k3-hue-bright); }
+
+/* page title block */
+body[data-page="dictionary"] .metrics-header,
+body[data-page="about"] .metrics-header {
+  background: none;
+  border: 0;
+  box-shadow: none;
+  gap: 0;
+  padding: 46px 0 4px;
+}
+
+body[data-page="dictionary"] .metrics-header h1,
+body[data-page="about"] .metrics-header h1 {
+  font-size: clamp(26px, 4vw, 33px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+body[data-page="dictionary"] .metrics-header p,
+body[data-page="about"] .metrics-header p {
+  color: var(--k3-soft);
+  font-size: 14.5px;
+  margin-top: 12px;
+  max-width: 58ch;
+}
+
+body[data-page="dictionary"] .eyebrow,
+body[data-page="about"] .eyebrow {
+  color: var(--k3-soft);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  margin: 0 0 6px;
+  text-transform: uppercase;
+}
+
+/* panels become hairline-separated bands, not floating cards */
+body[data-page="dictionary"] .panel,
+body[data-page="about"] .panel {
+  background: none;
+  border: 0;
+  border-radius: 0;
+  border-top: 1px solid var(--k3-hair);
+  box-shadow: none;
+  gap: 0;
+  margin: 0;
+  overflow: visible;
+  padding: 26px 0;
+}
+
+body[data-page="dictionary"] .panel h2,
+body[data-page="about"] .panel h2 {
+  font-size: 19px;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+body[data-page="dictionary"] .panel p,
+body[data-page="about"] .panel p {
+  color: var(--k3-soft);
+  font-size: 13.5px;
+  margin: 8px 0 0;
+  max-width: 62ch;
+}
+
+body[data-page="dictionary"] .panel section + section,
+body[data-page="about"] .panel section + section {
+  border-top: 1px solid var(--k3-hair);
+}
+
+/* ---------- Dictionary ---------- */
+
+/* Rows carry a caption on the right, so the column is a little wider than the
+   Support page's reading measure. */
+body[data-page="dictionary"] .metrics-layout { max-width: 780px; }
+
+/* how a rank gets made, as a margin note rather than a card */
+body[data-page="dictionary"] .dict-note {
+  border-left: 2px solid var(--k3-hue-soft);
+  color: var(--k3-soft);
+  font-size: 12.5px;
+  margin: 22px 0 0;
+  max-width: 66ch;
+  padding: 2px 0 2px 14px;
+}
+
+/* ---------- the controls ---------- */
+
+/* Sticky, because opening Physical environment puts 34 rows between you and
+   the search box. */
+body[data-page="dictionary"] .dict-bar {
+  background: #fff;
+  border-bottom: 1px solid var(--k3-hair);
+  margin-top: 26px;
+  padding: 12px 0 11px;
+  position: sticky;
+  top: 0;
+  z-index: 6;
+}
+
+body[data-page="dictionary"] .dict-searchrow { position: relative; }
+
+body[data-page="dictionary"] #dict-search {
+  background: #fff;
+  border: 1px solid var(--k3-hair);
+  border-radius: 10px;
+  color: var(--k3-ink);
+  font: inherit;
+  font-size: 14.5px;
+  padding: 10px 62px 10px 13px;
+  width: 100%;
+}
+
+body[data-page="dictionary"] #dict-search:focus {
+  border-color: var(--k3-hue-bright);
+  box-shadow: 0 0 0 3px var(--k3-hue-soft);
+  outline: none;
+}
+
+body[data-page="dictionary"] #dict-search::placeholder { color: #9aa1ad; }
+
+body[data-page="dictionary"] #dict-clear {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+body[data-page="dictionary"] .dict-linkbtn {
+  background: none;
+  border: 0;
+  color: var(--k3-hue-bright);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  padding: 0;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 3px;
+}
+
+body[data-page="dictionary"] .dict-linkbtn:hover { color: var(--k3-hue); }
+
+body[data-page="dictionary"] .dict-knobs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 20px;
+  margin-top: 10px;
+}
+
+body[data-page="dictionary"] .dict-knob {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+body[data-page="dictionary"] .dict-knoblab {
+  color: var(--k3-soft);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  margin-right: 2px;
+  text-transform: uppercase;
+}
+
+body[data-page="dictionary"] .dict-knob button {
+  background: #fff;
+  border: 1px solid var(--k3-hair);
+  border-radius: 99px;
+  color: var(--k3-soft);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 650;
+  padding: 4px 11px;
+  transition: color 0.14s ease, border-color 0.14s ease, background-color 0.14s ease;
+}
+
+body[data-page="dictionary"] .dict-knob button:hover {
+  border-color: var(--k3-hue-bright);
+  color: var(--k3-ink);
+}
+
+body[data-page="dictionary"] .dict-knob button.is-on {
+  background: var(--k3-hue-soft);
+  border-color: transparent;
+  color: var(--k3-hue);
+}
+
+body[data-page="dictionary"] .dict-tally {
+  align-items: baseline;
+  color: var(--k3-soft);
+  display: flex;
+  font-size: 12px;
+  justify-content: space-between;
+  margin: 13px 0 2px;
+}
+
+/* ---------- groups ---------- */
+
+body[data-page="dictionary"] .dict-group { border-top: 1px solid var(--k3-hair); }
+body[data-page="dictionary"] .dict-group:last-child { border-bottom: 1px solid var(--k3-hair); }
+
+body[data-page="dictionary"] .dict-group > summary {
+  align-items: baseline;
+  cursor: pointer;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+  list-style: none;
+  padding: 15px 24px 15px 0;
+  position: relative;
+}
+
+body[data-page="dictionary"] .dict-group > summary::-webkit-details-marker { display: none; }
+
+body[data-page="dictionary"] .dict-group > summary::after {
+  color: var(--k3-soft);
+  content: "\203A";
+  font-size: 18px;
+  line-height: 1;
+  position: absolute;
+  right: 2px;
+  top: 16px;
+  transition: transform 0.16s ease;
+}
+
+body[data-page="dictionary"] .dict-group[open] > summary::after { transform: rotate(90deg); }
+
+body[data-page="dictionary"] .dict-group > summary:hover .dict-grouptitle { color: var(--k3-hue-bright); }
+
+body[data-page="dictionary"] .dict-groupmain { display: block; }
+
+body[data-page="dictionary"] .dict-grouptitle {
+  display: block;
+  font-size: 16px;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+}
+
+body[data-page="dictionary"] .dict-groupblurb {
+  color: var(--k3-soft);
+  display: block;
+  font-size: 12.5px;
+  margin-top: 3px;
+  max-width: 60ch;
+}
+
+body[data-page="dictionary"] .dict-groupcount {
+  background: #f4f5f8;
+  border-radius: 99px;
+  color: #5d6472;
+  flex: none;
+  font-size: 11.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  padding: 3px 9px;
+}
+
+body[data-page="dictionary"] .dict-group[open] .dict-groupcount {
+  background: var(--k3-hue-soft);
+  color: var(--k3-hue);
+}
+
+body[data-page="dictionary"] .dict-rows {
+  border-top: 1px solid var(--k3-hair);
+  margin: 0 0 6px;
+  padding-left: 2px;
+}
+
+/* ---------- one measure per row ---------- */
+
+body[data-page="dictionary"] .dict-row + .dict-row { border-top: 1px solid #f3f4f7; }
+
+body[data-page="dictionary"] .dict-row > summary {
+  align-items: baseline;
+  cursor: pointer;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+  list-style: none;
+  padding: 11px 22px 11px 0;
+  position: relative;
+}
+
+body[data-page="dictionary"] .dict-row > summary::-webkit-details-marker { display: none; }
+
+body[data-page="dictionary"] .dict-row > summary::after {
+  color: #b6bcc7;
+  content: "\203A";
+  font-size: 15px;
+  line-height: 1;
+  position: absolute;
+  right: 4px;
+  top: 12px;
+  transition: transform 0.16s ease;
+}
+
+body[data-page="dictionary"] .dict-row[open] > summary::after { transform: rotate(90deg); }
+
+body[data-page="dictionary"] .dict-row > summary:hover .dict-rowname { color: var(--k3-hue-bright); }
+
+body[data-page="dictionary"] .dict-rowmain { display: block; min-width: 0; }
+
+body[data-page="dictionary"] .dict-rowname {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+body[data-page="dictionary"] .dict-rowdesc {
+  color: var(--k3-soft);
+  display: block;
+  font-size: 12.5px;
+  margin-top: 2px;
+  max-width: 62ch;
+}
+
+body[data-page="dictionary"] .dict-rowside {
+  align-items: center;
+  display: flex;
+  flex: none;
+  gap: 7px;
+}
+
+body[data-page="dictionary"] .dict-rowfam {
+  color: #99a0ac;
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+/* Only the exceptions are badged: the eleven measures that do not reach all
+   fifty wards. A chip on the other 160 would say nothing. */
+body[data-page="dictionary"] .dict-gap {
+  background: #fdf3e6;
+  border-radius: 99px;
+  color: #8a5a1c;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+
+body[data-page="dictionary"] .dict-row mark {
+  background: #fbf0c4;
+  border-radius: 2px;
+  color: inherit;
+  padding: 0 1px;
+}
+
+body[data-page="dictionary"] .dict-row.is-found {
+  animation: dict-flash 2.2s ease;
+}
+
+@keyframes dict-flash {
+  0%, 55% { background: #fbf6dd; }
+  100% { background: transparent; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body[data-page="dictionary"] .dict-row.is-found { animation: none; }
+  body[data-page="dictionary"] .dict-group > summary::after,
+  body[data-page="dictionary"] .dict-row > summary::after { transition: none; }
+}
+
+/* ---------- the opened entry ---------- */
+
+/* A left rule ties the opened entry to the row it came from, which matters
+   when it opens in the middle of thirty other rows. */
+body[data-page="dictionary"] .dict-body {
+  border-left: 2px solid var(--k3-hue-soft);
+  margin: 0 0 4px;
+  padding: 3px 0 17px 14px;
+}
+
+body[data-page="dictionary"] .dict-body p {
+  color: var(--k3-soft);
+  font-size: 13px;
+  margin: 0 0 9px;
+  max-width: 66ch;
+}
+
+body[data-page="dictionary"] .dict-body b { color: var(--k3-ink); font-weight: 700; }
+
+body[data-page="dictionary"] .dict-meta {
+  border-top: 1px solid var(--k3-hair);
+  display: grid;
+  gap: 10px 22px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  margin: 12px 0 0;
+  padding-top: 12px;
+}
+
+body[data-page="dictionary"] .dict-meta dt {
+  color: var(--k3-soft);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin: 0 0 2px;
+  text-transform: uppercase;
+}
+
+body[data-page="dictionary"] .dict-meta dd {
+  color: var(--k3-ink);
+  font-size: 12.5px;
+  margin: 0;
+}
+
+body[data-page="dictionary"] .dict-meta code {
+  background: #f4f5f8;
+  border-radius: 4px;
+  color: #4b525f;
+  font-size: 11.5px;
+  padding: 1px 5px;
+}
+
+body[data-page="dictionary"] .dict-inlists {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 4px 0 2px;
+}
+
+/* Deliberately not the uppercase eyebrow the meta grid uses, so this reads as
+   a sentence about the measure rather than one more field. */
+body[data-page="dictionary"] .dict-inlists span {
+  color: var(--k3-soft);
+  font-size: 12.5px;
+}
+
+body[data-page="dictionary"] .dict-chip {
+  background: var(--k3-hue-soft);
+  border-radius: 99px;
+  color: var(--k3-hue);
+  font-size: 12px;
+  font-weight: 650;
+  padding: 3px 10px;
+  text-decoration: none;
+}
+
+body[data-page="dictionary"] .dict-chip:hover { background: #e4dcfa; }
+
+body[data-page="dictionary"] .dict-nom {
+  color: var(--k3-soft);
+  font-size: 11.5px;
+  margin-top: 11px;
+}
+
+body[data-page="dictionary"] .dict-jump { margin: 18px 0 0; }
+
+body[data-page="dictionary"] .dict-jump a {
+  font-size: 12.5px;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+body[data-page="dictionary"] .dict-jump a:hover { text-decoration: underline; }
+
+body[data-page="dictionary"] .dict-empty {
+  color: var(--k3-soft);
+  font-size: 13.5px;
+  padding: 28px 0;
+}
+
+body[data-page="dictionary"] .dict-empty b { color: var(--k3-ink); }
+
+@media (max-width: 620px) {
+  /* Six pills wrapping onto three lines would put a 150px bar above every
+     screen of a phone. One scrolling line keeps the labels and the height. */
+  body[data-page="dictionary"] .dict-knobs {
+    flex-wrap: nowrap;
+    gap: 16px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  body[data-page="dictionary"] .dict-knobs::-webkit-scrollbar { display: none; }
+  body[data-page="dictionary"] .dict-knob { flex: none; flex-wrap: nowrap; }
+  body[data-page="dictionary"] .dict-knob button { white-space: nowrap; }
+  body[data-page="dictionary"] .dict-rowfam { display: none; }
+  body[data-page="dictionary"] .dict-groupblurb { max-width: none; }
+  body[data-page="dictionary"] .dict-meta { gap: 10px 16px; }
+}
+
+/* ---------- Support ---------- */
+
+body[data-page="about"] .support-cta-heading {
+  align-items: start;
+  display: grid;
+  gap: 14px 22px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+body[data-page="about"] .support-cta {
+  align-self: center;
+  background: #fff;
+  border: 1.5px solid var(--k3-hue-bright);
+  border-radius: 99px;
+  color: var(--k3-hue-bright);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 9px 17px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+body[data-page="about"] .support-cta:hover { background: var(--k3-hue-soft); }
+
+body[data-page="about"] .signifier-see-all a {
+  font-size: 12.5px;
+  font-weight: 650;
+}
+
+body[data-page="about"] .signifier-examples {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  margin-top: 18px;
+}
+
+body[data-page="about"] .signifier-example {
+  border: 1px solid var(--k3-hair);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+body[data-page="about"] .signifier-example img {
+  aspect-ratio: 4 / 3;
+  display: block;
+  object-fit: cover;
+  width: 100%;
+}
+
+/* 50 cells, one per ward; the filled ones have a resident nomination. Violet,
+   not orange, because orange means "behind" everywhere else on the site. */
+body[data-page="about"] .ward-grid {
+  display: grid;
+  gap: 4px;
+  grid-template-columns: repeat(auto-fill, minmax(34px, 1fr));
+  margin-top: 16px;
+}
+
+body[data-page="about"] .ward-cell {
+  align-items: center;
+  background: #f4f5f8;
+  border-radius: 7px;
+  color: #9aa0ab;
+  display: flex;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+  justify-content: center;
+  min-height: 32px;
+}
+
+body[data-page="about"] .ward-cell.is-nominated {
+  background: var(--k3-hue-bright);
+  color: #fff;
+}
+
+body[data-page="about"] .about-progress-count { color: var(--k3-hue); }
+
+body[data-page="about"] .about-progress {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+body[data-page="about"] .about-progress-count {
+  font-size: 32px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+}
+
+body[data-page="about"] .about-progress-of,
+body[data-page="about"] .about-progress-note {
+  color: var(--k3-soft);
+  font-size: 12.5px;
+}
+
+body[data-page="about"] .about-progress-bar {
+  background: var(--k3-hair);
+  border-radius: 99px;
+  flex: 0 0 100%;
+  height: 6px;
+  overflow: hidden;
+}
+
+body[data-page="about"] .about-progress-bar > * {
+  background: var(--k3-hue-bright);
+  display: block;
+  height: 100%;
+}
+
+/* ---------- the catalog growth chart ---------- */
+
+body[data-page="about"] .about-metric-growth { margin-top: 18px; }
+
+body[data-page="about"] .about-growth-head {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  justify-content: space-between;
+}
+
+body[data-page="about"] .about-growth-axis {
+  color: var(--k3-soft);
+  font-size: 11.5px;
+  margin-top: 8px;
+  max-width: 58ch;
+}
+
+body[data-page="about"] .about-growth-plot { margin-top: 14px; position: relative; }
+
+body[data-page="about"] .about-sparkline {
+  display: block;
+  height: auto;
+  overflow: visible;
+  width: 100%;
+}
+
+/* grid and axes stay recessive, they orient rather than compete */
+body[data-page="about"] .spark-grid { stroke: #eceef2; stroke-width: 1; }
+body[data-page="about"] .spark-tick { stroke: #f3f4f7; stroke-width: 1; }
+
+body[data-page="about"] .spark-ylab,
+body[data-page="about"] .spark-xlab {
+  fill: #9aa0ab;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+body[data-page="about"] .spark-area { fill: rgb(76 29 149 / 8%); }
+
+body[data-page="about"] .spark-line {
+  stroke: var(--k3-hue);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.5;
+}
+
+/* only the days that added a real batch carry a marker */
+body[data-page="about"] .spark-dot.is-add {
+  fill: #fff;
+  stroke: var(--k3-hue);
+  stroke-width: 2;
+}
+
+body[data-page="about"] .spark-now-halo { fill: #fff; }
+body[data-page="about"] .spark-now { fill: var(--k3-hue); }
+
+body[data-page="about"] .spark-nowlab {
+  fill: var(--k3-hue);
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+}
+
+/* crosshair on hover. SVG has no `hidden` attribute of its own, so the
+   attribute selector is what actually takes it off screen. */
+body[data-page="about"] .spark-cursor[hidden] { display: none; }
+
+body[data-page="about"] .spark-cursor-rule {
+  stroke: var(--k3-hue);
+  stroke-dasharray: 3 3;
+  stroke-width: 1;
+}
+
+body[data-page="about"] .spark-cursor-dot {
+  fill: var(--k3-hue);
+  stroke: #fff;
+  stroke-width: 2;
+}
+
+/* invisible hover targets spanning the plot height */
+body[data-page="about"] .spark-band { fill: transparent; }
+
+body[data-page="about"] .spark-tip {
+  background: var(--k3-ink);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 11.5px;
+  line-height: 1.4;
+  padding: 6px 10px;
+  pointer-events: none;
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 12px));
+  white-space: nowrap;
+  z-index: 3;
+}
+
+body[data-page="about"] .spark-tip.below { transform: translate(-50%, 14px); }
+body[data-page="about"] .spark-tip-date { color: rgb(255 255 255 / 62%); font-size: 10.5px; }
+body[data-page="about"] .spark-tip-head { font-weight: 650; }
+body[data-page="about"] .spark-tip-empty { color: rgb(255 255 255 / 72%); }
+
+body[data-page="about"] .about-metric-now { color: var(--k3-hue); font-weight: 700; }
+body[data-page="about"] .about-error { color: var(--k3-warm); font-size: 12.5px; }
+
+@media (max-width: 640px) {
+  body[data-page="about"] .support-cta-heading { grid-template-columns: minmax(0, 1fr); }
+  body[data-page="about"] .support-cta { justify-self: start; }
+}

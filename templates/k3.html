@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+{% block title %}Ward Wise Penlight{% endblock %}
+
+{% block head %}
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='k3.css', v=asset_version) }}">
+{% endblock %}
+
+{% block content %}
+  <main class="k3-page">
+    <!-- One container, four views. k3.js swaps which one is visible and keeps
+         the URL in sync, so every state of the app has a shareable address. -->
+    <div id="k3-app" class="k3-app" data-view="landing">
+
+      <!-- where-am-I strip: hidden on landing, present everywhere else -->
+      <div id="k3-context" class="k3-context" hidden>
+        <span id="k3-context-ward" class="k3-context-ward"></span>
+        <button type="button" id="k3-change-ward" class="k3-linkbtn">change</button>
+      </div>
+
+      <!-- STATE 1: landing -->
+      <section id="k3-landing" class="k3-landing k3-view" aria-label="Find your ward">
+        <h1>How is your part of Chicago doing?</h1>
+        <p class="k3-sub">
+          Type where you live and see where your ward stands on parks, libraries,
+          wellbeing, and 160 other measures of neighborhood life.
+        </p>
+        <div class="k3-bigsearch">
+          <input type="text" id="k3-search" placeholder="Your address, neighborhood, or ward number&hellip;"
+                 autocomplete="off" aria-label="Find your ward by address, neighborhood, or ward number">
+          <button type="button" id="k3-search-go">See my ward</button>
+        </div>
+        <div id="k3-search-results" class="k3-search-results" hidden></div>
+        <p class="k3-quiet">Free, no account, all 50 wards.</p>
+        <!-- starting points, right where a first-time visitor lands: picking one
+             recolors the map before they have chosen a ward at all -->
+        <div id="k3-landing-presets" class="k3-landing-presets"></div>
+        <p class="k3-or">or tap your ward on the map</p>
+      </section>
+
+      <!-- STATE 2: their ward -->
+      <section id="k3-ward" class="k3-ward k3-view" hidden aria-label="Your ward">
+        <div id="k3-ward-head"></div>
+        <div id="k3-ward-hero"></div>
+        <!-- which list the rank above is built from, and every other one, so
+             switching is a tap rather than a trip to another screen -->
+        <div id="k3-ward-mix"></div>
+        <div id="k3-field"></div>
+        <div class="k3-ctas">
+          <button type="button" id="k3-open-list" class="k3-cta">Choose what matters</button>
+          <button type="button" id="k3-open-compare" class="k3-cta ghost">Compare with another ward</button>
+        </div>
+        <div id="k3-peek"></div>
+        <div id="k3-overtime"></div>
+        <div class="k3-sumrow">
+          <span class="l">Share</span>
+          <button type="button" id="k3-share" class="k3-linkbtn">copy a link that carries this exact view</button>
+        </div>
+      </section>
+
+      <!-- STATE 3: choose what matters -->
+      <section id="k3-list" class="k3-list k3-view" hidden aria-label="Choose what matters">
+        <h2>What matters to you?</h2>
+        <p class="k3-sub">
+          Your ward&rsquo;s rank comes from this list. Add anything, remove anything,
+          the rank updates each time.
+        </p>
+        <div id="k3-statusline" class="k3-statusline" role="status" aria-live="polite"></div>
+        <div id="k3-onlist"></div>
+        <div class="k3-listsearch">
+          <input type="text" id="k3-metric-search" placeholder="Search everything we measure&hellip;"
+                 autocomplete="off" aria-label="Search all measures">
+        </div>
+        <div id="k3-addmore"></div>
+        <button type="button" id="k3-back-ward" class="k3-cta">Done, back to Ward <span id="k3-back-num"></span></button>
+      </section>
+
+      <!-- STATE 4: compare -->
+      <section id="k3-compare" class="k3-compare k3-view" hidden aria-label="Compare two wards">
+        <div id="k3-vs"></div>
+        <div id="k3-verdict"></div>
+        <div id="k3-pairfield"></div>
+        <div id="k3-duel"></div>
+        <p class="k3-duelcap">
+          Every thin mark is one of Chicago&rsquo;s 50 wards, placed by what it actually
+          measures rather than by its place in a queue. Biggest difference first.
+        </p>
+        <button type="button" id="k3-back-ward-2" class="k3-cta ghost">Back to Ward <span id="k3-back-num-2"></span></button>
+      </section>
+
+      <!-- the map rides along under every state -->
+      <section class="k3-mapwrap" aria-label="Chicago ward map">
+        <div class="k3-mapbox">
+          <div id="k3-map"></div>
+          <!-- Ward outlines drawn from the first paint, so the box shows the
+               shape of the city while the boundaries and tiles are still in
+               flight. Traced from the same geometry the live map uses and
+               simplified to ~14KB. Regenerate with scripts/build_map_assets.py. -->
+          <div id="k3-mapskel" class="k3-mapskel" aria-hidden="true">
+            {% include "_ward_outline.svg" %}
+            <span class="k3-mapskel-note">Drawing Chicago&rsquo;s 50 wards&hellip;</span>
+          </div>
+        </div>
+        <div id="k3-maplegend" class="k3-maplegend"></div>
+      </section>
+
+      <!-- follows the cursor over any ward mark on any chart -->
+      <div id="k3-tip" class="k3-tip" role="status" aria-live="polite" hidden></div>
+      <div id="k3-toast" class="k3-toast" role="status" aria-live="polite" hidden></div>
+    </div>
+  </main>
+{% endblock %}
+
+{% block scripts %}
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="{{ url_for('static', filename='common.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='k3-presets.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='ward-neighbors.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='k3.js', v=asset_version) }}"></script>
+{% endblock %}

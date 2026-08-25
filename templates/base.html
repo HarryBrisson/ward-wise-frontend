@@ -4,14 +4,19 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Ward Wise Penlight{% endblock %}</title>
-    {% block head %}{% endblock %}
+    {# Cascade order matters: the original sheet first, then the shared K3 shell
+       (header + page chrome), then whatever the page itself adds. Page CSS
+       loading last means it wins without specificity tricks. #}
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css', v=asset_version) }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='k3-shell.css', v=asset_version) }}">
+    {% block head %}{% endblock %}
   </head>
-  <body>
+  <body data-page="{{ request.endpoint }}">
     <header class="site-header">
       <a class="site-brand" href="{{ url_for('index') }}" aria-label="Ward Wise Penlight home">
         <span class="brand-mark" aria-hidden="true">
-          <img class="brand-logo" src="{{ url_for('static', filename='logo.png') }}" alt="">
+          <img class="brand-logo" src="{{ url_for('static', filename='logo.svg') }}" alt=""
+               width="64" height="64">
         </span>
         <span class="brand-copy">
           <span class="brand-kicker">Ward Wise</span>
