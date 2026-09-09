@@ -182,6 +182,9 @@ async function initExplorer() {
     initTimeControls();
     initMethodology();
     await loadAreaType("ward");
+    if (window.WardWiseHome && explorerState.wards.length) {
+      selectWard(explorerState.areaById.has("01") ? "01" : areaIdOf(explorerState.wards[0]));
+    }
   } catch (error) {
     renderMetricLoadError(error);
     renderMetricError(error);
@@ -415,11 +418,16 @@ function initAreaTypeToggle() {
       if (areaType === explorerState.areaType) return;
       group.querySelectorAll("button").forEach((b) => b.classList.toggle("is-active", b === button));
       group.setAttribute("aria-busy", "true");
+      group.querySelectorAll("button").forEach((b) => { b.disabled = true; });
       WardWiseExplorer.track("explore_area_type", { area_type: areaType });
       try {
         await loadAreaType(areaType);
+      } catch (error) {
+        renderMetricError(error);
+        setMapShadeLoading(false);
       } finally {
         group.removeAttribute("aria-busy");
+        group.querySelectorAll("button").forEach((b) => { b.disabled = false; });
       }
     });
   });
@@ -593,6 +601,7 @@ function markOverflowingDomains(container) {
 }
 
 function renderMetricControls() {
+  if (window.WardWiseHome) return WardWiseHome.renderMetrics();
   const container = document.querySelector("#metric-weights");
   setMetricControlsLoading(false);
   const available = explorerState.metrics.filter(
@@ -750,6 +759,7 @@ function initMethodology() {
 }
 
 function renderWellbeingEquation() {
+  if (window.WardWiseHome) return WardWiseHome.renderFormula();
   updateMethodologyLink();
   const formula = document.getElementById("wellbeing-equation-formula");
   if (!formula) return;
@@ -1119,6 +1129,7 @@ function fitFullCity() {
 }
 
 function wardStyle(wardId) {
+  if (window.WardWiseHome) return WardWiseHome.mapStyle(wardId);
   const score = scoreForWard(wardId)?.score;
   const isSelected = wardId === explorerState.currentWardId;
   return {
@@ -1409,6 +1420,7 @@ function highlightRankerRow(wardId) {
 
 // Keep the tooltip under the cursor as it moves across a map area (mousemove fires continuously).
 function repositionHoverDetails(wardId, event) {
+  if (window.WardWiseHome) return;
   if (explorerState.hoveredWardId !== wardId) return;
   const panel = document.querySelector("#ward-details-popover");
   if (panel && !panel.hidden) positionWardDetails(panel, event);
@@ -1441,6 +1453,7 @@ function positionWardDetails(panel, event) {
 }
 
 function hideWardDetails() {
+  if (window.WardWiseHome) return WardWiseHome.renderSelection(null);
   const detailsPanel = document.querySelector("#ward-details-popover");
   if (!detailsPanel) return;
   explorerState.currentDetailsWardId = null;
@@ -1449,11 +1462,13 @@ function hideWardDetails() {
 }
 
 function refreshVisibleWardDetails() {
+  if (window.WardWiseHome) return WardWiseHome.renderSelection(explorerState.currentWardId);
   if (!explorerState.currentDetailsWardId) return;
   showWardDetails(explorerState.currentDetailsWardId);
 }
 
 function showWardDetails(wardId, event) {
+  if (window.WardWiseHome) return WardWiseHome.renderSelection(explorerState.currentWardId || wardId);
   const detailsPanel = document.querySelector("#ward-details-popover");
   const ward = findArea(wardId);
   if (!detailsPanel || !ward) return;
@@ -1656,6 +1671,7 @@ function rankerScoreText(score) {
 }
 
 function renderWeightedRanker() {
+  if (window.WardWiseHome) return WardWiseHome.renderRanks();
   const table = document.querySelector("#comparison-table");
   if (!table) return;
   const heading = document.getElementById("ranker-title");
@@ -2072,6 +2088,11 @@ function roundChartCoordinate(value) {
 
 function renderMetricError(error) {
   const message = WardWiseExplorer.escapeHtml(error.message || "Unable to load metric data.");
+  if (window.WardWiseHome) {
+    document.querySelector("#comparison-table").innerHTML = `<p class="home-empty" role="alert">${message} Please refresh to try again.</p>`;
+    setMapShadeLoading(false);
+    return;
+  }
   document.querySelector("#comparison-table").innerHTML = "";
   document.querySelector("#time-series").innerHTML = `<p>${message}</p>`;
 }

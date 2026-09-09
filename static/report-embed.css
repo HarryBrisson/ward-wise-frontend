@@ -1,0 +1,10 @@
+/* Keep the HEAD report intact inside the homepage's two-column report panel. */
+body { background: #fff; }
+.site-header { display: none; }
+.k3-mapwrap, #k3-landing { display: none; }
+#k3-report-loading { padding: 24px 0; color: #7d8697; font-size: 14px; }
+.k3-page { --hue: #0b7892; --hue-bright: #0b7892; --hue-soft: #e9f5f7; min-height: 0; }
+.k3-app { max-width: 1000px; padding: 0 clamp(18px, 4vw, 40px) 40px; }
+.k3-context { position: sticky; top: 0; z-index: 500; background: #fff; }
+.k3-context::before { content: "WARD REPORT"; margin-right: auto; font-size: 11px; letter-spacing: .08em; color: #7d8697; }
+.k3-ward { padding-top: 24px; }

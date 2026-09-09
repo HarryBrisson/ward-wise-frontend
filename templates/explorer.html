@@ -2,116 +2,55 @@
 
 {% block title %}Ward Wise Penlight{% endblock %}
 
+{% block header %}
+<header class="home-header">
+  <a class="home-brand" href="{{ url_for('index') }}"><img src="{{ url_for('static', filename='logo.svg') }}" alt="" width="36" height="36">Ward Wise</a>
+  <button id="show-explorer" class="home-text-button" type="button" hidden>← Show leaderboard and metrics</button>
+  <details class="home-nav"><summary>Explore <span aria-hidden="true">▾</span></summary><nav aria-label="Main navigation"><a href="{{ url_for('index') }}">Explore</a><a href="{{ url_for('dictionary') }}">Metric dictionary</a><a href="{{ url_for('about') }}">Support the project</a></nav></details>
+</header>
+{% endblock %}
 {% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='home.css', v=asset_version) }}">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 {% endblock %}
 
 {% block content %}
-  <main class="explorer-layout">
-    <section class="visualizer-panel" aria-label="Chicago ward visualizer">
-      <div class="mobile-view-toggle" role="group" aria-label="Choose view">
-        <button type="button" data-mobile-view="map" class="is-active">Map</button>
-        <button type="button" data-mobile-view="ranker">Leaderboard</button>
+  <main class="home-layout">
+    <section id="visualizer-map" class="home-card home-map-card" aria-label="Chicago metric map">
+      <div id="area-type-toggle" class="home-geography" role="group" aria-label="Choose geography">
+        <button type="button" data-area-type="ward" class="is-active" aria-pressed="true">50 Wards</button>
+        <button type="button" data-area-type="community_area" aria-pressed="false">77 Neighborhoods</button>
+        <button type="button" data-area-type="chi" aria-pressed="false">χGRIDs</button>
       </div>
-
-      <div class="visualizer-cards is-loading" data-mobile-view="map">
-        <section id="visualizer-map" class="map-card visualizer-card">
-          <div id="area-type-toggle" class="area-type-toggle" role="group" aria-label="Choose geography">
-            <button type="button" data-area-type="ward" class="is-active">Wards</button>
-            <button type="button" data-area-type="community_area">Neighborhoods</button>
-            <button type="button" data-area-type="chi">χGRIDs</button>
-          </div>
-          <div id="map" aria-label="Chicago metric map"></div>
-          <div id="map-shade-loading" class="map-shade-loading" role="status" aria-live="polite" hidden>
-            <span class="metric-loading-spinner" aria-hidden="true"></span>
-            <span>Updating the map…</span>
-          </div>
-          <label class="map-detail-toggle" title="Show street map details">
-            <input type="checkbox" id="map-detail-toggle">
-            <span>Map details</span>
-          </label>
-        </section>
-
-        <section id="visualizer-ranker" class="panel visualizer-card ranker-card">
-          <h2 class="ranker-heading">Leaderboard</h2>
-          <div id="comparison-table" class="comparison-table"></div>
-        </section>
-
-        <section id="visualizer-timeline" class="panel visualizer-card timeline-card" role="tabpanel" aria-labelledby="tab-timeline" hidden>
-          <div class="panel-heading">
-            <p class="eyebrow">Timeline</p>
-            <h2>Weighted composite over time</h2>
-          </div>
-          <div id="time-series"></div>
-        </section>
-
-        <aside id="ward-details-popover" class="ward-details-popover" aria-live="polite" aria-label="Ward details" hidden></aside>
-
-        <div id="wellbeing-equation" class="wellbeing-equation" aria-live="polite" hidden>
-          <p><strong>wellbeing</strong> = <span id="wellbeing-equation-formula">Choose metrics in the panel</span></p>
-          <button type="button" id="delta-info" class="delta-info" hidden aria-label="Which metrics this change window can compare">i</button>
-          <button type="button" id="open-methodology" class="delta-info equation-info" hidden aria-label="How these are measured" title="How these are measured">?</button>
-        </div>
+      <div class="home-map-body">
+        <div id="map" aria-label="Select an area on the Chicago map"></div>
+        <div class="home-legend"><strong>Wellbeing Index <span>0–100</span></strong><div class="home-gradient"></div><div class="home-legend-labels"><span>Low</span><span>Medium</span><span>High</span></div></div>
+        <span id="map-hint" class="home-map-hint">● Click ward to inspect</span>
+        <div id="map-shade-loading" class="map-shade-loading" role="status" hidden><span class="metric-loading-spinner"></span>Updating the map…</div>
+        <label class="home-map-details"><input type="checkbox" id="map-detail-toggle"> Street details</label>
       </div>
     </section>
-
-    <aside class="input-panel" aria-label="Penlight inputs">
-      <div class="mobile-strip-bar">
-        <button type="button" id="mobile-random-metrics" class="mobile-strip-pill">Random</button>
-        <button type="button" id="mobile-all-metrics" class="mobile-strip-pill">All</button>
-        <button type="button" id="mobile-no-metrics" class="mobile-strip-pill">None</button>
-        <button type="button" id="input-panel-expander" class="input-panel-expander" aria-expanded="false" aria-label="Show all metrics">
-          <span class="expander-open-label">+</span>
-          <span class="expander-close-label">Done</span>
-        </button>
+    <section id="visualizer-ranker" class="home-card home-ranker" aria-label="Leaderboard">
+      <div class="home-card-heading"><h1>Leaderboard</h1><label class="home-search"><span aria-hidden="true">⌕</span><input id="ward-search" type="search" placeholder="Filter by ward or neighborhood…" aria-label="Filter leaderboard"></label></div>
+      <div id="comparison-table" class="home-rank-list"><p class="home-empty" role="status">Loading Chicago’s wards…</p></div>
+      <aside id="home-selection" class="home-selection" aria-label="Selected area" aria-live="polite"><p class="home-empty">Select an area to explore its score and metrics.</p></aside>
+    </section>
+    <section id="home-report" class="home-card home-report" aria-label="Full ward report" hidden><iframe id="ward-report-frame" title="Full ward report: rankings, charts, history, and comparisons"></iframe></section>
+    <aside id="home-inputs" class="home-card home-inputs" aria-label="Metric weights">
+      <div class="home-card-heading">
+        <h2>What metrics should matter?</h2>
+        <p>Weight <span id="metric-count">available</span> indicators: Off (0), On (1×), or <span class="home-priority-text">High (10×)</span>.</p>
+        <div class="home-search-row"><label class="home-search"><span aria-hidden="true">⌕</span><input id="metric-search" type="search" placeholder="Search open data metrics…" aria-label="Search metrics"></label></div>
+        <div class="home-shortcuts"><button id="surprise-me" type="button">Surprise me</button><button id="select-all-metrics" type="button">All</button><button id="deselect-all-metrics" type="button">None</button><button id="open-time-modal" type="button">Change time</button></div>
       </div>
-      <section class="panel input-card">
-        <div class="panel-heading input-panel-heading">
-          <p class="eyebrow">Input panel</p>
-          <h2>What metrics should matter?</h2>
-          <button type="button" id="open-settings-modal" class="settings-button" aria-label="Display settings" title="Display settings">
-            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="10" cy="10" r="2.6"/><path d="M10 2.5 L10 4.5 M10 15.5 L10 17.5 M2.5 10 L4.5 10 M15.5 10 L17.5 10 M4.7 4.7 L6.1 6.1 M13.9 13.9 L15.3 15.3 M15.3 4.7 L13.9 6.1 M6.1 13.9 L4.7 15.3"/></svg>
-          </button>
-        </div>
-
-        <section class="input-section">
-          <div class="metric-selection-intro">
-            <p class="metric-weight-hint">
-              Tap metric squares to choose the measures that matter to you. Each tap cycles
-              off &rarr; on &rarr; high priority &rarr; off, and the map updates around your choices.
-            </p>
-            <div class="metric-selection-actions" aria-label="Metric selection shortcuts">
-              <button type="button" id="surprise-me" class="surprise-button">Surprise me</button>
-              <div class="metric-bulk-actions">
-                <button type="button" id="select-all-metrics" class="metric-secondary-action">Select all</button>
-                <button type="button" id="deselect-all-metrics" class="metric-secondary-action">Deselect all</button>
-                <button type="button" id="open-time-modal" class="metric-secondary-action">Change time</button>
-              </div>
-            </div>
-          </div>
-          <div id="metric-weights" class="metric-button-grid metric-button-grid-loading" aria-busy="true">
-            <div class="metric-loading-status" role="status">
-              <span class="metric-loading-spinner" aria-hidden="true"></span>
-              <span>Loading metrics...</span>
-            </div>
-            {% for _ in range(30) %}
-              <span class="metric-loading-tile" aria-hidden="true"></span>
-            {% endfor %}
-          </div>
-          <div id="metric-button-tooltip" class="metric-button-tooltip" hidden></div>
-          <section class="metric-recommendation-panel" aria-label="Suggest a metric">
-            <p>
-              Missing something?
-              <a class="metric-recommendation-link" href="{{ live_url('/suggest-metric') }}">
-                Suggest a metric
-              </a>
-            </p>
-          </section>
-        </section>
-
-      </section>
+      <div id="metric-weights" class="home-metric-list" aria-busy="true"><p class="home-empty" role="status">Loading metrics…</p></div>
+      <footer class="home-input-footer"><span>▤ Chicago open data</span><a href="{{ live_url('/suggest-metric') }}">♧ Suggest dataset</a></footer>
     </aside>
-
+    <footer id="wellbeing-equation" class="home-formula" aria-label="Active formula">
+      <strong>☷ &nbsp; ACTIVE FORMULA:</strong><div id="wellbeing-equation-formula">Choose metrics in the panel</div>
+      <button type="button" id="delta-info" class="delta-info" hidden aria-label="Which metrics this change window can compare">i</button>
+      <button type="button" id="open-methodology" class="delta-info" hidden aria-label="How these are measured">?</button>
+    </footer>
     <div id="settings-modal" class="time-modal" hidden>
       <div class="time-modal-backdrop" data-close-settings-modal></div>
       <div class="time-modal-box" role="dialog" aria-modal="true" aria-label="Display settings">
@@ -181,5 +120,6 @@
   <script src="{{ url_for('static', filename='common.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='metric_icons.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='metric_details.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='home.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='explorer.js', v=asset_version) }}"></script>
 {% endblock %}

@@ -21,6 +21,11 @@
   "use strict";
 
   const api = window.WardWiseExplorer;
+  const embedded = new URLSearchParams(location.search).get("embedded") === "1" && window.parent !== window;
+  let receivingHost = false;
+  let reportReady = false;
+  let hostUpdate = 0;
+  let lastReportState = "";
 
   const STARTER = {
     park_count: 1,
@@ -228,6 +233,7 @@
 
   function writeUrl() {
     const params = new URLSearchParams();
+    if (embedded) params.set("embedded", "1");
     if (state.wardId) params.set("ward", String(Number(state.wardId)));
     if (state.view !== "landing" && state.view !== "ward") params.set("view", state.view);
     if (state.vsId && state.view === "compare") params.set("vs", String(Number(state.vsId)));
@@ -256,13 +262,13 @@
     const year = params.get("y");
     if (year && /^\d{4}$/.test(year)) state.year = Number(year);
     const mix = params.get("m");
-    if (mix) {
+    if (mix !== null) {
       const weights = {};
       mix.split(",").forEach((token) => {
         const [id, w] = token.split(":");
         if (id) weights[id.trim()] = Number(w || 1) || 1;
       });
-      if (Object.keys(weights).length) {
+      if (Object.keys(weights).length || embedded) {
         state.weights = weights;
         state.edited = true;
         state.mixChosen = true; // a shared link already carries a choice
@@ -293,6 +299,11 @@
       data.years.set("latest", matrix.latest || matrix);
       data.geojson = geojson;
     } catch (error) {
+      if (embedded) {
+        el("k3-report-loading").innerHTML = `<span role="alert">${esc(error.message)}</span> <button type="button" onclick="location.reload()">Retry loading report</button>`;
+        revealMap();
+        return;
+      }
       el("k3-landing").insertAdjacentHTML(
         "beforeend",
         `<p class="k3-quiet">${esc(error.message)} Refresh to try again.</p>`,
@@ -300,9 +311,11 @@
       revealMap();
       return;
     }
-    initMap();
+    if (!embedded) initMap();
     if (state.year !== "latest") await loadYear(state.year);
     render();
+    reportReady = true;
+    if (embedded) window.parent.postMessage({ type: "wardwise:report-ready" }, location.origin);
   }
 
   // ---------- map ----------
@@ -453,6 +466,7 @@
   }
 
   function render() {
+    if (embedded) show("k3-report-loading", false);
     // Every view but the landing one is about a specific ward. Without one
     // there is nothing to render, so fall back rather than paint "Ward 0".
     if (!state.wardId && state.view !== "landing") state.view = "landing";
@@ -480,6 +494,14 @@
       lastView = state.view;
     }
     writeUrl();
+    if (embedded && reportReady && !receivingHost) {
+      const message = { type: "wardwise:report-change", wardId: state.wardId, weights: state.weights, year: state.year };
+      const signature = JSON.stringify(message);
+      if (signature !== lastReportState) {
+        lastReportState = signature;
+        window.parent.postMessage(message, location.origin);
+      }
+    }
   }
 
   // ---------- state 1: landing ----------
@@ -1859,6 +1881,10 @@
     el("k3-app").addEventListener("change", onChange);
     wireTicks();
     el("k3-change-ward").addEventListener("click", () => {
+      if (embedded) {
+        window.parent.postMessage({ type: "wardwise:report-close" }, location.origin);
+        return;
+      }
       state.view = "landing";
       render();
     });
@@ -1910,6 +1936,30 @@
   }
 
   document.addEventListener("DOMContentLoaded", () => {
+    window.addEventListener("message", async (event) => {
+      if (!embedded || !reportReady || event.origin !== location.origin || event.source !== window.parent || event.data?.type !== "wardwise:report-state") return;
+      const wardId = pad(event.data.wardId);
+      if (!data.wardById.has(wardId)) return;
+      const update = ++hostUpdate;
+      receivingHost = true;
+      state.wardId = wardId;
+      state.weights = Object.fromEntries(Object.entries(event.data.weights || {}).filter(([id, w]) => data.metricById.has(id) && [1, 10].includes(w)));
+      state.edited = true;
+      state.mixChosen = true;
+      state.presetName = null;
+      state.year = /^\d{4}$/.test(String(event.data.year)) ? Number(event.data.year) : "latest";
+      if (state.view === "landing") state.view = "ward";
+      try {
+        if (state.year !== "latest") await loadYear(state.year);
+        if (update !== hostUpdate) return;
+        render();
+        lastReportState = JSON.stringify({ type: "wardwise:report-change", wardId: state.wardId, weights: state.weights, year: state.year });
+      } catch (error) {
+        toast(error.message || "Unable to update the report.");
+      } finally {
+        if (update === hostUpdate) receivingHost = false;
+      }
+    });
     wire();
     boot();
   });
