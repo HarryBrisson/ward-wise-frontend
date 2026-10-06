@@ -1,14 +1,20 @@
 # Build the static site and publish it to GitHub Pages.
 #
-# Merging to main IS the deploy: penlight.wardwise.org serves these pages through a CloudFront
-# distribution the maintainer owns (which also routes /api/*, /login, /admin/*, /survey… to the
-# private API). There are no cloud credentials in this repo and none are needed — if a step here
-# ever asks for an AWS secret, that's the wrong design, not a missing setting.
+# Two channels from one repo, one Pages site:
+#   main  → the stable site, served at penlight.wardwise.org   (Pages root)
+#   next  → the preview channel, served at new.wardwise.org   (Pages /next/, CloudFront origin path)
+# Merging to `next` IS the preview deploy; a PR from next → main (maintainer review) promotes it.
+# Both builds go out together on every push to either branch, so neither can be stale.
+#
+# penlight.wardwise.org / new.wardwise.org are CloudFront distributions the maintainer owns; they
+# also route /api/*, /login, /admin/*, /survey… to the private API. There are no cloud credentials
+# in this repo and none are needed — if a step here ever asks for an AWS secret, that's the wrong
+# design, not a missing setting.
 name: pages
 
 on:
   push:
-    branches: [main]
+    branches: [main, next]
   pull_request:
   workflow_dispatch:
 
@@ -24,16 +30,41 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
+          path: main
+      - uses: actions/checkout@v4
+        with:
+          ref: next
+          path: next
+        continue-on-error: true   # until the next branch exists, the preview channel = main
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install -r requirements.txt
-      - name: Build
+      - run: pip install -r main/requirements.txt
+      - name: Build the stable site (main)
         env:
           GA_ID: ${{ vars.GA_ID }}
-        run: python scripts/build_static.py --out dist
-      - name: Check
-        run: python scripts/check_build.py dist
+        working-directory: main
+        run: python scripts/build_static.py --out ../dist && python scripts/check_build.py ../dist
+      - name: Build the preview channel (next)
+        # no analytics on the preview channel: it is for the people building it
+        working-directory: next
+        run: |
+          if [ -f scripts/build_static.py ]; then
+            python scripts/build_static.py --out ../dist/next && python scripts/check_build.py ../dist/next
+            rm -f ../dist/next/CNAME
+          else
+            echo "no next branch yet; preview channel mirrors main"
+          fi
+      - name: Build this PR's branch (so the check runs on what's being proposed)
+        if: github.event_name == 'pull_request'
+        uses: actions/checkout@v4
+        with:
+          path: pr
+      - if: github.event_name == 'pull_request'
+        working-directory: pr
+        run: python scripts/build_static.py --out ../dist-pr && python scripts/check_build.py ../dist-pr
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

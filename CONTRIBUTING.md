@@ -8,16 +8,27 @@ deploy.**
 ./run.sh          # http://localhost:1837, real data, no credentials
 ```
 
+## Two channels
+
+| Branch | Where it serves | Who merges |
+|---|---|---|
+| `next` | **new.wardwise.org** — the preview channel, same live data | any collaborator, after one approving review |
+| `main` | **penlight.wardwise.org** — the stable site | the maintainer, via a PR from `next` |
+
+Day to day you work against `next`. When the preview looks right, open a PR `next → main`; that
+PR is the release note. Both channels build from every push, so `new.wardwise.org` is never behind
+what's merged.
+
 ## The loop
 
-1. Branch, edit templates under `templates/` or files under `static/`, reload.
+1. Branch from `next`, edit templates under `templates/` or files under `static/`, reload.
 2. `python scripts/build_static.py && python scripts/check_build.py dist` — the same two commands
    CI runs. `python server.py --built` shows you exactly what Pages will serve.
-3. Open a PR. The `pages / build` check must pass and one collaborator must approve. Changes to
-   the deploy mechanism itself (`.github/`, `scripts/build_static.py`, `penlight_site.py`,
-   `views.json`) also need the maintainer's review (see `.github/CODEOWNERS`).
-4. Merge. The site updates within a few minutes; `https://penlight.wardwise.org/build.json`
-   shows which commit is live.
+3. Open a PR into `next`. The `pages / build` check must pass and one collaborator must approve.
+   Changes to the deploy mechanism itself (`.github/`, `scripts/build_static.py`,
+   `penlight_site.py`, `views.json`) need the maintainer's review on any branch (`.github/CODEOWNERS`).
+4. Merge. `new.wardwise.org` updates within a few minutes; `/build.json` on either host shows
+   which commit is live there.
 
 ## Adding a page
 

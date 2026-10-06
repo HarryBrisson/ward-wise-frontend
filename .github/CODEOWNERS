@@ -1,7 +1,11 @@
-# The deploy mechanism itself changes only with the maintainer's review. Everything else in the
-# repo (templates, scripts under static/, styles) needs one approving review from any collaborator.
-/.github/            @HarryBrisson
-/scripts/build_static.py  @HarryBrisson
-/scripts/check_build.py   @HarryBrisson
-/penlight_site.py             @HarryBrisson
-/views.json          @HarryBrisson
+# Branch rules (set in the repo's Settings → Branches):
+#   main  — the stable site. PRs need a review from a code owner (below): the maintainer.
+#   next  — the preview channel at new.wardwise.org. PRs need one approving review from anyone
+#           with write access; collaborators merge their own work there.
+# Everything is owned by the maintainer on main; the deploy mechanism is owned everywhere.
+*                        @HarryBrisson
+/.github/                @HarryBrisson
+/scripts/build_static.py @HarryBrisson
+/scripts/check_build.py  @HarryBrisson
+/penlight_site.py        @HarryBrisson
+/views.json              @HarryBrisson

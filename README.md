@@ -48,12 +48,14 @@ without forwarding. Local dev is always signed out (`/api/me` → 401), by desig
 ## How it deploys
 
 ```
-push to main ──► GitHub Actions: build_static.py → dist/ ──► GitHub Pages (pages.penlight.wardwise.org)
-                                                                     ▲
-penlight.wardwise.org ──► CloudFront ─┬─ default: everything here ───┘
-                                      └─ /api/* /login /account /admin/* /survey* /request-access
-                                         /metric-submissions /metric-recommendations /app-static/*
-                                         ──► the private Flask app on AWS Lambda
+push to main ─┐
+push to next ─┴► GitHub Actions: build main → dist/, build next → dist/next/ ──► GitHub Pages
+                                                                                  ▲        ▲
+penlight.wardwise.org ──► CloudFront (origin path /) ─── default: pages ─────────┘        │
+new.wardwise.org      ──► CloudFront (origin path /next) ─ default: pages ─────────────────┘
+                          both: /api/* /login /account /admin/* /survey* /request-access
+                                /metric-submissions /metric-recommendations /app-static/*
+                                ──► the private Flask app on AWS Lambda (the same production API)
 ```
 
 - `scripts/build_static.py` renders every template in `penlight_site.PAGES` to `dist/<path>/index.html`
@@ -61,7 +63,7 @@ penlight.wardwise.org ──► CloudFront ─┬─ default: everything here �
   `python server.py --built` serves `dist/` exactly as Pages will.
 - `scripts/check_build.py` fails the PR if a page is missing, lacks the build marker
   (`<meta name="penlight-build">`), or references an asset that wasn't copied.
-- `.github/workflows/pages.yml` builds on every PR and deploys on `main`. **There are no cloud
+- `.github/workflows/pages.yml` builds on every PR and deploys on `main` and `next` (see CONTRIBUTING for the two channels). **There are no cloud
   credentials in this repo and none are needed.** If a change seems to need an AWS secret here,
   that's the wrong design — open an issue.
 - CloudFront answers `/metrics` with a 301 to `/reports` and rewrites `/report/<slug>/<id>` to
