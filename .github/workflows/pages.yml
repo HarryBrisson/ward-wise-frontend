@@ -41,19 +41,21 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install -r main/requirements.txt
+      - run: pip install -r "$( [ -f main/requirements.txt ] && echo main || echo next )/requirements.txt"
       - name: Build the stable site (main)
         env:
           GA_ID: ${{ vars.GA_ID }}
-        working-directory: main
-        run: python scripts/build_static.py --out ../dist && python scripts/check_build.py ../dist
+        # Until the static build has landed on main (PR #2), the root is built from next so the Pages
+        # site is never empty; after that merge this branch of the `if` is dead and main is the root.
+        run: |
+          if [ -f main/scripts/build_static.py ]; then src=main; else echo "main has no static build yet; root mirrors next"; src=next; fi
+          (cd "$src" && python scripts/build_static.py --out ../dist && python scripts/check_build.py ../dist)
       - name: Build the preview channel (next)
         # no analytics on the preview channel: it is for the people building it
-        working-directory: next
         run: |
-          if [ -f scripts/build_static.py ]; then
-            python scripts/build_static.py --out ../dist/next && python scripts/check_build.py ../dist/next
-            rm -f ../dist/next/CNAME
+          if [ -f next/scripts/build_static.py ]; then
+            (cd next && python scripts/build_static.py --out ../dist/next && python scripts/check_build.py ../dist/next)
+            rm -f dist/next/CNAME
           else
             echo "no next branch yet; preview channel mirrors main"
           fi
