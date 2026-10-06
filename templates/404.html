@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}Not found — Ward Wise Penlight{% endblock %}
+
+{% block content %}
+  <main class="metrics-layout">
+    <div class="metrics-header panel-heading">
+      <p class="eyebrow">Ward Wise Penlight</p>
+      <h1>That page isn't here</h1>
+      <p>Try the <a href="{{ url_for('ui.index') }}">map</a>, the <a href="{{ url_for('ui.reports_page') }}">reports</a>, or the <a href="{{ url_for('ui.dictionary_page') }}">metric dictionary</a>.</p>
+    </div>
+  </main>
+  <script>
+    // Without CloudFront in front (plain GitHub Pages), /report/<slug>/<id> lands here; the report
+    // page reads its own URL, so bounce to it keeping the path in the query for it to pick up.
+    (function () {
+      var m = location.pathname.match(/^\/report\/([a-z_]+)\/([^/]+)\/?$/);
+      if (m) location.replace("/report/?area=" + encodeURIComponent(m[1] + "/" + m[2]) + (location.search ? "&" + location.search.slice(1) : "") + location.hash);
+    })();
+  </script>
+{% endblock %}

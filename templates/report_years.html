@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}Data years — Ward Wise Penlight{% endblock %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='report_ui.css', v=asset_version) }}">
+{% endblock %}
+
+{% block content %}
+  <main class="metrics-layout">
+    <div class="metrics-header panel-heading">
+      <p class="eyebrow"><a href="{{ url_for('ui.reports_page') }}">Reports</a></p>
+      <h1>Data years</h1>
+      <p>Which years each measure actually covers — measured vintages, carried-forward coverage, constants and gaps — and how directly each one was measured.</p>
+    </div>
+    <section class="panel metrics-panel" id="years-view" aria-live="polite">
+      <div class="yearsgrid-controls">
+        <label class="yearsgrid-sort">Sort
+          <select id="yearsgrid-sort">
+            <option value="domain">By domain</option>
+            <option value="gaps">Largest gaps first</option>
+            <option value="tier">Most directly measured first</option>
+          </select>
+        </label>
+        <label class="yearsgrid-filter">Show
+          <select id="yearsgrid-filter-tier">
+            <option value="">All measurement tiers</option>
+            <option value="direct">Direct (recorded by ward)</option>
+            <option value="point">Point (located records)</option>
+            <option value="polygon">Polygon (apportioned)</option>
+            <option value="modeled">Modeled (estimated)</option>
+          </select>
+        </label>
+        <label class="yearsgrid-filter">Portability
+          <select id="yearsgrid-filter-portability">
+            <option value="">All metrics</option>
+            <option value="us_wide">Could be built for any US city</option>
+            <option value="anywhere">Could be built for any city on earth</option>
+            <option value="chicago_only">Chicago-specific only</option>
+          </select>
+        </label>
+        <label class="yearsgrid-showall"><input type="checkbox" id="yearsgrid-show-all"> Show years before 2009</label>
+      </div>
+      <div id="yearsgrid-content"><p>Loading metric coverage…</p></div>
+    </section>
+  </main>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='common.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='metric_icons.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='reports_years.js', v=asset_version) }}"></script>
+{% endblock %}

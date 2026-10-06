@@ -144,6 +144,9 @@
 
   function renderMetricDefinitionGroups(metrics, coverage, snapshots, options = {}) {
     const groups = groupedMetrics(metrics);
+    // the full list rides in options so a card can name its same-measure siblings, which live in
+    // other domain groups (renderMetricDomainPanel only ever sees its own group)
+    options = { ...options, allMetrics: metrics };
     if (!groups.length) {
       return "<p>No metric definitions are available yet.</p>";
     }
@@ -155,6 +158,22 @@
         </div>
       </div>
     `;
+  }
+
+
+  // Sibling sources for the same measure. Seeing "also counted by: business licences, County
+  // Business Patterns" is what tells a reader these rows aren't three different things.
+  function measureFamilyNoteHtml(metric, allMetrics) {
+    if (!metric.measure_family) return "";
+    const siblings = (allMetrics || []).filter(
+      (m) => m.measure_family === metric.measure_family && m.metric_id !== metric.metric_id);
+    if (!siblings.length) return "";
+    const links = siblings
+      .map((m) => `<a href="?metric=${WardWiseExplorer.escapeHtml(m.metric_id)}" data-metric-link="${WardWiseExplorer.escapeHtml(m.metric_id)}">${
+        WardWiseExplorer.escapeHtml(m.source_variant || m.label)}</a>`)
+      .join(", ");
+    return `<p class="metric-family-note">The same measure is also counted from ${links}. ` +
+      `Sources disagree — that gap is information, not an error.</p>`;
   }
 
   function groupedMetrics(metrics) {
@@ -258,6 +277,7 @@
           <span>${WardWiseExplorer.escapeHtml(metric.description || "No definition is available yet.")}</span>
         </summary>
         <div class="metric-definition-body">
+          ${measureFamilyNoteHtml(metric, options.allMetrics)}
           ${methodology ? `<p><strong>How to read it:</strong> ${WardWiseExplorer.escapeHtml(methodology)}</p>` : ""}
           ${metric.calculation ? `<p><strong>How it is calculated:</strong> ${WardWiseExplorer.escapeHtml(metric.calculation)}</p>` : ""}
           <dl class="metric-definition-meta">
@@ -265,6 +285,7 @@
               <dt>Source</dt>
               <dd>${renderMetricSource(source, sourceUrl)}</dd>
             </div>
+            ${renderMetricExplore(metric)}
             <div>
               <dt>Coverage</dt>
               <dd>${WardWiseExplorer.escapeHtml(metricCoverageLabel(metricCoverage))}</dd>
@@ -321,6 +342,23 @@
     if (!source) return "Not recorded";
     if (!sourceUrl) return WardWiseExplorer.escapeHtml(source);
     return `<a href="${WardWiseExplorer.escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer">${WardWiseExplorer.escapeHtml(source)}</a>`;
+  }
+
+  // A partner site that shows this metric's underlying records. Deliberately its own row rather
+  // than folded into Source: the number came from the source, the deeper view comes from here.
+  function renderMetricExplore(metric) {
+    const explore = metric?.explore;
+    if (!explore || !isHttpUrl(explore.url)) return "";
+    const label = explore.label || "External site";
+    const note = explore.note
+      ? `<span class="metric-explore-note">${WardWiseExplorer.escapeHtml(explore.note)}</span>`
+      : "";
+    return `
+      <div>
+        <dt>Explore further</dt>
+        <dd><a href="${WardWiseExplorer.escapeHtml(explore.url)}" target="_blank" rel="noopener noreferrer">${WardWiseExplorer.escapeHtml(label)}</a>${note}</dd>
+      </div>
+    `;
   }
 
   function renderAdminTechnicalDetails(metric, coverage, status, source, defaultWeight) {
@@ -579,7 +617,18 @@
     metricSourceUrl,
   };
 
-  // Auto-initialize the /metrics page when its root element is present.
+  // A metric link from a report (/dictionary?metric=X) opens the entry and scrolls to it.
+  function revealEntry(metricId) {
+    const entry = document.getElementById(`metric-entry-${metricId}`);
+    if (!entry) return false;
+    entry.open = true;  // domain panels all render — only the entry itself needs opening
+    entry.scrollIntoView({ block: "center", behavior: "smooth" });
+    entry.classList.add("is-highlighted");
+    setTimeout(() => entry.classList.remove("is-highlighted"), 2400);
+    return true;
+  }
+
+  // Auto-initialize the /dictionary page when its root element is present.
   const metricsRoot = document.getElementById("metrics-content");
   if (metricsRoot) {
     const isAdmin = metricsRoot.dataset.isAdmin === "true";
@@ -591,6 +640,17 @@
           snapshots: metricData.snapshots,
           weights: metricData.default_weights || {},
           isAdmin,
+        });
+        const wanted = new URLSearchParams(location.search).get("metric");
+        if (wanted) revealEntry(wanted);
+        // sibling-source links inside an entry: jump within the page instead of reloading it
+        metricsRoot.addEventListener("click", (event) => {
+          const link = event.target.closest("a[data-metric-link]");
+          if (!link) return;
+          event.preventDefault();
+          const id = link.dataset.metricLink;
+          history.replaceState(null, "", `${location.pathname}?metric=${encodeURIComponent(id)}`);
+          revealEntry(id);
         });
       })
       .catch((error) => {

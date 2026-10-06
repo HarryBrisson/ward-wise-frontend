@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}Suggest a Metric - Ward Wise Penlight{% endblock %}
+
+{% block content %}
+  <main class="metric-suggestion-layout">
+    <section class="panel metric-suggestion-card" aria-labelledby="metric-suggestion-heading">
+      <div class="metric-suggestion-intro">
+        <p class="eyebrow">Suggest a metric</p>
+        <h1 id="metric-suggestion-heading">What should we measure next?</h1>
+        <p>Share your idea for a ward-level metric!</p>
+      </div>
+
+      <form id="metric-recommendation-form" class="metric-recommendation-form metric-suggestion-form" novalidate>
+        <label>
+          Metric idea
+          <textarea name="metric" rows="4" required placeholder="What should we measure?"></textarea>
+        </label>
+
+        <label>
+          Why does this metric matter to you?<span>(optional)</span>
+          <textarea name="wellbeing_rationale" rows="4"></textarea>
+        </label>
+
+        <fieldset class="recommendation-about-you">
+          <legend>About you</legend>
+          <div class="recommendation-contact-grid">
+            <label>
+              Name
+              <input name="name" type="text" autocomplete="name" required>
+            </label>
+
+            <label>
+              Email
+              <input name="email" type="email" autocomplete="email" required>
+            </label>
+          </div>
+
+          <div class="recommendation-contact-grid">
+            <label>
+              Ward
+              <select name="ward_id" data-ward-select>
+                <option value="">Select a ward</option>
+              </select>
+            </label>
+
+            <label>
+              Community area
+              <select name="community_area_id" data-community-area-select>
+                <option value="">Select a community area</option>
+              </select>
+            </label>
+          </div>
+
+          <label>
+            <span class="recommendation-label-row">
+              Address, nearest intersection, or landmark<span>(optional)</span>
+              <span class="location-help" tabindex="0" aria-describedby="location-help-text">
+                Why do we ask this?
+                <span id="location-help-text" class="location-help-tooltip" role="tooltip">
+                  We are trying to cover all 50 wards and 77 community areas. By choosing your ward/community area, you help us track where we are on this objective.
+                </span>
+              </span>
+            </span>
+            <input
+              name="address_or_intersection"
+              type="text"
+              autocomplete="street-address"
+            >
+          </label>
+        </fieldset>
+
+        <label class="recommendation-checkbox">
+          <input name="can_list_nominator" type="checkbox" value="true">
+          <span>
+            You may list me as the metric contributor if Ward Wise Penlight adds this metric.
+            <span>(optional)</span>
+          </span>
+        </label>
+
+        <div id="metric-recommendation-status" class="metric-recommendation-status" role="status" aria-live="polite" hidden></div>
+        <button type="submit" class="recommendation-submit-button">Submit suggestion</button>
+      </form>
+    </section>
+  </main>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='common.js') }}"></script>
+  <script src="{{ url_for('static', filename='metric_suggestion.js') }}"></script>
+{% endblock %}

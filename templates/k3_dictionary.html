@@ -1,0 +1,60 @@
+{% extends "base_k3.html" %}
+
+{% block title %}Metric dictionary — Ward Wise Penlight{% endblock %}
+
+{% block content %}
+  <main class="metrics-layout">
+    <div class="metrics-header panel-heading">
+      <p class="eyebrow">Ward Wise Penlight</p>
+      <h1>Metric dictionary</h1>
+      <p>
+        Every measure behind the map. What it counts, who published the number, which
+        wards it covers, and how it is scored. Search it, or open a topic below.
+      </p>
+    </div>
+
+    <p id="dict-note" class="dict-note"></p>
+
+    {# The controls stay in the template so the page has its shape before the
+       catalog lands. k3-dictionary.js wires them and fills the counts. #}
+    <div class="dict-bar">
+      <div class="dict-searchrow">
+        <input type="text" id="dict-search" autocomplete="off" spellcheck="false"
+               placeholder="Search every measure&hellip;" aria-label="Search measures">
+        <button type="button" id="dict-clear" class="dict-linkbtn" hidden>clear</button>
+      </div>
+      <div class="dict-knobs">
+        <div class="dict-knob" role="group" aria-label="Group measures by">
+          <span class="dict-knoblab">Group by</span>
+          <button type="button" data-group-btn="topic" class="is-on" aria-pressed="true">Topic</button>
+          <button type="button" data-group-btn="source" aria-pressed="false">Source</button>
+          <button type="button" data-group-btn="az" aria-pressed="false">A to Z</button>
+        </div>
+        <div class="dict-knob" role="group" aria-label="Filter measures">
+          <span class="dict-knoblab">Show</span>
+          <button type="button" data-show-btn="all" class="is-on" aria-pressed="true">Everything</button>
+          <button type="button" data-show-btn="lists" aria-pressed="false">In a starting list</button>
+          <button type="button" data-show-btn="partial" aria-pressed="false">Partial coverage</button>
+        </div>
+      </div>
+    </div>
+
+    <p class="dict-tally">
+      <span id="dict-count"></span>
+      <button type="button" id="dict-expand" class="dict-linkbtn">expand all</button>
+    </p>
+
+    <div id="dict-results" class="dict-results">
+      <p class="dict-empty">Loading the catalog&hellip;</p>
+    </div>
+  </main>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='common.js', v=asset_version) }}"></script>
+  {# metric_details.js is loaded for its shared per-metric facts. It only takes
+     over a page that has a #metrics-content element, which this one does not. #}
+  <script src="{{ url_for('static', filename='metric_details.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='k3-presets.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='k3-dictionary.js', v=asset_version) }}"></script>
+{% endblock %}

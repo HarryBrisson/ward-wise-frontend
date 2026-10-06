@@ -1,0 +1,7 @@
+# The deploy mechanism itself changes only with the maintainer's review. Everything else in the
+# repo (templates, scripts under static/, styles) needs one approving review from any collaborator.
+/.github/            @HarryBrisson
+/scripts/build_static.py  @HarryBrisson
+/scripts/check_build.py   @HarryBrisson
+/penlight_site.py             @HarryBrisson
+/views.json          @HarryBrisson

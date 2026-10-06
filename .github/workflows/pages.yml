@@ -1,0 +1,53 @@
+# Build the static site and publish it to GitHub Pages.
+#
+# Merging to main IS the deploy: penlight.wardwise.org serves these pages through a CloudFront
+# distribution the maintainer owns (which also routes /api/*, /login, /admin/*, /survey… to the
+# private API). There are no cloud credentials in this repo and none are needed — if a step here
+# ever asks for an AWS secret, that's the wrong design, not a missing setting.
+name: pages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - name: Build
+        env:
+          GA_ID: ${{ vars.GA_ID }}
+        run: python scripts/build_static.py --out dist
+      - name: Check
+        run: python scripts/check_build.py dist
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block title %}Submit a Photo - Ward Wise Penlight{% endblock %}
+
+{% block content %}
+  <main class="metric-suggestion-layout">
+    <section class="panel metric-suggestion-card" aria-labelledby="photo-suggestion-heading">
+      <div class="metric-suggestion-intro">
+        <p class="eyebrow">Put your neighborhood on the map</p>
+        <h1 id="photo-suggestion-heading">Submit a photo for your area</h1>
+        <p>
+          Every ward, neighborhood, and &chi;GRID on Penlight shows a representative photo of a
+          place inside it. Know a spot that captures yours? Send it in. Submissions are reviewed
+          for rights and quality before they appear, with credit to you.
+        </p>
+      </div>
+
+      <form id="photo-submission-form" class="metric-recommendation-form metric-suggestion-form" novalidate>
+        <label>
+          Photo <span>(JPEG, PNG, or WebP — up to 8 MB)</span>
+          <input name="photo" type="file" accept="image/jpeg,image/png,image/webp" required>
+        </label>
+
+        <div class="recommendation-field-grid">
+          <label>
+            Area type
+            <select name="area_type" required>
+              <option value="ward">Ward</option>
+              <option value="community_area">Neighborhood</option>
+              <option value="chi">&chi;GRID</option>
+            </select>
+          </label>
+          <label>
+            Which one?
+            <input name="area_label" type="text" required placeholder="e.g. Ward 5, South Shore, 10N10W">
+          </label>
+        </div>
+
+        <label>
+          What is this a photo of? <span>(optional)</span>
+          <input name="caption" type="text" placeholder="e.g. The South Shore Cultural Center at sunrise">
+        </label>
+
+        <fieldset class="recommendation-about-you">
+          <legend>About you</legend>
+          <div class="recommendation-contact-grid">
+            <label>
+              Name
+              <input name="name" type="text" autocomplete="name" required>
+            </label>
+            <label>
+              Email
+              <input name="email" type="email" autocomplete="email" required>
+            </label>
+          </div>
+        </fieldset>
+
+        <label class="settings-option">
+          <input type="checkbox" name="consent" value="yes" required>
+          <span>
+            I took this photo, and I license it under
+            <a href="https://creativecommons.org/licenses/by/4.0/" rel="noopener">CC BY 4.0</a>
+            so Penlight can display it with credit to me.
+          </span>
+        </label>
+
+        <input name="website" type="text" class="visually-hidden" tabindex="-1" autocomplete="off" aria-hidden="true">
+
+        <button type="submit" class="surprise-button">Submit photo</button>
+        <p id="photo-submission-status" role="status" hidden></p>
+      </form>
+    </section>
+  </main>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='common.js') }}"></script>
+  <script>
+    (function () {
+      "use strict";
+      const form = document.getElementById("photo-submission-form");
+      const status = document.getElementById("photo-submission-status");
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        if (!form.reportValidity()) return;
+        status.hidden = false;
+        status.textContent = "Uploading…";
+        try {
+          const response = await fetch("/api/photo-submissions", { method: "POST", body: new FormData(form) });
+          const payload = await response.json();
+          if (!response.ok) throw new Error(payload.error || "Upload failed.");
+          form.reset();
+          status.textContent = "Thank you! Your photo is in the review queue — we'll credit you if it's chosen.";
+        } catch (error) {
+          status.textContent = error.message || "Upload failed — please try again.";
+        }
+      });
+    })();
+  </script>
+{% endblock %}

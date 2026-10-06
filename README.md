@@ -1,21 +1,27 @@
 # ward-wise-frontend
 
-The frontend for **Ward Wise Penlight** — a civic-data project built at
+The public site for **Ward Wise Penlight** — a civic-data project built at
 [Chi Hack Night](https://chihacknight.org/) that turns Chicago open data into neighborhood
-wellbeing metrics anyone can explore, weight, and compare. Live at
+wellbeing measures anyone can explore, weight, and compare. Live at
 [penlight.wardwise.org](https://penlight.wardwise.org).
 
-This repo is the **UX half** of Penlight. It holds the three main views and nothing else:
+This repo is every reader-facing page of Penlight: the map, the reports, the metric dictionary,
+the Support pages, and Connor Florczyk's sequenced K3 explorer. **Merging to `main` deploys it.**
+The data, the pipeline, the API, and the signed-in pages (survey, account, admin) live in the
+private [ward-wise-civic-tech](https://github.com/HarryBrisson/ward-wise-civic-tech) repo and are
+reached on the same host.
 
-| View | Route | What it is |
+| Page | Route | Template |
 |---|---|---|
-| **Map** | `/` | The landing page. A Leaflet choropleth of Chicago by ward, neighborhood, or χGRID, with a metric picker that rescores the map live. |
-| **Metric dictionary** | `/dictionary` | Every measure: what it counts, its source, its coverage years, how it enters the composite. Grouped by wellbeing domain. |
-| **Support** | `/support` (`/about`) | How residents contribute — nominate a metric, submit a photo, bring Penlight to another city. |
+| Map view | `/` | `explorer.html` |
+| K3 sequenced explorer | `/k3` (+ `/k3/dictionary`) | `k3.html` |
+| Reports hub, and one page per report | `/reports`, `/report`, `/compare`, `/reports/term`, `/reports/comparison`, `/reports/deep-dive`, `/reports/data-years` | `reports_hub.html`, `report*.html`, `compare.html` |
+| Index of fifty, Menu money, Metrics near you | `/index`, `/menu`, `/near`, `/near/change` | `index_page.html`, `menu.html`, `near*.html` |
+| Metric dictionary, Data notes, API docs | `/dictionary`, `/data-notes`, `/api-docs` | |
+| Support, visual signifiers, nominate / submit a photo / your city | `/about` (`/support`), `/signifiers`, `/suggest-metric`, `/suggest-photo`, `/your-city` | |
 
-The data, the ETL pipeline, and the API live in
-[HarryBrisson/ward-wise-civic-tech](https://github.com/HarryBrisson/ward-wise-civic-tech), and
-will eventually move into their own APIs repo.
+The full list, with each page's nav label and group, is `views.json` (a snapshot of the API's
+`/api/views`); the route table is `penlight_site.PAGES`.
 
 ## Run it
 
@@ -23,89 +29,69 @@ will eventually move into their own APIs repo.
 ./run.sh
 ```
 
-That's the whole setup: a venv, Flask, and `requests`. Then open
-<http://localhost:1837>. You get the real site with real Chicago data — no AWS credentials,
-no data pipeline, no database.
-
-## How it works
-
-`server.py` is a ~120-line shell that does two things: render the three templates, and proxy
-`/api/*` to the live Penlight API. Proxying (rather than calling the API cross-origin from the
-browser) keeps every request same-origin, so there's no CORS to configure and no API key.
-
-```
-GET /dictionary  ->  templates/dictionary.html
-GET /api/metrics ->  https://penlight.wardwise.org/api/metrics
-```
-
-The live API is the only backend you need; it's public and unauthenticated for these reads.
+A venv, Flask and Jinja2. Open <http://localhost:1837>: the real site with real Chicago data —
+no AWS credentials, no data pipeline, no database. Edit a template or a file under `static/` and
+reload.
 
 | Variable | Default | Purpose |
 |---|---|---|
 | `PENLIGHT_API_BASE` | `https://penlight.wardwise.org` | Where `/api/*` is forwarded |
-| `PENLIGHT_SITE_BASE` | `https://penlight.wardwise.org` | Where out-of-scope links point |
+| `PENLIGHT_SITE_BASE` | `https://penlight.wardwise.org` | Where links to signed-in pages (survey, account) point |
 | `PROXY_ALLOW_WRITES` | `0` | `1` forwards POSTs upstream instead of stubbing them |
+| `GA_ID` | unset | Google Analytics id to render (production sets it as a repo variable) |
 | `PORT` | `1837` | The year Chicago was incorporated |
 
-**Writes are stubbed by default.** The map view POSTs an analytics event on every metric toggle;
+**Writes are stubbed by default.** The map POSTs an analytics event on every metric toggle;
 clicking around locally shouldn't write rows into production, so the proxy acknowledges those
-without forwarding.
+without forwarding. Local dev is always signed out (`/api/me` → 401), by design.
 
-### Links that leave
+## How it deploys
 
-Penlight has pages this repo deliberately doesn't carry — the reports page, metric nomination,
-photo submission, the API docs, the submissions admin. Links to them resolve against
-`PENLIGHT_SITE_BASE` and open on the live site rather than 404ing.
+```
+push to main ──► GitHub Actions: build_static.py → dist/ ──► GitHub Pages (pages.penlight.wardwise.org)
+                                                                     ▲
+penlight.wardwise.org ──► CloudFront ─┬─ default: everything here ───┘
+                                      └─ /api/* /login /account /admin/* /survey* /request-access
+                                         /metric-submissions /metric-recommendations /app-static/*
+                                         ──► the private Flask app on AWS Lambda
+```
+
+- `scripts/build_static.py` renders every template in `penlight_site.PAGES` to `dist/<path>/index.html`
+  with `?v=<content hash>` asset URLs, plus `404.html`, `build.json` and `.nojekyll`.
+  `python server.py --built` serves `dist/` exactly as Pages will.
+- `scripts/check_build.py` fails the PR if a page is missing, lacks the build marker
+  (`<meta name="penlight-build">`), or references an asset that wasn't copied.
+- `.github/workflows/pages.yml` builds on every PR and deploys on `main`. **There are no cloud
+  credentials in this repo and none are needed.** If a change seems to need an AWS secret here,
+  that's the wrong design — open an issue.
+- CloudFront answers `/metrics` with a 301 to `/reports` and rewrites `/report/<slug>/<id>` to
+  the report page; the build also writes fallbacks for both so plain Pages works.
+- Pages caches HTML for up to ten minutes, so a merge is live within a few minutes.
+
+## How the pages get their data
+
+Everything comes from the same-origin API at runtime. The three things the server used to inject
+at render time are gone:
+
+| Was | Now |
+|---|---|
+| `url_for('ui.…')` link targets | `penlight_site.make_url_for` knows the Flask endpoint names, so templates didn't change |
+| `nav_groups` for the Explore menu | `views.json`, refreshed from `GET /api/views` when a view is added upstream |
+| `user` (avatar menu, admin flags) | `static/account.js` asks `GET /api/me` (cookie, never cached) and fills the menu in |
+| signifier photos on Support / Signifiers | `GET /api/signifiers/examples`, `GET /api/signifiers/groups` |
+| the report's area from the route | `report.html` reads `location.pathname` |
 
 ## Stack
 
-There is no build step. No npm, no bundler, no framework.
+There is no bundler. No npm, no framework.
 
-- **Flask + Jinja2** for the shell and three templates
-- **Vanilla JS** in IIFEs attaching to `window` (`WardWiseExplorer`, `WardWiseIcons`, `WardWiseMetricDetails`)
-- **One hand-written stylesheet**, `static/styles.css`
+- **Jinja2** templates, rendered once by the build (and live by `server.py` in dev)
+- **Vanilla JS** in IIFEs attaching to `window` (`WardWiseExplorer`, `WardWiseIcons`, `WardWiseMetricDetails`, …)
+- **`static/styles.css`** plus a few page sheets (`report_ui.css`, `editorial.css`, `k3*.css`)
 - **Leaflet 1.9.4** from CDN, OpenStreetMap tiles
-
-Edit a file, reload the page. `server.py` runs in debug mode, so templates and Python reload
-themselves; static assets are cache-busted by mtime.
-
-```
-server.py               views + /api/* proxy
-templates/
-  base.html             layout: header, nav, stylesheet
-  k3.html               the explorer at / — four views, one map
-  explorer.html         the older map view, still at /classic
-  dictionary.html       metric dictionary
-  about.html            support page
-  _ward_outline.svg     50 ward paths, inlined so the map box is never blank
-static/
-  common.js             WardWiseExplorer — the API client, formatters, shared year math
-  k3.js                 the explorer: scoring, ranks, time machine, compare
-  k3.css                the explorer's design system
-  k3-shell.css          the shared header, plus the Dictionary and Support pages
-  k3-presets.js         the starting-point lists, plain data
-  k3-dictionary.js      the metric dictionary: search, grouping, deep links
-  ward-neighbors.js     which wards border which, generated
-  explorer.js           the older map view (2,100 lines: Leaflet, choropleth, weights, modals)
-  metric_details.js     per-metric facts shared by the dictionary and /classic
-  metric_icons.js       one inline SVG per metric
-  about.js              support page
-  styles.css            everything the older view uses
-scripts/
-  build_map_assets.py   regenerates the map outline and the neighbor list
-```
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) — including a list of good first issues.
 
 ## Provenance
 
-Cut from `HarryBrisson/ward-wise-civic-tech` (private) at commit `b5ba7e4`
-(`apps/ward_wise_explorer/`). Most files here are byte-identical copies, so fixes still port
-cleanly in either direction. The deliberate differences:
-
-- `base.html` drops Google Analytics and the whole auth branch — no login, no accounts.
-- The Support page's rotating signifier photos moved from server-rendered Jinja into `about.js`,
-  which fetches them from the area endpoints. That removed the last server-side data dependency
-  in these three views (and, upstream, an S3 read on every page render).
-- The dictionary was a subtab of `/reports` behind an `i` toggle; here it's a page of its own.
-  `metric_details.js` is unchanged — it self-initializes on `#metrics-content`.
+The pages were cut from the private repo's `apps/ward_wise_explorer/` (last synced 2026-10-06,
+when they were removed there). This repo is now the only copy. The K3 explorer at `/k3` is
+Connor Florczyk's redesign from PR #1; the classic explorer stays at `/`.

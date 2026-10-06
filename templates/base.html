@@ -4,19 +4,55 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Ward Wise Penlight{% endblock %}</title>
-    {# Cascade order matters: the original sheet first, then the shared K3 shell
-       (header + page chrome), then whatever the page itself adds. Page CSS
-       loading last means it wins without specificity tricks. #}
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css', v=asset_version) }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='k3-shell.css', v=asset_version) }}">
+    {# Which build of github.com/HarryBrisson/ward-wise-frontend rendered this page. The deploy's
+       smoke check requires it on every public page, so a Flask shell leaking through is caught. #}
+    <meta name="penlight-build" content="{{ build_sha }}">
+    {% if ga_id %}
+      <!-- Google tag (gtag.js) -->
+      <script async src="https://www.googletagmanager.com/gtag/js?id={{ ga_id|urlencode }}"></script>
+      <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag("js", new Date());
+
+        gtag("config", {{ ga_id|tojson }});
+      </script>
+    {% endif %}
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='logo.svg') }}">
+    <meta name="theme-color" content="#ffffff">
+    <script>
+      // Theme bootstrap: apply the stored preference (or the device's) before the stylesheet paints,
+      // so a dark-theme reader never sees a flash of the classic palette. theme.js owns the rest.
+      (function () {
+        var pref = null;
+        try { pref = window.localStorage.getItem("wardWiseTheme"); } catch (e) {}
+        var dark = pref === "dark" || (pref !== "classic" && window.matchMedia &&
+          window.matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.dataset.theme = dark ? "dark" : "classic";
+        document.documentElement.style.colorScheme = dark ? "dark" : "light";
+      })();
+    </script>
     {% block head %}{% endblock %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
   </head>
-  <body data-page="{{ request.endpoint }}">
+  <body data-page="{{ page_key }}">
     <header class="site-header">
-      <a class="site-brand" href="{{ url_for('index') }}" aria-label="Ward Wise Penlight home">
+      <a class="site-brand" href="{{ url_for('ui.index') }}" aria-label="Ward Wise Penlight home">
         <span class="brand-mark" aria-hidden="true">
-          <img class="brand-logo" src="{{ url_for('static', filename='logo.svg') }}" alt=""
-               width="64" height="64">
+          {# Connor's simplified mark: a beam of light carrying a rising data line. Inline so its two
+             colors follow the theme tokens; static/logo.svg is the same drawing for the favicon. #}
+          <svg class="brand-logo" viewBox="0 0 64 64" width="34" height="34" aria-hidden="true" focusable="false">
+            <defs>
+              <linearGradient id="brand-beam" x1="18" y1="46" x2="54" y2="16" gradientUnits="userSpaceOnUse">
+                <stop offset="0" style="stop-color: var(--logo-hue)" stop-opacity="0.22"/>
+                <stop offset="1" style="stop-color: var(--logo-hue)" stop-opacity="0.03"/>
+              </linearGradient>
+            </defs>
+            <path d="M18 46 L52 2 L58 34 Z" fill="url(#brand-beam)"/>
+            <path d="M18 46 L30 33 L39 38 L52 18" fill="none" style="stroke: var(--logo-hue)" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="52" cy="18" r="4.2" style="fill: var(--logo-hue)"/>
+            <circle cx="18" cy="46" r="4.6" style="fill: var(--logo-ink)"/>
+          </svg>
         </span>
         <span class="brand-copy">
           <span class="brand-kicker">Ward Wise</span>
@@ -24,14 +60,96 @@
         </span>
       </a>
       <nav class="site-nav" aria-label="Main navigation">
-        <a class="nav-link{% if request.endpoint == 'index' %} is-active{% endif %}" href="{{ url_for('index') }}">Explore</a>
-        <a class="nav-link{% if request.endpoint == 'dictionary' %} is-active{% endif %}" href="{{ url_for('dictionary') }}">Dictionary</a>
-        <a class="nav-link{% if request.endpoint == 'about' %} is-active{% endif %}" href="{{ url_for('about') }}">Support</a>
+        {# One dropdown for every way of reading the data — the map is just the first view.
+           The groups and entries come from views.json (a snapshot of the API's /api/views, which
+           the private app's services/view_registry.py publishes); add a view there. #}
+        {% set on_views = request.endpoint in view_endpoints %}
+        <div class="nav-menu">
+          <button type="button" class="nav-link nav-menu-button{% if on_views %} is-active{% endif %}"
+                  id="nav-views-toggle" aria-expanded="false" aria-haspopup="true" aria-controls="nav-views-menu">
+            Explore
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6,8.5 10,12.5 14,8.5"/></svg>
+          </button>
+          <div class="nav-menu-panel" id="nav-views-menu" hidden>
+            {% for group, views in nav_groups %}
+              {% if not loop.first %}<p class="nav-menu-heading">{{ group }}</p>{% endif %}
+              {% for view in views %}
+                <a href="{{ url_for(view.endpoint) }}"{% if request.endpoint == view.endpoint %} aria-current="page"{% endif %}>{{ view.label }}</a>
+              {% endfor %}
+            {% endfor %}
+          </div>
+        </div>
+        <a class="nav-link{% if request.endpoint in ('ui.about_page', 'ui.signifiers_page') %} is-active{% endif %}" href="{{ url_for('ui.about_page') }}">Support</a>
+        <button type="button" class="nav-link nav-icon-button theme-toggle" id="theme-toggle" data-theme-toggle
+                aria-label="Switch theme" title="Switch theme">
+          <svg class="theme-icon theme-icon-sun" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="10" cy="10" r="3.4"/><path d="M10 2.2v2.1M10 15.7v2.1M2.2 10h2.1M15.7 10h2.1M4.5 4.5l1.5 1.5M14 14l1.5 1.5M15.5 4.5L14 6M6 14l-1.5 1.5"/></svg>
+          <svg class="theme-icon theme-icon-moon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16.5 12.4A7 7 0 0 1 7.6 3.5a7 7 0 1 0 8.9 8.9z"/></svg>
+        </button>
+        {# Identity and admin live behind one avatar button so the bar stays three destinations
+           wide whoever is looking. These pages are static, so the avatar is filled in by
+           account.js from /api/me (same origin; the session cookie rides along). Signed-out
+           readers see nothing here: the login page appears when a gated page needs it. #}
+        <div class="nav-account" id="nav-account" hidden
+             data-account-url="{{ url_for('auth.account') }}"
+             data-logout-url="{{ url_for('auth.logout') }}"
+             data-submissions-url="{{ url_for('ui.metric_submissions_page') }}">
+          <button type="button" class="nav-account-button" id="nav-account-toggle"
+                  aria-expanded="false" aria-haspopup="true" aria-controls="nav-account-menu" title="">
+            <span class="nav-avatar" aria-hidden="true"></span>
+            <span class="visually-hidden">Account menu</span>
+          </button>
+          <div class="nav-account-menu" id="nav-account-menu" hidden>
+            <p class="nav-account-email"></p>
+            <a data-account-link href="{{ url_for('auth.account') }}">Account</a>
+            <a data-submissions-link href="{{ url_for('ui.metric_submissions_page') }}" hidden>Submissions</a>
+            <a data-logout-link href="{{ url_for('auth.logout') }}">Log out</a>
+          </div>
+        </div>
       </nav>
     </header>
 
     {% block content %}{% endblock %}
 
+    <script>
+      // Every nav dropdown: one open at a time, closes on outside click or Escape.
+      (function () {
+        var pairs = [["nav-views-toggle", "nav-views-menu"], ["nav-account-toggle", "nav-account-menu"]]
+          .map(function (ids) {
+            return { toggle: document.getElementById(ids[0]), menu: document.getElementById(ids[1]) };
+          })
+          .filter(function (pair) { return pair.toggle && pair.menu; });
+        function closeAll(except) {
+          pairs.forEach(function (pair) {
+            if (pair === except) return;
+            pair.menu.hidden = true;
+            pair.toggle.setAttribute("aria-expanded", "false");
+          });
+        }
+        pairs.forEach(function (pair) {
+          pair.toggle.addEventListener("click", function (event) {
+            event.stopPropagation();
+            var open = pair.menu.hidden;
+            closeAll(pair);
+            pair.menu.hidden = !open;
+            pair.toggle.setAttribute("aria-expanded", String(open));
+          });
+        });
+        document.addEventListener("click", function (event) {
+          pairs.forEach(function (pair) {
+            if (!pair.menu.hidden && !pair.menu.contains(event.target)) {
+              pair.menu.hidden = true;
+              pair.toggle.setAttribute("aria-expanded", "false");
+            }
+          });
+        });
+        document.addEventListener("keydown", function (event) {
+          if (event.key === "Escape") closeAll(null);
+        });
+      })();
+    </script>
+    <script src="{{ url_for('static', filename='theme.js') }}"></script>
+    <script src="{{ url_for('static', filename='account.js') }}"></script>
     {% block scripts %}{% endblock %}
   </body>
 </html>

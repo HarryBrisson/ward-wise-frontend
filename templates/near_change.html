@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Where funding moved — Ward Wise Penlight{% endblock %}
+
+{% block head %}
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+{% endblock %}
+
+{% block content %}
+<main class="near-layout near-change-layout" aria-label="Where funding moved">
+  <section class="near-intro">
+    <h1>Where funding moved</h1>
+    <p class="near-change-lead">Each area is colored by whether its surroundings gained or lost
+      between your two periods — the circle setting is the measurement radius around every
+      point, so nearby areas blend into a continuous picture. Pick any two periods: years,
+      terms, decades. Click anywhere for that spot's full report.</p>
+  </section>
+
+  <section class="near-change-controls">
+    <label>measure
+      <select id="chg-family"></select>
+    </label>
+    <fieldset class="near-change-period"><legend>period A</legend>
+      <select id="chg-a-from"></select>–<select id="chg-a-to"></select>
+    </fieldset>
+    <fieldset class="near-change-period"><legend>period B</legend>
+      <select id="chg-b-from"></select>–<select id="chg-b-to"></select>
+    </fieldset>
+    <label>circle
+      <select id="chg-radius">
+        <option value="250">250 m</option>
+        <option value="500" selected>500 m</option>
+        <option value="1000">1 km</option>
+      </select>
+    </label>
+    <span id="chg-presets" class="near-change-presets"></span>
+  </section>
+
+  <div id="chg-status" class="near-status"></div>
+  <div id="chg-map" class="near-change-map"></div>
+  <div class="near-change-legend">
+    <span id="chg-legend-lo"></span>
+    <span class="near-change-swatches" aria-hidden="true"></span>
+    <span id="chg-legend-hi"></span>
+    <span id="chg-legend-note" class="near-change-note"></span>
+  </div>
+  <p class="near-privacy">Rates are per covered year within each period; partial years and years
+    the source can't honestly report are left out. Coverage caveats live in the
+    <a href="/data-notes">data notes</a>; each dot links back to its full
+    <a href="/near">near-you report</a>.</p>
+</main>
+{% endblock %}
+
+{% block scripts %}
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="{{ url_for('static', filename='common.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='near_change.js', v=asset_version) }}"></script>
+{% endblock %}

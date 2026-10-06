@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Ward Wise Penlight{% endblock %}</title>
+    <meta name="penlight-build" content="{{ build_sha }}">
+    {# Cascade order matters: the original sheet first, then the shared K3 shell
+       (header + page chrome), then whatever the page itself adds. Page CSS
+       loading last means it wins without specificity tricks. #}
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css', v=asset_version) }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='k3-shell.css', v=asset_version) }}">
+    {% block head %}{% endblock %}
+  </head>
+  <body data-page="{{ page_key }}">
+    <header class="site-header">
+      <a class="site-brand" href="{{ url_for('ui.k3') }}" aria-label="Ward Wise Penlight home">
+        <span class="brand-mark" aria-hidden="true">
+          <img class="brand-logo" src="{{ url_for('static', filename='logo.svg') }}" alt=""
+               width="64" height="64">
+        </span>
+        <span class="brand-copy">
+          <span class="brand-kicker">Ward Wise</span>
+          <span class="brand-name">Penlight</span>
+        </span>
+      </a>
+      <nav class="site-nav" aria-label="Main navigation">
+        <a class="nav-link{% if request.endpoint == 'ui.k3' %} is-active{% endif %}" href="{{ url_for('ui.k3') }}">Explore</a>
+        <a class="nav-link{% if request.endpoint == 'ui.k3_dictionary' %} is-active{% endif %}" href="{{ url_for('ui.k3_dictionary') }}">Dictionary</a>
+        <a class="nav-link{% if request.endpoint == 'ui.about_page' %} is-active{% endif %}" href="{{ url_for('ui.about_page') }}">Support</a>
+      </nav>
+    </header>
+
+    {% block content %}{% endblock %}
+
+    {% block scripts %}{% endblock %}
+    {# the shared account menu is not in this shell; K3 is anonymous by design #}
+  </body>
+</html>

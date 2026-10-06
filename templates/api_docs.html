@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+
+{% block title %}API — Ward Wise Penlight{% endblock %}
+
+{% block content %}
+  <main class="metrics-layout api-docs-layout">
+    <div class="metrics-header panel-heading">
+      <p class="eyebrow">Developers</p>
+      <h1>Penlight API</h1>
+      <p>
+        Two read-only endpoints over the same data the dashboard uses: one ward's numbers in
+        context, and the dictionary that explains what every metric means.
+        <a href="{{ url_for('ui.about_page') }}">Ask for a key &rarr;</a>
+      </p>
+    </div>
+
+    <section class="panel metrics-panel">
+      <div class="panel-heading">
+        <h2>Authentication</h2>
+        <p>Every request needs a key, sent as a header. Keys are issued by request — they're free,
+          we just like knowing who's building on this.</p>
+      </div>
+      <pre class="api-code">curl -H "X-API-Key: wwp_1a2b3c4d_…" \
+  https://penlight.wardwise.org/api/v1/wards/12</pre>
+      <p class="api-note">
+        <code>Authorization: Bearer &lt;token&gt;</code> works too. Never put a key in a query
+        string — it would end up in logs and browser history. A missing key returns
+        <code>401 api_key_required</code>; a revoked one returns <code>403 api_key_invalid</code>.
+      </p>
+    </section>
+
+    <section class="panel metrics-panel">
+      <div class="panel-heading">
+        <h2><code>GET /api/v1/wards/{ward}</code></h2>
+        <p>Every published metric for one ward, each beside the average ward and this ward's rank.</p>
+      </div>
+      <p class="api-note">
+        <strong>Path</strong> <code>ward</code> — ward number, <code>1</code> or <code>01</code>.<br>
+        <strong>Query</strong> <code>year</code> — a four-digit year, or <code>latest</code> (default).
+        Unavailable years return <code>404 year_not_available</code> with the list of years that exist.
+      </p>
+      <pre class="api-code">{
+  "ward": { "ward_id": "12", "ward_number": 12,
+            "neighborhoods": ["Brighton Park", "Mckinley Park", "New City"] },
+  "year": "latest",
+  "available_years": ["2003", "2004", "…", "2026"],
+  "metric_count": 96,
+  "metrics": [
+    {
+      "metric_id": "c311_response_days",
+      "label": "311 Response Time",
+      "unit": "days", "direction": "lower", "category": "good_governance",
+      "value": 10.24,
+      "ward_average": 9.31,
+      "rank": 34, "wards_measured": 50,
+      "normalized_score": 41.7
+    }
+  ]
+}</pre>
+      <p class="api-note">
+        <code>ward_average</code> is the unweighted mean across wards that have a value — the
+        average ward, not a population-weighted citywide figure. <code>rank</code> counts from the
+        good end for that metric's <code>direction</code>, so <code>1</code> is always best.
+        <code>normalized_score</code> is the 0–100 position within that year's distribution, where
+        higher is always better regardless of direction.
+      </p>
+    </section>
+
+    <section class="panel metrics-panel">
+      <div class="panel-heading">
+        <h2><code>GET /api/v1/metrics</code></h2>
+        <p>What each metric measures, where it comes from, and which years it covers.</p>
+      </div>
+      <pre class="api-code">{
+  "metric_count": 137,
+  "data_years": [2003, 2004, "…", 2026],
+  "metrics": [
+    {
+      "metric_id": "c311_response_days",
+      "label": "311 Response Time",
+      "description": "How many days the city takes to close common 311 requests here.",
+      "category": "good_governance",
+      "unit": "days", "direction": "lower",
+      "source": "Chicago 311 service requests",
+      "calculation": "One value per calendar year since 2011: median days-to-close …",
+      "methodology_short": "Median days to close six common 311 request types …",
+      "time_invariant": false, "valid_from": null,
+      "data_years": [2011, 2012, "…", 2025],
+      "coverage": { "status": "populated", "populated_ward_count": 50 },
+      "nominator": { "name": "Connor Florczyk", "ward_id": "42" }
+    }
+  ]
+}</pre>
+      <p class="api-note">
+        <code>direction</code> is <code>higher</code>, <code>lower</code>, or <code>neutral</code>
+        — it tells you which way is good, which you need before ranking anything yourself.
+        <code>data_years</code> lists the years actually measured; a gap means no measurement, not
+        a zero.
+      </p>
+    </section>
+
+    <section class="panel metrics-panel">
+      <div class="panel-heading">
+        <h2>Using it honestly</h2>
+      </div>
+      <ul class="api-list">
+        <li>A metric's absence for a year is missing data, never zero — check <code>data_years</code>.</li>
+        <li>Comparing two years only makes sense for metrics remeasured in both; a vintage value
+          carried forward is the same measurement, not new evidence.</li>
+        <li>Most metrics are allocated to wards from finer geography, so treat small differences as
+          noise. <code>coverage.populated_ward_count</code> tells you how many wards a metric
+          actually reaches.</li>
+        <li>Ward boundaries changed in May 2023. Values are mapped to today's boundaries wherever
+          the source allows it.</li>
+        <li>The data is open — attribution to Ward Wise Penlight is appreciated, and corrections
+          are more than appreciated.</li>
+      </ul>
+    </section>
+  </main>
+{% endblock %}

@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>χGRID — Chicago's square-mile chis</title>
+<style>
+  :root {
+    --background: #f6f2ea; --surface: #fffdf8; --text: #172026; --muted-text: #5d6b73;
+    --border: #e3dccd; --surface-muted: #efe9dc; --accent: #c55f2c; --accent-dark: #93431f;
+    --strong: #12343b;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--background); color: var(--text); margin: 0;
+    font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 2.25rem 1.25rem 4rem; }
+  h1 { font-size: 1.9rem; margin: 0 0 0.3rem; letter-spacing: -0.01em; }
+  .lede { color: var(--muted-text); margin: 0 0 1.5rem; max-width: 62ch; }
+  .lede b { color: var(--text); font-weight: 600; }
+  code { background: var(--surface-muted); border-radius: 5px; padding: 0.1rem 0.35rem; font-size: 0.92em; }
+  .layout { display: grid; gap: 1.5rem; grid-template-columns: minmax(0, 1.4fr) minmax(15rem, 1fr); align-items: start; }
+  @media (max-width: 760px) { .layout { grid-template-columns: 1fr; } }
+  .mapcard { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1rem; }
+  .mapcard svg { width: 100%; height: auto; display: block; }
+  .chi { fill: var(--surface-muted); stroke: var(--border); stroke-width: 0.5; cursor: pointer; }
+  .chi:hover { fill: #ecd9cb; }
+  .chi.sel { fill: var(--accent); stroke: var(--accent-dark); stroke-width: 1; }
+  .chilabel { fill: var(--muted-text); font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    text-anchor: middle; pointer-events: none; opacity: 0.75; }
+  .chilabel.sel { fill: #fff; opacity: 1; font-weight: 600; }
+  .origin { fill: var(--strong); }
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.25rem; position: sticky; top: 1rem; }
+  .panel .ord { color: var(--accent-dark); font-size: 1.6rem; font-weight: 700; margin: 0; letter-spacing: 0.01em; }
+  .panel .nm { font-size: 1.1rem; margin: 0.1rem 0 0; }
+  .panel .lab { color: var(--muted-text); margin: 0.15rem 0 1rem; }
+  .panel dl { display: grid; grid-template-columns: auto 1fr; gap: 0.3rem 0.75rem; margin: 0; font-size: 0.9rem; }
+  .panel dt { color: var(--muted-text); }
+  .panel dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+  .search { width: 100%; padding: 0.5rem 0.7rem; border: 1px solid var(--border); border-radius: 8px;
+    background: var(--background); color: var(--text); font-size: 0.95rem; margin-bottom: 0.9rem; }
+  .search:focus { outline: 2px solid var(--accent); border-color: var(--accent); }
+  .hint { color: var(--muted-text); font-size: 0.85rem; }
+  details { margin-top: 1.75rem; border-top: 1px solid var(--border); padding-top: 1rem; }
+  summary { cursor: pointer; font-weight: 600; color: var(--accent-dark); }
+  details p { color: var(--text); max-width: 64ch; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>χGRID <span style="color:var(--muted-text);font-size:1rem;font-weight:400">· Chicago's square-mile chis</span></h1>
+  <p class="lede">χGRID divides Chicago into regular <b>one-mile cells called chis</b>, bounded by the
+    mile roads and centered on the half-mile-road intersection. Each chi has a public name like
+    <code>Damen–43rd chi</code>, a compact label <code>Dam43</code>, and a formal chi-ordinate
+    <code>χ:5S3W</code> indexing its position from State &amp; Madison. Click a cell to inspect it.</p>
+
+  <div class="layout">
+    <div class="mapcard"><div id="map">Loading the grid…</div></div>
+    <aside class="panel">
+      <input id="search" class="search" type="text" placeholder="Find by ordinate (5S3W) or name (Damen)" autocomplete="off" />
+      <div id="detail"><p class="hint">Select a chi on the map, or search above.</p></div>
+    </aside>
+  </div>
+
+  <details>
+    <summary>How the system works</summary>
+    <p><b>Origin.</b> The grid is anchored at <b>State &amp; Madison</b>, the zero point of Chicago's
+      address system. χ:1S1W is the chi at the origin; numbers grow south/north and west/east from there.</p>
+    <p><b>Limits &amp; midpoints.</b> Every chi is bounded by mile roads and centered on the half-mile
+      roads between them. The Damen–43rd chi spans Ashland→Western (east–west) and 39th→47th
+      (north–south), centered on Damen and 43rd.</p>
+    <p><b>Geographic, not address-number.</b> Distances are real miles. Chicago's south-side street
+      numbers overstate distance (43rd St is ~4.5 mi south, not 5.4), so the grid uses true geography —
+      which is why 43rd lands in the 5S band and Ashland on the 2W/3W boundary.</p>
+    <p><b>Names.</b> The x/avenue comes before the y/street: <code>Damen–43rd</code>, <code>Dam43</code>.
+      χGRID sits beneath neighborhood and community-area names — it doesn't replace them.</p>
+  </details>
+</div>
+
+<script>
+  const svgNS = "http://www.w3.org/2000/svg";
+  const ORIGIN = [-87.62768, 41.88197];
+  let cells = [], selected = null;
+
+  function render(geo) {
+    cells = geo.features;
+    const lons = [], lats = [];
+    for (const f of cells) for (const [x, y] of f.geometry.coordinates[0]) { lons.push(x); lats.push(y); }
+    const minX = Math.min(...lons), maxX = Math.max(...lons), minY = Math.min(...lats), maxY = Math.max(...lats);
+    const W = 760, pad = 8;
+    const sx = (W - 2 * pad) / (maxX - minX);
+    const H = (maxY - minY) * sx + 2 * pad;
+    const px = (lon) => pad + (lon - minX) * sx;
+    const py = (lat) => H - pad - (lat - minY) * sx; // north up
+
+    const svg = document.createElementNS(svgNS, "svg");
+    svg.setAttribute("viewBox", `0 0 ${W} ${Math.round(H)}`);
+    svg.setAttribute("role", "img");
+    svg.setAttribute("aria-label", "Map of Chicago's chi cells");
+    const ring0 = cells[0].geometry.coordinates[0];
+    const cellLon = Math.max(...ring0.map((p) => p[0])) - Math.min(...ring0.map((p) => p[0]));
+    const fontPx = Math.max(4, Math.min(8, (sx * cellLon) / 5.5)); // fit ~5 chars in a cell
+    for (const f of cells) {
+      const pts = f.geometry.coordinates[0].map(([x, y]) => `${px(x).toFixed(1)},${py(y).toFixed(1)}`).join(" ");
+      const poly = document.createElementNS(svgNS, "polygon");
+      poly.setAttribute("points", pts);
+      poly.setAttribute("class", "chi");
+      poly.dataset.ord = f.properties.chi_ordinate;
+      const t = document.createElementNS(svgNS, "title");
+      t.textContent = `${f.properties.name} · ${f.properties.label}`;
+      poly.appendChild(t);
+      poly.addEventListener("click", () => select(f.properties.chi_ordinate));
+      svg.appendChild(poly);
+      // compact label inside each cell, for easy reading (e.g. "Cen43")
+      const token = f.properties.label.replace(/\s*χ$/, "");
+      const txt = document.createElementNS(svgNS, "text");
+      txt.setAttribute("x", px(f.properties.center[0]).toFixed(1));
+      txt.setAttribute("y", (py(f.properties.center[1]) + fontPx / 3).toFixed(1));
+      txt.setAttribute("class", "chilabel");
+      txt.setAttribute("font-size", fontPx.toFixed(1));
+      txt.dataset.ord = f.properties.chi_ordinate;
+      txt.textContent = token;
+      svg.appendChild(txt);
+    }
+    const o = document.createElementNS(svgNS, "circle");
+    o.setAttribute("cx", px(ORIGIN[0])); o.setAttribute("cy", py(ORIGIN[1]));
+    o.setAttribute("r", 3.5); o.setAttribute("class", "origin");
+    const ot = document.createElementNS(svgNS, "title"); ot.textContent = "State & Madison (origin)";
+    o.appendChild(ot); svg.appendChild(o);
+
+    const map = document.getElementById("map");
+    map.innerHTML = ""; map.appendChild(svg);
+    restoreFromHash();
+  }
+
+  function select(ord) {
+    selected = cells.find((f) => f.properties.chi_ordinate === ord);
+    document.querySelectorAll(".chi, .chilabel").forEach((p) => p.classList.toggle("sel", p.dataset.ord === ord));
+    const sel = document.querySelector(`.chi[data-ord="${CSS.escape(ord)}"]`);
+    if (sel) sel.parentNode.appendChild(sel); // raise selected above neighbors
+    const selLabel = document.querySelector(`.chilabel[data-ord="${CSS.escape(ord)}"]`);
+    if (selLabel) selLabel.parentNode.appendChild(selLabel);
+    history.replaceState(null, "", `#chi=${ord.replace("χ:", "")}`);
+    renderDetail();
+  }
+
+  function renderDetail() {
+    const node = document.getElementById("detail");
+    if (!selected) { node.innerHTML = `<p class="hint">Select a chi on the map, or search above.</p>`; return; }
+    const p = selected.properties;
+    node.innerHTML = `
+      <p class="ord">${p.chi_ordinate}</p>
+      <p class="nm">${p.name}</p>
+      <p class="lab">${p.label}</p>
+      <dl>
+        <dt>Label</dt><dd>${p.label}</dd>
+        <dt>Center</dt><dd>${p.center[1].toFixed(4)}, ${p.center[0].toFixed(4)}</dd>
+        <dt>Cell</dt><dd>1 sq mile</dd>
+      </dl>`;
+  }
+
+  function restoreFromHash() {
+    const m = (location.hash || "").match(/chi=([A-Za-z0-9]+)/);
+    if (m) select(`χ:${m[1].toUpperCase()}`);
+  }
+
+  document.getElementById("search").addEventListener("input", (e) => {
+    const q = e.target.value.trim().toLowerCase();
+    if (!q) return;
+    const hit = cells.find((f) =>
+      f.properties.chi_ordinate.toLowerCase().replace("χ:", "") === q ||
+      f.properties.name.toLowerCase().includes(q) ||
+      f.properties.label.toLowerCase().includes(q));
+    if (hit) select(hit.properties.chi_ordinate);
+  });
+
+  fetch("/static/chigrid.geojson")
+    .then((r) => r.json())
+    .then(render)
+    .catch(() => { document.getElementById("map").textContent = "Could not load the grid."; });
+</script>
+</body>
+</html>

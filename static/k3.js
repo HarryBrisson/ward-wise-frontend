@@ -1582,7 +1582,7 @@
     box.innerHTML = `<button type="button" disabled>Looking up that address&hellip;</button>`;
     try {
       const result = await api.fetchJson(
-        `/geocode?q=${encodeURIComponent(query)}`,
+        `/api/geocode?q=${encodeURIComponent(query)}`,
         "Address lookup is unavailable right now.",
       );
       if (result.match) {
@@ -1678,7 +1678,7 @@
       const seq = ++suggestSeq;
       try {
         const result = await api.fetchJson(
-          `/geocode/suggest?q=${encodeURIComponent(query)}`,
+          `/api/geocode/suggest?q=${encodeURIComponent(query)}`,
           "Suggestions unavailable.",
         );
         if (suggestCache.size > 80) suggestCache.clear();
@@ -1700,7 +1700,7 @@
     el("k3-search-results").hidden = true;
     try {
       const result = await api.fetchJson(
-        `/geocode/resolve?text=${encodeURIComponent(suggestion.label)}&key=${encodeURIComponent(suggestion.key || "")}`,
+        `/api/geocode/resolve?text=${encodeURIComponent(suggestion.label)}&key=${encodeURIComponent(suggestion.key || "")}`,
         "Address lookup is unavailable right now.",
       );
       const wardId = result.match ? wardAtPoint(result.match.lat, result.match.lon) : null;

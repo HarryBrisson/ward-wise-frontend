@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Index of fifty — Ward Wise Penlight{% endblock %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='report_ui.css', v=asset_version) }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='editorial.css', v=asset_version) }}">
+{% endblock %}
+
+{% block content %}
+  <main class="ed-page" id="index-root" aria-live="polite">
+    <header class="ed-masthead">
+      <p class="ed-kicker" data-kicker>Ward by ward</p>
+      <h1>All <span data-count>fifty</span> <span data-noun>wards</span>, and what the numbers can honestly say about them.</h1>
+      <p class="ed-standfirst">Every <span data-noun-single>ward</span> in Chicago, ranked against the others on the measures Ward Wise
+        Penlight collects. Each ranking comes with what undercuts it, because a place in a list of <span data-count>fifty</span>
+        looks more precise than it usually is.</p>
+    </header>
+
+    <section class="ed-howto" aria-label="How to read this">
+      <p class="ed-section-label">How to read this</p>
+      <div class="howto-grid">
+        <div><h3>A rank is not a grade.</h3><p><span data-noun-cap>Wards</span> are often bunched so tightly that first and fifteenth describe the same conditions. When that happens, the line says so.</p></div>
+        <div><h3>Some measures are modeled.</h3><p>A few are statistical estimates of what a <span data-noun-single>ward</span> is likely to be like, not counts of anything inside it. Those are marked in the report.</p></div>
+        <div><h3>Ward lines moved in 2023.</h3><p>Boundaries were redrawn, so measures tied to a ward field describe a differently shaped place before that year. Neighborhoods and χGRIDs did not move.</p></div>
+        <div><h3>This is not a scorecard for anyone.</h3><p>Rankings reflect decades of conditions, geography, and investment. They are not a measure of any office's work, and nothing here is written as one.</p></div>
+      </div>
+    </section>
+
+    <div id="index-body"><p class="report-loading">Loading the index…</p></div>
+  </main>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='common.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='metric_icons.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='presets.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='geography.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='scoring.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='report_charts.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='index_page.js', v=asset_version) }}"></script>
+{% endblock %}

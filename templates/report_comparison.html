@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Metric comparison — Ward Wise Penlight{% endblock %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='report_ui.css', v=asset_version) }}">
+{% endblock %}
+
+{% block content %}
+  <main class="metrics-layout">
+    <div class="metrics-header panel-heading">
+      <p class="eyebrow"><a href="{{ url_for('ui.reports_page') }}">Reports</a></p>
+      <h1>Metric comparison</h1>
+      <p>Plot any two measures against each other across wards, neighborhoods or χGRIDs. The badge gives Pearson's r and Spearman's ρ; the line is drawn only when there is a relationship to draw.</p>
+    </div>
+    <section class="panel metrics-panel" id="comparison-view" aria-live="polite">
+      <div class="metric-tool-controls">
+        <label>X axis
+          <select id="compare-metric-x"></select>
+        </label>
+        <label>Y axis
+          <select id="compare-metric-y"></select>
+        </label>
+        <div class="area-type-toggle" id="compare-area-toggle" role="group" aria-label="Geography">
+          <button type="button" class="is-active" data-area-type="ward">Wards</button>
+          <button type="button" data-area-type="community_area">Neighborhoods</button>
+          <button type="button" data-area-type="chi">Chis</button>
+        </div>
+      </div>
+      <div id="comparison-content"><p>Pick two metrics to compare them across areas.</p></div>
+    </section>
+  </main>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='common.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='metric_icons.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='report_common.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='report_comparison.js', v=asset_version) }}"></script>
+{% endblock %}

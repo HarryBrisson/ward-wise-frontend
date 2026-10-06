@@ -7,7 +7,7 @@
 // groups that stay shut until you open one.
 //
 // metric_details.js still owns the per-metric facts (status, source, source
-// URL) so the explorer at /classic and this page cannot drift apart. It only
+// URL) so the explorer at / and this page cannot drift apart. It only
 // self-renders when it finds #metrics-content, and this page does not have one.
 (function () {
   "use strict";
@@ -299,7 +299,7 @@
         </dl>
         ${renderNominator(metric)}
         <p class="dict-jump">
-          <a href="/?m=${encodeURIComponent(metric.metric_id)}">See where the 50 wards stand on this &rsaquo;</a>
+          <a href="/k3?m=${encodeURIComponent(metric.metric_id)}">See where the 50 wards stand on this &rsaquo;</a>
         </p>
       </div>
     `;
@@ -317,7 +317,7 @@
       .map((name) => {
         const preset = (window.K3_PRESETS || []).find((item) => item.name === name);
         const mix = (preset?.metric_ids || []).join(",");
-        return `<a class="dict-chip" href="/?m=${encodeURIComponent(mix)}">${esc(name)}</a>`;
+        return `<a class="dict-chip" href="/k3?m=${encodeURIComponent(mix)}">${esc(name)}</a>`;
       })
       .join("");
     return `<p class="dict-inlists"><span>Part of</span>${chips}</p>`;

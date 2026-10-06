@@ -1,0 +1,135 @@
+{
+  "groups": [
+    "Explore",
+    "Reports",
+    "Reference"
+  ],
+  "views": [
+    {
+      "key": "map",
+      "endpoint": "ui.index",
+      "label": "Map view",
+      "group": "Explore",
+      "blurb": "Every ward or neighborhood shaded by a list of measures, with a leaderboard.",
+      "path": "/",
+      "public": true
+    },
+    {
+      "key": "my_index",
+      "endpoint": "ui.values_survey_page",
+      "label": "My index",
+      "group": "Explore",
+      "blurb": "Answer a short survey and get a personal index to read the city through.",
+      "path": "/survey",
+      "public": true
+    },
+    {
+      "key": "near",
+      "endpoint": "ui.near_page",
+      "label": "Metrics near you",
+      "group": "Explore",
+      "blurb": "What the measures say about the blocks around one address.",
+      "path": "/near",
+      "public": true
+    },
+    {
+      "key": "index",
+      "endpoint": "ui.index_page",
+      "label": "Index of fifty",
+      "group": "Explore",
+      "blurb": "All fifty wards ranked on a list, each with its domain bloom.",
+      "path": "/index",
+      "public": true
+    },
+    {
+      "key": "menu",
+      "endpoint": "ui.menu_page",
+      "label": "Menu money",
+      "group": "Explore",
+      "blurb": "Where each ward office spends its discretionary infrastructure budget.",
+      "path": "/menu",
+      "public": true
+    },
+    {
+      "key": "report",
+      "endpoint": "ui.report_page",
+      "label": "Full report",
+      "group": "Reports",
+      "blurb": "One ward, neighborhood or χGRID in full: standing, strongest and weakest measures, rank over time, what changed, and every domain.",
+      "path": "/report",
+      "public": true
+    },
+    {
+      "key": "compare",
+      "endpoint": "ui.compare_page",
+      "label": "Compare areas",
+      "group": "Reports",
+      "blurb": "Two places side by side on the same list of measures.",
+      "path": "/compare",
+      "public": true
+    },
+    {
+      "key": "term",
+      "endpoint": "ui.report_term_page",
+      "label": "Term report",
+      "group": "Reports",
+      "blurb": "Every alderperson's ward on two measures across one term, scored on the ward map that term actually used.",
+      "path": "/reports/term",
+      "public": true
+    },
+    {
+      "key": "comparison",
+      "endpoint": "ui.report_comparison_page",
+      "label": "Metric comparison",
+      "group": "Reports",
+      "blurb": "Any two measures plotted against each other across wards, with the correlation.",
+      "path": "/reports/comparison",
+      "public": true
+    },
+    {
+      "key": "deepdive",
+      "endpoint": "ui.report_deepdive_page",
+      "label": "Metric deep dive",
+      "group": "Reports",
+      "blurb": "One measure ranked across every area, and which other measures move with it.",
+      "path": "/reports/deep-dive",
+      "public": true
+    },
+    {
+      "key": "dictionary",
+      "endpoint": "ui.dictionary_page",
+      "label": "Metric dictionary",
+      "group": "Reference",
+      "blurb": "Every measure Penlight tracks — what it means, where it comes from, how it's computed.",
+      "path": "/dictionary",
+      "public": true
+    },
+    {
+      "key": "years",
+      "endpoint": "ui.report_years_page",
+      "label": "Data years",
+      "group": "Reference",
+      "blurb": "Which years each measure actually covers, and how directly it was measured.",
+      "path": "/reports/data-years",
+      "public": true
+    },
+    {
+      "key": "data_notes",
+      "endpoint": "ui.data_notes_page",
+      "label": "Data notes",
+      "group": "Reference",
+      "blurb": "Caveats and seams in the sources, dataset by dataset.",
+      "path": "/data-notes",
+      "public": true
+    },
+    {
+      "key": "api_docs",
+      "endpoint": "ui.api_docs_page",
+      "label": "API docs",
+      "group": "Reference",
+      "blurb": "Read the same numbers programmatically.",
+      "path": "/api-docs",
+      "public": true
+    }
+  ]
+}
