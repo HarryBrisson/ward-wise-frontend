@@ -15,6 +15,46 @@
       </p>
     </div>
 
+    <section class="panel about-panel about-team" id="team">
+      <div class="panel-heading support-cta-heading">
+        <div>
+          <p class="eyebrow">Who builds it</p>
+          <h2>The Penlight team</h2>
+          <p>
+            Volunteers who met at Chi Hack Night, each from a different ward. The site's code is
+            public and open to pull requests; the data pipeline and API are maintained privately.
+          </p>
+        </div>
+        <a class="support-link support-cta" href="https://github.com/HarryBrisson/ward-wise-frontend" rel="noopener">Contribute on GitHub &rarr;</a>
+      </div>
+      {# In ward order. Photos are the team's own, from the Chi Hack Night talk deck. #}
+      <ul class="team-grid">
+        <li class="team-card">
+          <img src="{{ url_for('static', filename='team/harry-brisson.jpg') }}" alt="Harry Brisson" loading="lazy" width="240" height="240">
+          <strong>Harry Brisson</strong>
+          <span>12th Ward &middot; Data coordinator</span>
+          <a href="https://github.com/HarryBrisson" rel="noopener">@HarryBrisson</a>
+        </li>
+        <li class="team-card">
+          <img src="{{ url_for('static', filename='team/angel-carbajal.jpg') }}" alt="Angel Carbajal" loading="lazy" width="240" height="240">
+          <strong>Angel Carbajal</strong>
+          <span>33rd Ward &middot; UX / design</span>
+          <a href="https://github.com/zyplos" rel="noopener">@zyplos</a>
+        </li>
+        <li class="team-card">
+          <img src="{{ url_for('static', filename='team/connor-florczyk.jpg') }}" alt="Connor Florczyk" loading="lazy" width="240" height="240">
+          <strong>Connor Florczyk</strong>
+          <span>42nd Ward &middot; UX / reporting</span>
+          <a href="https://github.com/cflorczyk9" rel="noopener">@cflorczyk9</a>
+        </li>
+        <li class="team-card">
+          <img src="{{ url_for('static', filename='team/jackie-schmitz.jpg') }}" alt="Jackie Schmitz" loading="lazy" width="240" height="240">
+          <strong>Jackie Schmitz</strong>
+          <span>43rd Ward &middot; Personalization</span>
+        </li>
+      </ul>
+    </section>
+
     <section class="panel about-panel">
       <div class="panel-heading support-cta-heading">
         <div>

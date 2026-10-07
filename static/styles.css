@@ -5072,3 +5072,12 @@ body:has(#near-picker:not([hidden])) .near-layout { max-width: 1180px; }
   #preset-tray .preset-chip-create { border-style: dashed; }
   #preset-tray .preset-chip-create[aria-expanded="true"] { border-style: solid; }
 }
+
+/* Support page: the team. Square photos so the row reads as one line of faces; the GitHub handle
+   is the only link, because that is where a reader can actually reach the person. */
+.team-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 1rem 1.25rem; }
+.team-card { display: grid; gap: 0.2rem; font-size: 0.9rem; line-height: 1.35; }
+.team-card img { width: 100%; max-width: 240px; aspect-ratio: 1; object-fit: cover; border-radius: 12px; margin-bottom: 0.35rem; }
+.team-card strong { font-weight: 600; }
+.team-card span { color: var(--muted-text); }
+.team-card a { font-size: 0.85rem; }
