@@ -37,6 +37,13 @@ use), write the template extending `base.html`, and build. If the page should ap
 Explore menu it needs an entry in the API's view registry too — open an issue and it'll be added
 upstream, then `views.json` gets refreshed from `/api/views`.
 
+## One file the backend reads
+
+`static/presets.js` (the curated lists on the map) is also read by the API repo's pipeline, which
+builds the ward narratives from the same lists. Keep it a plain array literal assigned to
+`window.WardWisePresets`; `scripts/check_build.py` parses it the way the pipeline does and fails the
+build if it can't. Add or reorder lists freely; just don't turn the file into code.
+
 ## Where things live
 
 This repo renders what the API returns; it doesn't produce the data. Data questions — a metric's
