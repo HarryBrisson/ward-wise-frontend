@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}Penlight for Your City - Ward Wise Penlight{% endblock %}
+
+{% block content %}
+  <main class="metric-suggestion-layout">
+    <section class="panel metric-suggestion-card" aria-labelledby="your-city-heading">
+      <div class="metric-suggestion-intro">
+        <p class="eyebrow">Beyond Chicago</p>
+        <h1 id="your-city-heading">Bring Penlight to your city</h1>
+        <p>
+          Penlight is built on open data and open source, and most of what it measures exists in
+          every American city. If you want neighborhood wellbeing metrics where you live — whoever
+          you are, wherever that is — tell us about your city.
+        </p>
+      </div>
+
+      <form id="city-interest-form" class="metric-recommendation-form metric-suggestion-form" novalidate>
+        <label>
+          Your city
+          <input name="city" type="text" required placeholder="Any city, anywhere">
+        </label>
+
+        <label>
+          What draws you to this? <span>(optional)</span>
+          <textarea name="message" rows="4" placeholder="Your neighborhood, your civic group, the metrics your city needs…"></textarea>
+        </label>
+
+        <fieldset class="recommendation-about-you">
+          <legend>About you</legend>
+          <div class="recommendation-contact-grid">
+            <label>
+              Name
+              <input name="name" type="text" autocomplete="name" required>
+            </label>
+            <label>
+              Email
+              <input name="email" type="email" autocomplete="email" required>
+            </label>
+          </div>
+          <label>
+            Organization <span>(optional)</span>
+            <input name="organization" type="text" placeholder="Where do you work or volunteer? What's your occupation or skillset?">
+          </label>
+        </fieldset>
+
+        <input name="website" type="text" class="visually-hidden" tabindex="-1" autocomplete="off" aria-hidden="true">
+
+        <button type="submit" class="surprise-button">Send it</button>
+        <p id="city-interest-status" role="status" hidden></p>
+      </form>
+    </section>
+  </main>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='common.js') }}"></script>
+  <script>
+    (function () {
+      "use strict";
+      const form = document.getElementById("city-interest-form");
+      const status = document.getElementById("city-interest-status");
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        if (!form.reportValidity()) return;
+        status.hidden = false;
+        status.textContent = "Sending…";
+        try {
+          const response = await fetch("/api/city-interest", { method: "POST", body: new FormData(form) });
+          const payload = await response.json();
+          if (!response.ok) throw new Error(payload.error || "Something went wrong.");
+          form.reset();
+          status.textContent = "Got it — we'll be in touch. Thanks for wanting this for your city.";
+        } catch (error) {
+          status.textContent = error.message || "Something went wrong — please try again.";
+        }
+      });
+    })();
+  </script>
+{% endblock %}

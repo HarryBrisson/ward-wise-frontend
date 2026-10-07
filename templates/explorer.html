@@ -4,6 +4,7 @@
 
 {% block head %}
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='report_ui.css', v=asset_version) }}">
 {% endblock %}
 
 {% block content %}
@@ -20,8 +21,24 @@
             <button type="button" data-area-type="ward" class="is-active">Wards</button>
             <button type="button" data-area-type="community_area">Neighborhoods</button>
             <button type="button" data-area-type="chi">χGRIDs</button>
+            {# The precinct lens replaces the three peers with one exit: "‹ Ward 4 · Precincts". Same
+               slot and styling, so a fourth geography never widens the toggle on a phone. #}
+            <button type="button" data-area-type="ward" data-lens-exit class="area-type-lens-exit" title="Back to wards" hidden>‹ Precincts</button>
           </div>
           <div id="map" aria-label="Chicago metric map"></div>
+          <div class="map-overlays-tr">
+            <span id="map-hint" class="map-hint" role="status">Click a ward to inspect</span>
+            <div id="map-legend" class="map-legend" aria-label="Map colour scale" hidden>
+              <strong class="map-legend-title">Wellbeing</strong>
+              <div class="map-legend-gradient" aria-hidden="true"></div>
+              <div class="map-legend-labels"><span data-lo></span><span data-mid></span><span data-hi></span></div>
+              {# Precinct lens only: colour the ward's precincts on their own range, or on every precinct's. #}
+              <div class="map-legend-scope" role="group" aria-label="Colour scale range" hidden>
+                <button type="button" data-scope="ward" class="is-active">This ward</button>
+                <button type="button" data-scope="city">All precincts</button>
+              </div>
+            </div>
+          </div>
           <div id="map-shade-loading" class="map-shade-loading" role="status" aria-live="polite" hidden>
             <span class="metric-loading-spinner" aria-hidden="true"></span>
             <span>Updating the map…</span>
@@ -33,8 +50,15 @@
         </section>
 
         <section id="visualizer-ranker" class="panel visualizer-card ranker-card">
-          <h2 class="ranker-heading">Leaderboard</h2>
+          <div class="ranker-head" id="ranker-head">
+            <h2 class="ranker-heading" id="ranker-title">Leaderboard</h2>
+            <label class="ranker-search"><span aria-hidden="true">&#x2315;</span>
+              <input id="ranker-search" type="search" autocomplete="off" aria-label="Filter the leaderboard" placeholder="Filter wards…"></label>
+          </div>
+          <p id="ranker-search-status" class="visually-hidden" role="status"></p>
           <div id="comparison-table" class="comparison-table"></div>
+          {# Selecting an area swaps the leaderboard for its mini report (same card, back button). #}
+          <div id="mini-report" class="mini-report" aria-live="polite" hidden></div>
         </section>
 
         <section id="visualizer-timeline" class="panel visualizer-card timeline-card" role="tabpanel" aria-labelledby="tab-timeline" hidden>
@@ -45,10 +69,8 @@
           <div id="time-series"></div>
         </section>
 
-        <aside id="ward-details-popover" class="ward-details-popover" aria-live="polite" aria-label="Ward details" hidden></aside>
-
         <div id="wellbeing-equation" class="wellbeing-equation" aria-live="polite" hidden>
-          <p><strong>wellbeing</strong> = <span id="wellbeing-equation-formula">Choose metrics in the panel</span></p>
+          <p class="wellbeing-equation-line"><strong id="wellbeing-equation-lhs">wellbeing</strong> = <span id="wellbeing-equation-formula" class="eq-chips" role="list" aria-label="Metrics in the formula">Choose metrics in the panel</span></p>
           <button type="button" id="delta-info" class="delta-info" hidden aria-label="Which metrics this change window can compare">i</button>
           <button type="button" id="open-methodology" class="delta-info equation-info" hidden aria-label="How these are measured" title="How these are measured">?</button>
         </div>
@@ -58,8 +80,9 @@
     <aside class="input-panel" aria-label="Penlight inputs">
       <div class="mobile-strip-bar">
         <button type="button" id="mobile-random-metrics" class="mobile-strip-pill">Random</button>
-        <button type="button" id="mobile-all-metrics" class="mobile-strip-pill">All</button>
-        <button type="button" id="mobile-no-metrics" class="mobile-strip-pill">None</button>
+        <button type="button" id="mobile-all-metrics" class="mobile-strip-pill mobile-advanced-only">All</button>
+        <button type="button" id="mobile-no-metrics" class="mobile-strip-pill mobile-advanced-only">None</button>
+        <button type="button" id="mobile-customize" class="mobile-strip-pill mobile-curated-only">Advanced options</button>
         <button type="button" id="input-panel-expander" class="input-panel-expander" aria-expanded="false" aria-label="Show all metrics">
           <span class="expander-open-label">+</span>
           <span class="expander-close-label">Done</span>
@@ -70,16 +93,18 @@
           <p class="eyebrow">Input panel</p>
           <h2>What metrics should matter?</h2>
           <button type="button" id="open-settings-modal" class="settings-button" aria-label="Display settings" title="Display settings">
-            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="10" cy="10" r="2.6"/><path d="M10 2.5 L10 4.5 M10 15.5 L10 17.5 M2.5 10 L4.5 10 M15.5 10 L17.5 10 M4.7 4.7 L6.1 6.1 M13.9 13.9 L15.3 15.3 M15.3 4.7 L13.9 6.1 M6.1 13.9 L4.7 15.3"/></svg>
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="10" r="2.4"/><path d="M10 2.2v1.9m0 11.8v1.9M2.2 10h1.9m11.8 0h1.9M4.5 4.5l1.3 1.3m8.4 8.4 1.3 1.3M15.5 4.5l-1.3 1.3M5.8 14.2l-1.3 1.3"/><path d="M10 5.6a4.4 4.4 0 1 0 0 8.8 4.4 4.4 0 0 0 0-8.8z"/></svg>
           </button>
         </div>
 
         <section class="input-section">
           <div class="metric-selection-intro">
             <p class="metric-weight-hint">
-              Tap metric squares to choose the measures that matter to you. Each tap cycles
-              off &rarr; on &rarr; high priority &rarr; off, and the map updates around your choices.
+              Pick from <span id="metric-count-total">these</span> metrics the ones you most value.
             </p>
+            <label class="metric-search"><span aria-hidden="true">&#x2315;</span>
+              <input id="metric-search" type="search" autocomplete="off" aria-label="Search metrics" placeholder="Search metrics…"></label>
+            <p id="metric-search-status" class="visually-hidden" role="status"></p>
             <div class="metric-selection-actions" aria-label="Metric selection shortcuts">
               <button type="button" id="surprise-me" class="surprise-button">Surprise me</button>
               <div class="metric-bulk-actions">
@@ -89,6 +114,9 @@
               </div>
             </div>
           </div>
+          {# Curated lists live in their own tray, a SIBLING of the grid: the phone strip flattens the
+             grid's children with display: contents, so anything placed inside it would be flattened too. #}
+          <div id="preset-tray" class="preset-tray" aria-label="Curated lists" hidden></div>
           <div id="metric-weights" class="metric-button-grid metric-button-grid-loading" aria-busy="true">
             <div class="metric-loading-status" role="status">
               <span class="metric-loading-spinner" aria-hidden="true"></span>
@@ -102,7 +130,7 @@
           <section class="metric-recommendation-panel" aria-label="Suggest a metric">
             <p>
               Missing something?
-              <a class="metric-recommendation-link" href="{{ live_url('/suggest-metric') }}">
+              <a class="metric-recommendation-link" href="{{ url_for('ui.suggest_metric') }}">
                 Suggest a metric
               </a>
             </p>
@@ -122,12 +150,35 @@
         <fieldset class="settings-field">
           <legend>Metric picker layout</legend>
           <label class="settings-option">
-            <input type="radio" name="picker-layout" value="domains" checked>
+            <input type="radio" name="picker-layout" value="curated" checked>
+            <span><strong>Curated lists</strong> — start from a ready-made list, customize any time</span>
+          </label>
+          <label class="settings-option">
+            <input type="radio" name="picker-layout" value="list">
+            <span><strong>Detailed list</strong> — every metric with a description and Off / 1× / 10×</span>
+          </label>
+          <label class="settings-option">
+            <input type="radio" name="picker-layout" value="domains">
             <span><strong>Grouped by domain</strong> — one row per wellbeing domain</span>
           </label>
           <label class="settings-option">
             <input type="radio" name="picker-layout" value="flat">
             <span><strong>Flat grid</strong> — all metrics in one shuffled grid</span>
+          </label>
+        </fieldset>
+        <fieldset class="settings-field">
+          <legend>Theme</legend>
+          <label class="settings-option">
+            <input type="radio" name="theme-pref" value="system">
+            <span><strong>Follow my device</strong> — light or dark to match the system setting</span>
+          </label>
+          <label class="settings-option">
+            <input type="radio" name="theme-pref" value="classic">
+            <span><strong>Classic</strong> — the warm palette</span>
+          </label>
+          <label class="settings-option">
+            <input type="radio" name="theme-pref" value="dark">
+            <span><strong>Dark</strong> — ink and violet</span>
           </label>
         </fieldset>
       </div>
@@ -169,7 +220,8 @@
           <h3>How these are measured</h3>
           <button type="button" class="time-modal-close" data-close-methodology aria-label="Close">&times;</button>
         </div>
-        <p class="time-modal-hint">Notes that apply to the metrics you've weighted, on the geography you're viewing.</p>
+        <p class="time-modal-hint">Notes that apply to the metrics you've weighted, on the geography you're viewing.
+          Full definitions for every metric live in the <a href="/dictionary">metric dictionary</a>.</p>
         <div id="methodology-body" class="methodology-body"></div>
       </div>
     </div>
@@ -181,5 +233,10 @@
   <script src="{{ url_for('static', filename='common.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='metric_icons.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='metric_details.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='metric_tags.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='presets.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='geography.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='scoring.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='report_charts.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='explorer.js', v=asset_version) }}"></script>
 {% endblock %}

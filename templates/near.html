@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}Metrics near you — Ward Wise Penlight{% endblock %}
+
+{% block head %}
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+{% endblock %}
+
+{% block content %}
+<main class="near-layout" aria-label="Metrics near you">
+  <section class="near-intro">
+    <h1>Metrics near you</h1>
+  </section>
+
+  <section id="near-choose" class="near-choose">
+    <p class="near-choose-lead">See how the square kilometre around you has changed, term by term.</p>
+    <button type="button" id="near-locate" class="near-locate-primary">Use my location</button>
+    <form id="near-address-form" class="near-address-form">
+      <input id="near-address" type="text" placeholder="or type an address — 2045 N Damen Ave"
+             aria-label="Address or intersection" maxlength="120">
+      <button type="submit" class="near-detail-chip">Go</button>
+    </form>
+    <button type="button" id="near-show-map" class="near-choose-alt">or pick a spot on the map</button>
+    <p class="near-choose-privacy">Your location stays in your browser except for the coordinates
+      we look up.</p>
+  </section>
+
+  <section id="near-picker" class="near-map-panel" hidden>
+    <div id="near-map" class="near-map" role="application" aria-label="Pick a point in Chicago"></div>
+    <div class="near-map-controls">
+      <button type="button" id="near-locate-map" class="near-locate">Use my location</button>
+      <span id="near-status" class="near-status">Click the map to drop a pin.</span>
+    </div>
+  </section>
+
+  <section id="near-results" class="near-results" hidden>
+    <div class="near-report-bar">
+      <div id="near-areas" class="near-areas"></div>
+      <label class="near-radius">radius
+        <select id="near-radius">
+          <option value="500">500 m</option>
+          <option value="1000" selected>1 km</option>
+          <option value="1500">1.5 km</option>
+          <option value="2000">2 km</option>
+        </select>
+      </label>
+      <button type="button" id="near-change" class="near-change">change my neighborhood</button>
+      <form id="near-address-form-bar" class="near-address-form near-address-bar">
+        <input id="near-address-bar" type="text" placeholder="jump to an address"
+               aria-label="Address or intersection" maxlength="120">
+      </form>
+    </div>
+    <div id="near-strip" class="near-strip"></div>
+    <div id="near-overlays" class="near-overlay-bar"></div>
+    <div id="near-terms" class="near-terms"></div>
+    <p class="near-change-link"><a href="/near/change">See where funding moved across the whole
+      city →</a> · <button type="button" id="near-methodology-open" class="near-change">Methodology
+      notes</button> · <a href="/data-notes">Data notes</a></p>
+    <dialog id="near-methodology" class="near-methodology">
+      <h2>Methodology notes</h2>
+      <ul>
+        <li>Your pin snaps to a ~110&thinsp;m grid cell, and the circle includes whole cells —
+          precision is about one city block, and the circle's edge is approximate.</li>
+        <li>When the circle spans more than one ward, every ward is shown with its share of your
+          circle. Slivers under 5% are folded into "other".</li>
+        <li>Different measures see different years: crashes begin 2015, Divvy 2020, licenses 2002,
+          permits 2006, property sales 1999. Rates are per covered year, and a measure that cannot
+          see a term is left blank — never shown as zero.</li>
+        <li>Neighborhood-statistic blends (income, rent) mix ~1-square-mile grid values; some are
+          themselves smoothed from ward data and are tagged accordingly.</li>
+        <li>New licenses are licenses, not businesses; sale volume is dollars changing hands, not
+          prices going up.</li>
+        <li>"Closures seen on Google" are businesses our licence&harr;places matching links to a
+          Google listing marked permanently closed — recent and real, but incomplete by nature.</li>
+      </ul>
+      <form method="dialog"><button class="near-detail-chip">Close</button></form>
+    </dialog>
+    <p class="near-privacy">Privacy: the pin's coordinates reach our server, where requests are
+      logged to understand how this page is used. An address you type is resolved on our own
+      server (never a third party's) and is not stored or logged — only the resulting
+      coordinates are. Completeness details for every dataset live in the
+      <a href="/data-notes">data notes</a>.</p>
+  </section>
+</main>
+{% endblock %}
+
+{% block scripts %}
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="{{ url_for('static', filename='common.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='near.js', v=asset_version) }}"></script>
+{% endblock %}

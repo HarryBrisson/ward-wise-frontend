@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Metric deep dive — Ward Wise Penlight{% endblock %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='report_ui.css', v=asset_version) }}">
+{% endblock %}
+
+{% block content %}
+  <main class="metrics-layout">
+    <div class="metrics-header panel-heading">
+      <p class="eyebrow"><a href="{{ url_for('ui.reports_page') }}">Reports</a></p>
+      <h1>Metric deep dive</h1>
+      <p>One measure: what it is, how it varies across every area, and which other measures move with it.</p>
+    </div>
+    <section class="panel metrics-panel" id="deepdive-view" aria-live="polite">
+      <div class="metric-tool-controls">
+        <label>Metric
+          <select id="deepdive-metric"></select>
+        </label>
+        <div class="area-type-toggle" id="deepdive-area-toggle" role="group" aria-label="Geography">
+          <button type="button" class="is-active" data-area-type="ward">Wards</button>
+          <button type="button" data-area-type="community_area">Neighborhoods</button>
+          <button type="button" data-area-type="chi">Chis</button>
+        </div>
+      </div>
+      <div id="deepdive-content"><p>Pick a metric to see its distribution.</p></div>
+    </section>
+  </main>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='common.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='metric_icons.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='report_common.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='report_deepdive.js', v=asset_version) }}"></script>
+{% endblock %}

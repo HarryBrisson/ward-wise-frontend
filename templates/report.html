@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Full report — Ward Wise Penlight{% endblock %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='report_ui.css', v=asset_version) }}">
+{% endblock %}
+
+{% block content %}
+  <script>
+    // The URL tells the page which area it opened on (/report/<slug>/<id>, or ?area=<slug>/<id>
+    // when plain GitHub Pages bounced it through 404.html); everything else (basket, year) is in
+    // the query string and read by report.js. Slugs are reader-facing words; area_type keys are the
+    // API's. An unknown slug renders the chooser, as the old 404 did its job before.
+    (function () {
+      var slugs = { ward: "ward", neighborhood: "community_area", chi: "chi" };
+      var m = location.pathname.match(/^\/report\/([a-z_]+)\/([^/]+)\/?$/);
+      if (!m) {
+        var q = new URLSearchParams(location.search).get("area");
+        if (q && q.indexOf("/") !== -1) m = [null, q.split("/")[0], q.split("/").slice(1).join("/")];
+      }
+      if (m && m[1] === "community_area") m[1] = "neighborhood";
+      var slug = m && slugs[m[1]] ? m[1] : null;
+      window.WW_REPORT = slug
+        ? { area_type: slugs[slug], slug: slug, area_id: decodeURIComponent(m[2]) }
+        : { area_type: null, slug: null, area_id: null };
+    })();
+  </script>
+  <main class="report-layout" id="report-root" aria-live="polite">
+    <p class="report-loading">Loading the report…</p>
+  </main>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='common.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='metric_icons.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='presets.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='geography.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='scoring.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='report_charts.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='report_domains.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='report_changes.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='report.js', v=asset_version) }}"></script>
+{% endblock %}

@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}Visual signifiers — Ward Wise Penlight  <script>
+    // Every area's photo with its provenance, from /api/signifiers/groups. Same markup the server
+    // used to render; escaped because captions and credits are free text from the sources.
+    (function () {
+      var root = document.getElementById("signifier-groups");
+      function esc(value) {
+        return String(value == null ? "" : value).replace(/[&<>"']/g, function (ch) {
+          return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch];
+        });
+      }
+      fetch("/api/signifiers/groups", { headers: { Accept: "application/json" } })
+        .then(function (response) { return response.json(); })
+        .then(function (payload) {
+          root.innerHTML = (payload.groups || []).map(function (group) {
+            return '<section class="signifier-group">' +
+              '<h2>' + esc(group.label) + ' <span class="signifier-count">' + esc(group.covered) + ' / ' + esc(group.total) + '</span></h2>' +
+              '<div class="signifier-grid">' + (group.entries || []).map(function (entry) {
+                var credit = esc(entry.source) + (entry.credit ? " &middot; " + esc(entry.credit) : "") +
+                  (entry.link ? ' &middot; <a href="' + esc(entry.link) + '" target="_blank" rel="noopener noreferrer">source</a>' : "");
+                return '<figure class="signifier-card">' +
+                  '<img src="' + esc(entry.image) + '" alt="' + esc(entry.subject) + '" loading="lazy" referrerpolicy="no-referrer">' +
+                  '<figcaption><span class="signifier-area">' + esc(entry.area) + '</span>' +
+                  '<span class="signifier-subject">' + esc(entry.subject) + '</span>' +
+                  '<span class="signifier-credit">' + credit + '</span></figcaption></figure>';
+              }).join("") + '</div></section>';
+          }).join("");
+        })
+        .catch(function () { root.innerHTML = '<p class="report-loading">The photo list is unavailable right now.</p>'; });
+    })();
+  </script>
+{% endblock %}
+
+{% block content %}
+  <main class="signifiers-page">
+    <header class="signifiers-header">
+      <p class="eyebrow">Ward Wise Penlight</p>
+      <h1>Visual signifiers</h1>
+      <p>
+        Each ward, neighborhood, and &chi;GRID shows a representative photo of a place
+        <strong>inside it</strong> &mdash; never a stand-in from elsewhere. Areas without a documented
+        image keep a letter or coordinate badge. Every photo's source and license is listed below; to
+        request a correction or removal, see <a href="{{ url_for('ui.about_page') }}">About</a>.
+      </p>
+    </header>
+
+    <div id="signifier-groups" aria-live="polite"><p class="report-loading">Loading photos…</p></div>
+  </main>
+{% endblock %}

@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>chiGRID over the streets</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  #map { position: absolute; inset: 0; }
+  .legend { background: #fffdf8; padding: 8px 11px; border-radius: 8px; box-shadow: 0 2px 8px rgb(18 52 59 / 25%);
+    font-size: 12px; line-height: 1.7; color: #172026; }
+  .legend b { font-size: 13px; }
+  .legend i { display: inline-block; width: 13px; height: 13px; margin-right: 6px; vertical-align: -2px;
+    border: 1px solid #12343b; }
+  .legend label { display: block; cursor: pointer; }
+  .chilab { background: none; border: 0; box-shadow: none; padding: 0;
+    font: 600 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace; color: #12343b; text-shadow: 0 0 2px #fff, 0 0 2px #fff; }
+</style>
+</head>
+<body>
+<div id="map"></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  const map = L.map("map", { preferCanvas: false }).setView([41.83, -87.68], 11);
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+    attribution: "© OpenStreetMap, © CARTO", subdomains: "abcd", maxZoom: 19,
+  }).addTo(map);
+
+  const FILL = { flag: "#e8762c", edge: "#7fae9b", interior: "#c5602c" };
+  function kind(p) { return p.flag ? "flag" : p.edge ? "edge" : "interior"; }
+  function style(f) {
+    const k = kind(f.properties);
+    return { color: "#12343b", weight: 1, fillColor: FILL[k], fillOpacity: k === "flag" ? 0.45 : k === "edge" ? 0.16 : 0.1 };
+  }
+
+  let gridLayer, labelsOn = true, scheme = "local"; // "local" = real streets, "canon" = mile-grid
+  const cellLabel = (p) => (scheme === "canon" ? p.label_canon || p.label : p.label);
+  fetch("/static/chigrid_aligned.geojson")
+    .then((r) => r.json())
+    .then((gj) => {
+      gridLayer = L.geoJSON(gj, {
+        style,
+        onEachFeature: (f, layer) => {
+          const p = f.properties;
+          const canon = p.label_canon && p.label_canon !== p.label
+            ? `<br><span style="color:#6b7d77">canonical: ${p.name_canon} &middot; <code>${p.label_canon}</code></span>` : "";
+          layer.bindPopup(
+            `<b>${p.name}</b><br>${p.chi_ordinate} &middot; <code>${p.label}</code>${canon}<br>` +
+            `${p.area_sqmi} sq mi &middot; ${p.flag ? "<b style='color:#c0410c'>flagged</b>" : p.edge ? "edge (city-clipped)" : "interior"}`,
+          );
+          layer.bindTooltip(cellLabel(p), { permanent: true, direction: "center", className: "chilab" });
+          layer.on("mouseover", () => layer.setStyle({ weight: 2.5 }));
+          layer.on("mouseout", () => gridLayer.resetStyle(layer));
+        },
+      }).addTo(map);
+      map.fitBounds(gridLayer.getBounds());
+    });
+
+  const legend = L.control({ position: "topright" });
+  legend.onAdd = function () {
+    const d = L.DomUtil.create("div", "legend");
+    d.innerHTML =
+      "<b>chiGRID over the streets</b><br>" +
+      `<i style="background:${FILL.flag}"></i>flagged (off 0.9–1.1 sq mi)<br>` +
+      `<i style="background:${FILL.edge}"></i>edge (clipped to city limit)<br>` +
+      `<i style="background:${FILL.interior};opacity:.5"></i>interior ~1 sq mi<br>` +
+      `<label><input type="checkbox" id="lab" checked> show labels</label>` +
+      `<label><input type="radio" name="sch" value="local" checked> local streets (BroElm)</label>` +
+      `<label><input type="radio" name="sch" value="canon"> canonical grid (RacPet)</label>`;
+    L.DomEvent.disableClickPropagation(d);
+    return d;
+  };
+  legend.addTo(map);
+
+  // toggle label visibility (dense citywide) and which naming scheme the labels show
+  function refreshLabels() {
+    if (!gridLayer) return;
+    gridLayer.eachLayer((l) => {
+      l.unbindTooltip();
+      if (labelsOn) l.bindTooltip(cellLabel(l.feature.properties), { permanent: true, direction: "center", className: "chilab" });
+    });
+  }
+  document.addEventListener("change", (e) => {
+    if (e.target.id === "lab") { labelsOn = e.target.checked; refreshLabels(); }
+    else if (e.target.name === "sch") { scheme = e.target.value; refreshLabels(); }
+  });
+</script>
+</body>
+</html>

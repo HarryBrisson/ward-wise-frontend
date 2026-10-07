@@ -34,6 +34,17 @@ window.WardWiseExplorer = {
     },
   },
 
+  // Shared hover-tooltip placement for the SVG timeline charts (explorer composite, ward-report
+  // character charts): follow the pointer inside the container, clamped so the tooltip never
+  // clips at the right/top edge.
+  positionTimelineTooltip(event, tooltip, container) {
+    const bounds = container.getBoundingClientRect();
+    const x = event.clientX - bounds.left + 12;
+    const y = event.clientY - bounds.top + 12;
+    tooltip.style.left = `${Math.max(8, Math.min(x, bounds.width - 190))}px`;
+    tooltip.style.top = `${Math.max(8, y)}px`;
+  },
+
   // Single safe entry point for Google Analytics events (GA4 is wired in base.html
   // when GOOGLE_ANALYTICS_ID is set). Never let analytics throw into the app.
   track(action, params = {}) {
@@ -89,6 +100,17 @@ window.WardWiseExplorer = {
     return this.fetchJson("/api/chigrid.geojson", "Unable to load chi geometry.");
   },
 
+  // Precincts are a lens on one ward: pass its id to load only that ward's precincts.
+  async fetchPrecincts(wardId) {
+    const query = wardId ? `?ward=${encodeURIComponent(wardId)}` : "";
+    return this.fetchJson(`/api/precincts${query}`, "Unable to load precincts.");
+  },
+
+  async fetchPrecinctGeojson(wardId) {
+    const query = wardId ? `?ward=${encodeURIComponent(wardId)}` : "";
+    return this.fetchJson(`/api/precincts.geojson${query}`, "Unable to load precinct geometry.");
+  },
+
   async fetchMetrics() {
     return this.fetchJson("/api/metrics", "Unable to load metrics.");
   },
@@ -140,11 +162,12 @@ window.WardWiseExplorer = {
     return this.fetchJson(`/api/metrics/comparison?${params.toString()}`, "Unable to load comparison data.");
   },
 
-  async fetchTimeline({ metricIds = [], areaType = "ward", areaId } = {}) {
+  async fetchTimeline({ metricIds = [], areaType = "ward", areaId, wardId } = {}) {
     const params = new URLSearchParams();
     if (metricIds.length) params.set("metrics", metricIds.join(","));
     if (areaType) params.set("area_type", areaType);
     if (areaId) params.set("area_id", areaId);
+    if (wardId && areaType === "precinct") params.set("ward", wardId);
     return this.fetchJson(`/api/metrics/timeline?${params.toString()}`, "Unable to load history.");
   },
 
@@ -195,17 +218,17 @@ window.WardWiseExplorer = {
   },
 
   async fetchAccessUsers() {
-    return this.fetchJson("/api/admin/users", "Unable to load approved users.");
+    return this.fetchJson("/api/admin/users", "Unable to load people with access.");
   },
 
   async addAccessUser(payload) {
-    return this.postJson("/api/admin/users", payload, "Unable to add approved user.");
+    return this.postJson("/api/admin/users", payload, "Unable to save access.");
   },
 
   async deleteAccessUser(email) {
     return this.deleteJson(
       `/api/admin/users/${encodeURIComponent(email)}`,
-      "Unable to remove approved user.",
+      "Unable to remove access.",
     );
   },
 
@@ -341,7 +364,36 @@ window.WardWiseExplorer = {
     if (metric?.unit === "rate_per_10000") {
       return `${this.formatNumber(value, { maximumFractionDigits: 1 })} per 10k`;
     }
+    if (metric?.unit === "degrees_c") {
+      return `${this.formatNumber(value, { maximumFractionDigits: 1 })} °C`;
+    }
     return this.formatNumber(value, { maximumFractionDigits: 1 });
+  },
+
+  // The value with its unit spelled out, for places where the number stands alone and the reader
+  // has to know what it counts ("0.2 (unitless index)", "3.4 days", "12.1 per 10k residents").
+  formatMetricValueWithUnit(value, metric) {
+    if (value === null || value === undefined) return "No data";
+    const unit = String(metric?.unit || "");
+    const id = String(metric?.metric_id || "");
+    const num = (digits) => this.formatNumber(value, { maximumFractionDigits: digits });
+    if (unit === "percent") return `${num(1)}%`;
+    if (unit === "currency" || unit === "USD") return this.formatMetricValue(value, { unit: "currency" });
+    if (unit === "rating") return `${num(2)} stars`;
+    if (unit === "miles") return `${num(2)} miles`;
+    if (unit === "degrees_c") return `${num(1)} °C`;
+    if (unit === "days") return `${num(1)} ${Number(value) === 1 ? "day" : "days"}`;
+    if (unit === "minutes") return `${num(1)} minutes`;
+    if (unit === "rate_per_10000" || unit === "per_10000" || unit === "per 10k residents") return `${num(1)} per 10k residents`;
+    if (unit === "acres_per_10000") return `${num(1)} acres per 10k residents`;
+    if (unit === "count") return `${num(0)} in total`;
+    if (unit === "index") return `${num(2)} (unitless index)`;
+    if (unit === "score") return `${num(1)} (source's own score)`;
+    if (unit === "ratio" && /miles_per_sq_mi/.test(id)) return `${num(1)} miles per sq mi`;
+    if (unit === "rate" && /per_sqkm$/.test(id)) return `${num(1)} per sq km`;
+    if (unit === "rate" && /per_household$/.test(id)) return `${num(2)} per household`;
+    if (unit === "rate" || unit === "ratio") return `${num(2)} (${unit})`;
+    return unit ? `${num(1)} ${unit}` : num(1);
   },
 
   formatCategory(category) {

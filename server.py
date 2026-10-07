@@ -1,217 +1,108 @@
-"""Ward Wise Penlight — frontend shell.
+"""Ward Wise Penlight — local dev server for the public site.
 
-This app renders the three views and nothing else. Every byte of data comes from the
-Penlight API, which lives in another repo and is reached through the `/api/*` proxy
-below. Proxying (rather than calling the API cross-origin from the browser) keeps every
-request same-origin, so there is no CORS to configure and no API key to hand out.
+Renders the same templates the static build does (live, so edit-and-reload works) and proxies
+`/api/*` to the Penlight API so every page gets real data with no credentials. In production none
+of this runs: GitHub Pages serves the built pages and CloudFront routes `/api/*` to the API.
+
+    python server.py            # Jinja live, http://localhost:1837
+    python server.py --built    # serve dist/ exactly as Pages will (run scripts/build_static.py first)
 
 Environment:
-  PENLIGHT_API_BASE   where /api/* is forwarded   (default: https://penlight.wardwise.org)
-  PENLIGHT_SITE_BASE  where out-of-scope links go (default: https://penlight.wardwise.org)
-  PROXY_ALLOW_WRITES  1 to forward POSTs upstream (default: 0, stubbed — see proxy())
+  PENLIGHT_API_BASE   where /api/* is forwarded             (default: https://penlight.wardwise.org)
+  PENLIGHT_SITE_BASE  where private-app pages link to         (default: https://penlight.wardwise.org)
+  PROXY_ALLOW_WRITES  1 to forward POSTs upstream             (default: 0, stubbed — see proxy())
+  GA_ID               analytics id to render                   (default: none locally)
   PORT                default 1837, the year Chicago was incorporated
 """
 
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 
 import requests
-from flask import Flask, Response, jsonify, redirect, render_template, request, url_for
+from flask import Flask, Response, abort, jsonify, redirect, request, send_from_directory
 
-API_BASE = os.environ.get("PENLIGHT_API_BASE", "https://penlight.wardwise.org").rstrip("/")
-SITE_BASE = os.environ.get("PENLIGHT_SITE_BASE", "https://penlight.wardwise.org").rstrip("/")
+import penlight_site as _site  # route table + Jinja environment, shared with the static build
+
+API_BASE = os.environ.get("PENLIGHT_API_BASE", _site.SITE_BASE_DEFAULT).rstrip("/")
+SITE_BASE = os.environ.get("PENLIGHT_SITE_BASE", _site.SITE_BASE_DEFAULT).rstrip("/")
 ALLOW_WRITES = os.environ.get("PROXY_ALLOW_WRITES", "0") == "1"
+BUILT = "--built" in sys.argv
+DIST = Path(__file__).resolve().parent / "dist"
 
 # Headers that describe the *hop*, not the payload — forwarding them would corrupt the
 # response (a re-chunked body carrying the upstream's Content-Length, say).
 HOP_BY_HOP = {"content-encoding", "content-length", "transfer-encoding", "connection"}
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder=None)
 
-# One keep-alive session for every upstream call. Reusing the TCP and TLS
-# connection saves a few hundred milliseconds per request, which is the
-# difference between autocomplete feeling live and feeling laggy.
+# One keep-alive session for every upstream call. Reusing the TCP and TLS connection saves a few
+# hundred milliseconds per request, which is the difference between autocomplete feeling live and
+# feeling laggy.
 HTTP = requests.Session()
 
-STATIC_DIR = Path(app.static_folder)
 
-# Cache-bust static assets: one version per change = newest mtime among css/js, so editing
-# any stylesheet or script forces a refetch. Templates pass `v=asset_version`.
-ASSET_VERSION = int(max(
-    (path.stat().st_mtime for path in STATIC_DIR.iterdir() if path.suffix in (".css", ".js")),
-    default=0,
-))
+def _mtime_version(filename: str) -> str:
+    path = _site.STATIC / filename
+    return str(int(path.stat().st_mtime)) if path.exists() else ""
 
 
-@app.context_processor
-def inject_globals():
-    return {
-        "asset_version": ASSET_VERSION,
-        # Features that stayed behind in the monorepo — nominate a metric, submit a photo,
-        # the reports page, the API docs. They link out to the live site rather than 404.
-        "live_url": lambda path: f"{SITE_BASE}{path}",
-    }
+ENV = _site.make_environment(_mtime_version, app_base=SITE_BASE, ga_id=os.environ.get("GA_ID") or None,
+                             build_sha="dev")
 
 
-# --- Views -------------------------------------------------------------------
+# --- Pages -------------------------------------------------------------------
 
-@app.get("/")
-def index():
-    # K3: the sequenced explorer (landing -> your ward -> choose -> compare).
-    # The pre-K3 explorer stays reachable at /classic while the redesign settles.
-    return render_template("k3.html")
+def _render(page: _site.Page, path: str | None = None) -> str:
+    ENV.cache.clear() if ENV.cache is not None else None  # pick up template edits without restarting
+    return ENV.get_template(page.template).render(**_site.page_context(page, path=path))
 
 
-@app.get("/classic")
-def classic():
-    return render_template("explorer.html")
+def _register_page(page: _site.Page) -> None:
+    def view(**_kwargs):
+        if BUILT:
+            rel = "index.html" if page.path == "/" else f"{page.path.strip('/')}/index.html"
+            return send_from_directory(DIST, rel)
+        return _render(page, request.path)
+
+    for path in (page.path, *page.aliases):
+        app.add_url_rule(path, endpoint=f"page_{page.key}_{len(app.url_map._rules)}", view_func=view)
 
 
-@app.get("/dictionary")
-def dictionary():
-    return render_template("dictionary.html")
+for _page in _site.PAGES:
+    _register_page(_page)
 
 
-@app.get("/metrics")
-def metrics_redirect():
-    # Upstream 301s /metrics to the page carrying the dictionary; keep the habit.
-    return redirect(url_for("dictionary"), 301)
+@app.get("/report/<slug>/<area_id>")
+def report_area(slug: str, area_id: str):
+    # CloudFront rewrites this to /report/ in production; the page reads its own URL.
+    page = _site.PAGES_BY_KEY["report"]
+    if BUILT:
+        return send_from_directory(DIST, "report/index.html")
+    return _render(page, request.path)
 
 
-@app.get("/support")
-@app.get("/about")
-def about():
-    return render_template("about.html")
+for _source, _target in _site.REDIRECTS.items():
+    app.add_url_rule(_source, endpoint=f"redirect_{_source}", view_func=(lambda t: (lambda: redirect(t, 301)))(_target))
 
 
-# --- Geocoding ---------------------------------------------------------------
-
-# Chicago bounding box for Nominatim, so "Clark St" resolves here and not Iowa.
-CHICAGO_VIEWBOX = "-87.95,42.03,-87.50,41.62"
-
-# The same box in Photon's order (min lon, min lat, max lon, max lat).
-CHICAGO_BBOX = "-87.95,41.62,-87.50,42.03"
+@app.get("/static/<path:filename>")
+def static_file(filename: str):
+    return send_from_directory(DIST / "static" if BUILT else _site.STATIC, filename)
 
 
-# The City of Chicago's own address locator, the authority on what addresses
-# exist here. Free public ArcGIS endpoint, no key.
-CHICAGO_GEOCODER = (
-    "https://gisapps.chicago.gov/arcgis/rest/services/Chicago_Addresses/GeocodeServer"
-)
-
-GEOCODER_HEADERS = {
-    "User-Agent": "ward-wise-frontend (https://github.com/HarryBrisson/ward-wise-frontend)",
-}
+@app.get("/build.json")
+def build_manifest():
+    if BUILT:
+        return send_from_directory(DIST, "build.json")
+    return jsonify({"sha": "dev", "built_at": None})
 
 
-@app.get("/geocode/suggest")
-def geocode_suggest():
-    """Address autocomplete from the City of Chicago's own geocoder.
-
-    The city's locator knows every address point in Chicago, so 550 N Saint
-    Clair completes on the first try, which the OSM geocoders could not do.
-    Suggestions return a text plus a magicKey; /geocode/resolve turns the
-    picked one into coordinates.
-    """
-    query = (request.args.get("q") or "").strip()
-    if len(query) < 3:
-        return jsonify({"suggestions": []})
-    try:
-        response = HTTP.get(
-            f"{CHICAGO_GEOCODER}/suggest",
-            params={"text": query, "f": "json", "maxSuggestions": 6},
-            headers=GEOCODER_HEADERS,
-            timeout=6,
-        )
-        raw = response.json().get("suggestions", [])
-    except requests.RequestException as error:
-        return jsonify({"error": f"Suggestions failed: {error}"}), 502
-    suggestions = [
-        {"label": item["text"], "key": item["magicKey"]}
-        for item in raw
-        if item.get("text") and not item.get("isCollection")
-    ]
-    return jsonify({"suggestions": suggestions[:6]})
-
-
-@app.get("/geocode/resolve")
-def geocode_resolve():
-    """Turn a picked suggestion into WGS84 coordinates via the city locator."""
-    text = (request.args.get("text") or "").strip()
-    key = (request.args.get("key") or "").strip()
-    if not text:
-        return jsonify({"error": "Missing text."}), 400
-    params = {"SingleLine": text, "outSR": 4326, "maxLocations": 1, "f": "json"}
-    if key:
-        params["magicKey"] = key
-    try:
-        response = HTTP.get(
-            f"{CHICAGO_GEOCODER}/findAddressCandidates",
-            params=params,
-            headers=GEOCODER_HEADERS,
-            timeout=6,
-        )
-        candidates = response.json().get("candidates", [])
-    except requests.RequestException as error:
-        return jsonify({"error": f"Address lookup failed: {error}"}), 502
-    if not candidates:
-        return jsonify({"match": None})
-    top = candidates[0]
-    return jsonify(
-        {
-            "match": {
-                "lat": top["location"]["y"],
-                "lon": top["location"]["x"],
-                "label": top.get("address", text),
-            }
-        }
-    )
-
-
-@app.get("/geocode")
-def geocode():
-    """Resolve a street address to coordinates via OpenStreetMap's Nominatim.
-
-    Proxied server-side rather than called from the browser so the request
-    carries a proper User-Agent per the Nominatim usage policy, and so the
-    frontend stays same-origin. The ward lookup itself happens client-side
-    against the ward boundaries the page already holds.
-    """
-    query = (request.args.get("q") or "").strip()
-    if not query:
-        return jsonify({"error": "Missing query."}), 400
-    try:
-        response = HTTP.get(
-            "https://nominatim.openstreetmap.org/search",
-            params={
-                "q": f"{query}, Chicago, Illinois",
-                "format": "jsonv2",
-                "limit": 1,
-                "viewbox": CHICAGO_VIEWBOX,
-                "bounded": 1,
-            },
-            headers={
-                "User-Agent": "ward-wise-frontend (https://github.com/HarryBrisson/ward-wise-frontend)",
-            },
-            timeout=8,
-        )
-        results = response.json()
-    except requests.RequestException as error:
-        return jsonify({"error": f"Geocoding failed: {error}"}), 502
-    if not results:
-        return jsonify({"match": None})
-    top = results[0]
-    return jsonify(
-        {
-            "match": {
-                "lat": float(top["lat"]),
-                "lon": float(top["lon"]),
-                "label": top.get("display_name", query),
-            }
-        }
-    )
+@app.get("/.well-known/<path:_>")
+def well_known(_):
+    abort(404)
 
 
 # --- API proxy ---------------------------------------------------------------
@@ -220,12 +111,13 @@ def geocode():
 def proxy(api_path: str):
     """Forward to the Penlight API, streaming bytes through untouched.
 
-    Bytes, not JSON: /api/civic-assets/... serves the signifier JPEGs that the map view
-    and Support page render, so the proxy has to stay content-type agnostic.
+    Bytes, not JSON: /api/civic-assets/... serves the signifier JPEGs that the map view and
+    Support page render, so the proxy has to stay content-type agnostic. Cookies are NOT
+    forwarded: local dev is always signed out (/api/me → 401), by design.
     """
     if request.method == "POST" and not ALLOW_WRITES:
-        # The map view POSTs an analytics event on every metric toggle. Clicking around
-        # locally shouldn't write rows into production, so acknowledge without forwarding.
+        # The map view POSTs an analytics event on every metric toggle. Clicking around locally
+        # shouldn't write rows into production, so acknowledge without forwarding.
         return jsonify({"ok": True, "stubbed": True})
 
     upstream = f"{API_BASE}/api/{api_path}"
@@ -241,13 +133,26 @@ def proxy(api_path: str):
     except requests.RequestException as error:
         return jsonify({"error": f"Upstream request failed: {error}"}), 502
 
-    headers = [
-        (key, value)
-        for key, value in response.headers.items()
-        if key.lower() not in HOP_BY_HOP
-    ]
+    headers = [(key, value) for key, value in response.headers.items() if key.lower() not in HOP_BY_HOP]
     return Response(response.content, status=response.status_code, headers=headers)
 
 
+# Pages that stay in the private app (survey, account, admin…). Locally they link out to the live
+# site via url_for; a direct hit here says so instead of 404ing mysteriously.
+for _prefix in _site.APP_PATH_PREFIXES:
+    if _prefix.startswith("/api/"):
+        continue
+    _rule = _prefix.rstrip("/") or "/"
+
+    def _elsewhere(_prefix=_prefix, **_kw):
+        return redirect(f"{SITE_BASE}{request.full_path.rstrip('?')}", 302)
+
+    app.add_url_rule(_rule, endpoint=f"app_{_rule}", view_func=_elsewhere)
+    app.add_url_rule(f"{_rule}/<path:_rest>", endpoint=f"app_{_rule}_rest", view_func=_elsewhere)
+
+
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 1837)), debug=True)
+    if BUILT and not DIST.exists():
+        raise SystemExit("dist/ not found — run `python scripts/build_static.py` first")
+    print(f"Penlight public site ({'built dist/' if BUILT else 'live templates'}) → API {API_BASE}")
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 1837)), debug=not BUILT)

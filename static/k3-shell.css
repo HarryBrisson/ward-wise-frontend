@@ -66,7 +66,7 @@
 /* ---------- the two content pages ---------- */
 
 /* Scoped to Dictionary and Support so /classic is untouched. */
-body[data-page="dictionary"],
+body[data-page="k3_dictionary"],
 body[data-page="about"] {
   background: #fff;
   color: var(--k3-ink);
@@ -77,21 +77,21 @@ body[data-page="about"] {
 
 /* styles.css paints :root beige, which would show through wherever body does
    not reach (short pages, overscroll). Clear it on these two routes only. */
-html:has(body[data-page="dictionary"]),
+html:has(body[data-page="k3_dictionary"]),
 html:has(body[data-page="about"]) { background: #fff; }
 
-body[data-page="dictionary"] .metrics-layout,
+body[data-page="k3_dictionary"] .metrics-layout,
 body[data-page="about"] .metrics-layout {
   gap: 0;
   max-width: 720px;
   padding: 0 clamp(16px, 4vw, 28px) 64px;
 }
 
-body[data-page="dictionary"] a,
+body[data-page="k3_dictionary"] a,
 body[data-page="about"] a { color: var(--k3-hue-bright); }
 
 /* page title block */
-body[data-page="dictionary"] .metrics-header,
+body[data-page="k3_dictionary"] .metrics-header,
 body[data-page="about"] .metrics-header {
   background: none;
   border: 0;
@@ -100,7 +100,7 @@ body[data-page="about"] .metrics-header {
   padding: 46px 0 4px;
 }
 
-body[data-page="dictionary"] .metrics-header h1,
+body[data-page="k3_dictionary"] .metrics-header h1,
 body[data-page="about"] .metrics-header h1 {
   font-size: clamp(26px, 4vw, 33px);
   font-weight: 800;
@@ -108,7 +108,7 @@ body[data-page="about"] .metrics-header h1 {
   line-height: 1.15;
 }
 
-body[data-page="dictionary"] .metrics-header p,
+body[data-page="k3_dictionary"] .metrics-header p,
 body[data-page="about"] .metrics-header p {
   color: var(--k3-soft);
   font-size: 14.5px;
@@ -116,7 +116,7 @@ body[data-page="about"] .metrics-header p {
   max-width: 58ch;
 }
 
-body[data-page="dictionary"] .eyebrow,
+body[data-page="k3_dictionary"] .eyebrow,
 body[data-page="about"] .eyebrow {
   color: var(--k3-soft);
   font-size: 11px;
@@ -127,7 +127,7 @@ body[data-page="about"] .eyebrow {
 }
 
 /* panels become hairline-separated bands, not floating cards */
-body[data-page="dictionary"] .panel,
+body[data-page="k3_dictionary"] .panel,
 body[data-page="about"] .panel {
   background: none;
   border: 0;
@@ -140,7 +140,7 @@ body[data-page="about"] .panel {
   padding: 26px 0;
 }
 
-body[data-page="dictionary"] .panel h2,
+body[data-page="k3_dictionary"] .panel h2,
 body[data-page="about"] .panel h2 {
   font-size: 19px;
   font-weight: 750;
@@ -148,7 +148,7 @@ body[data-page="about"] .panel h2 {
   margin: 0;
 }
 
-body[data-page="dictionary"] .panel p,
+body[data-page="k3_dictionary"] .panel p,
 body[data-page="about"] .panel p {
   color: var(--k3-soft);
   font-size: 13.5px;
@@ -156,7 +156,7 @@ body[data-page="about"] .panel p {
   max-width: 62ch;
 }
 
-body[data-page="dictionary"] .panel section + section,
+body[data-page="k3_dictionary"] .panel section + section,
 body[data-page="about"] .panel section + section {
   border-top: 1px solid var(--k3-hair);
 }
@@ -165,10 +165,10 @@ body[data-page="about"] .panel section + section {
 
 /* Rows carry a caption on the right, so the column is a little wider than the
    Support page's reading measure. */
-body[data-page="dictionary"] .metrics-layout { max-width: 780px; }
+body[data-page="k3_dictionary"] .metrics-layout { max-width: 780px; }
 
 /* how a rank gets made, as a margin note rather than a card */
-body[data-page="dictionary"] .dict-note {
+body[data-page="k3_dictionary"] .dict-note {
   border-left: 2px solid var(--k3-hue-soft);
   color: var(--k3-soft);
   font-size: 12.5px;
@@ -181,7 +181,7 @@ body[data-page="dictionary"] .dict-note {
 
 /* Sticky, because opening Physical environment puts 34 rows between you and
    the search box. */
-body[data-page="dictionary"] .dict-bar {
+body[data-page="k3_dictionary"] .dict-bar {
   background: #fff;
   border-bottom: 1px solid var(--k3-hair);
   margin-top: 26px;
@@ -191,9 +191,9 @@ body[data-page="dictionary"] .dict-bar {
   z-index: 6;
 }
 
-body[data-page="dictionary"] .dict-searchrow { position: relative; }
+body[data-page="k3_dictionary"] .dict-searchrow { position: relative; }
 
-body[data-page="dictionary"] #dict-search {
+body[data-page="k3_dictionary"] #dict-search {
   background: #fff;
   border: 1px solid var(--k3-hair);
   border-radius: 10px;
@@ -204,22 +204,22 @@ body[data-page="dictionary"] #dict-search {
   width: 100%;
 }
 
-body[data-page="dictionary"] #dict-search:focus {
+body[data-page="k3_dictionary"] #dict-search:focus {
   border-color: var(--k3-hue-bright);
   box-shadow: 0 0 0 3px var(--k3-hue-soft);
   outline: none;
 }
 
-body[data-page="dictionary"] #dict-search::placeholder { color: #9aa1ad; }
+body[data-page="k3_dictionary"] #dict-search::placeholder { color: #9aa1ad; }
 
-body[data-page="dictionary"] #dict-clear {
+body[data-page="k3_dictionary"] #dict-clear {
   position: absolute;
   right: 12px;
   top: 50%;
   transform: translateY(-50%);
 }
 
-body[data-page="dictionary"] .dict-linkbtn {
+body[data-page="k3_dictionary"] .dict-linkbtn {
   background: none;
   border: 0;
   color: var(--k3-hue-bright);
@@ -232,23 +232,23 @@ body[data-page="dictionary"] .dict-linkbtn {
   text-underline-offset: 3px;
 }
 
-body[data-page="dictionary"] .dict-linkbtn:hover { color: var(--k3-hue); }
+body[data-page="k3_dictionary"] .dict-linkbtn:hover { color: var(--k3-hue); }
 
-body[data-page="dictionary"] .dict-knobs {
+body[data-page="k3_dictionary"] .dict-knobs {
   display: flex;
   flex-wrap: wrap;
   gap: 6px 20px;
   margin-top: 10px;
 }
 
-body[data-page="dictionary"] .dict-knob {
+body[data-page="k3_dictionary"] .dict-knob {
   align-items: center;
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
 }
 
-body[data-page="dictionary"] .dict-knoblab {
+body[data-page="k3_dictionary"] .dict-knoblab {
   color: var(--k3-soft);
   font-size: 10.5px;
   font-weight: 700;
@@ -257,7 +257,7 @@ body[data-page="dictionary"] .dict-knoblab {
   text-transform: uppercase;
 }
 
-body[data-page="dictionary"] .dict-knob button {
+body[data-page="k3_dictionary"] .dict-knob button {
   background: #fff;
   border: 1px solid var(--k3-hair);
   border-radius: 99px;
@@ -270,18 +270,18 @@ body[data-page="dictionary"] .dict-knob button {
   transition: color 0.14s ease, border-color 0.14s ease, background-color 0.14s ease;
 }
 
-body[data-page="dictionary"] .dict-knob button:hover {
+body[data-page="k3_dictionary"] .dict-knob button:hover {
   border-color: var(--k3-hue-bright);
   color: var(--k3-ink);
 }
 
-body[data-page="dictionary"] .dict-knob button.is-on {
+body[data-page="k3_dictionary"] .dict-knob button.is-on {
   background: var(--k3-hue-soft);
   border-color: transparent;
   color: var(--k3-hue);
 }
 
-body[data-page="dictionary"] .dict-tally {
+body[data-page="k3_dictionary"] .dict-tally {
   align-items: baseline;
   color: var(--k3-soft);
   display: flex;
@@ -292,10 +292,10 @@ body[data-page="dictionary"] .dict-tally {
 
 /* ---------- groups ---------- */
 
-body[data-page="dictionary"] .dict-group { border-top: 1px solid var(--k3-hair); }
-body[data-page="dictionary"] .dict-group:last-child { border-bottom: 1px solid var(--k3-hair); }
+body[data-page="k3_dictionary"] .dict-group { border-top: 1px solid var(--k3-hair); }
+body[data-page="k3_dictionary"] .dict-group:last-child { border-bottom: 1px solid var(--k3-hair); }
 
-body[data-page="dictionary"] .dict-group > summary {
+body[data-page="k3_dictionary"] .dict-group > summary {
   align-items: baseline;
   cursor: pointer;
   display: flex;
@@ -306,9 +306,9 @@ body[data-page="dictionary"] .dict-group > summary {
   position: relative;
 }
 
-body[data-page="dictionary"] .dict-group > summary::-webkit-details-marker { display: none; }
+body[data-page="k3_dictionary"] .dict-group > summary::-webkit-details-marker { display: none; }
 
-body[data-page="dictionary"] .dict-group > summary::after {
+body[data-page="k3_dictionary"] .dict-group > summary::after {
   color: var(--k3-soft);
   content: "\203A";
   font-size: 18px;
@@ -319,20 +319,20 @@ body[data-page="dictionary"] .dict-group > summary::after {
   transition: transform 0.16s ease;
 }
 
-body[data-page="dictionary"] .dict-group[open] > summary::after { transform: rotate(90deg); }
+body[data-page="k3_dictionary"] .dict-group[open] > summary::after { transform: rotate(90deg); }
 
-body[data-page="dictionary"] .dict-group > summary:hover .dict-grouptitle { color: var(--k3-hue-bright); }
+body[data-page="k3_dictionary"] .dict-group > summary:hover .dict-grouptitle { color: var(--k3-hue-bright); }
 
-body[data-page="dictionary"] .dict-groupmain { display: block; }
+body[data-page="k3_dictionary"] .dict-groupmain { display: block; }
 
-body[data-page="dictionary"] .dict-grouptitle {
+body[data-page="k3_dictionary"] .dict-grouptitle {
   display: block;
   font-size: 16px;
   font-weight: 750;
   letter-spacing: -0.01em;
 }
 
-body[data-page="dictionary"] .dict-groupblurb {
+body[data-page="k3_dictionary"] .dict-groupblurb {
   color: var(--k3-soft);
   display: block;
   font-size: 12.5px;
@@ -340,7 +340,7 @@ body[data-page="dictionary"] .dict-groupblurb {
   max-width: 60ch;
 }
 
-body[data-page="dictionary"] .dict-groupcount {
+body[data-page="k3_dictionary"] .dict-groupcount {
   background: #f4f5f8;
   border-radius: 99px;
   color: #5d6472;
@@ -351,12 +351,12 @@ body[data-page="dictionary"] .dict-groupcount {
   padding: 3px 9px;
 }
 
-body[data-page="dictionary"] .dict-group[open] .dict-groupcount {
+body[data-page="k3_dictionary"] .dict-group[open] .dict-groupcount {
   background: var(--k3-hue-soft);
   color: var(--k3-hue);
 }
 
-body[data-page="dictionary"] .dict-rows {
+body[data-page="k3_dictionary"] .dict-rows {
   border-top: 1px solid var(--k3-hair);
   margin: 0 0 6px;
   padding-left: 2px;
@@ -364,9 +364,9 @@ body[data-page="dictionary"] .dict-rows {
 
 /* ---------- one measure per row ---------- */
 
-body[data-page="dictionary"] .dict-row + .dict-row { border-top: 1px solid #f3f4f7; }
+body[data-page="k3_dictionary"] .dict-row + .dict-row { border-top: 1px solid #f3f4f7; }
 
-body[data-page="dictionary"] .dict-row > summary {
+body[data-page="k3_dictionary"] .dict-row > summary {
   align-items: baseline;
   cursor: pointer;
   display: flex;
@@ -377,9 +377,9 @@ body[data-page="dictionary"] .dict-row > summary {
   position: relative;
 }
 
-body[data-page="dictionary"] .dict-row > summary::-webkit-details-marker { display: none; }
+body[data-page="k3_dictionary"] .dict-row > summary::-webkit-details-marker { display: none; }
 
-body[data-page="dictionary"] .dict-row > summary::after {
+body[data-page="k3_dictionary"] .dict-row > summary::after {
   color: #b6bcc7;
   content: "\203A";
   font-size: 15px;
@@ -390,19 +390,19 @@ body[data-page="dictionary"] .dict-row > summary::after {
   transition: transform 0.16s ease;
 }
 
-body[data-page="dictionary"] .dict-row[open] > summary::after { transform: rotate(90deg); }
+body[data-page="k3_dictionary"] .dict-row[open] > summary::after { transform: rotate(90deg); }
 
-body[data-page="dictionary"] .dict-row > summary:hover .dict-rowname { color: var(--k3-hue-bright); }
+body[data-page="k3_dictionary"] .dict-row > summary:hover .dict-rowname { color: var(--k3-hue-bright); }
 
-body[data-page="dictionary"] .dict-rowmain { display: block; min-width: 0; }
+body[data-page="k3_dictionary"] .dict-rowmain { display: block; min-width: 0; }
 
-body[data-page="dictionary"] .dict-rowname {
+body[data-page="k3_dictionary"] .dict-rowname {
   display: block;
   font-size: 14px;
   font-weight: 700;
 }
 
-body[data-page="dictionary"] .dict-rowdesc {
+body[data-page="k3_dictionary"] .dict-rowdesc {
   color: var(--k3-soft);
   display: block;
   font-size: 12.5px;
@@ -410,14 +410,14 @@ body[data-page="dictionary"] .dict-rowdesc {
   max-width: 62ch;
 }
 
-body[data-page="dictionary"] .dict-rowside {
+body[data-page="k3_dictionary"] .dict-rowside {
   align-items: center;
   display: flex;
   flex: none;
   gap: 7px;
 }
 
-body[data-page="dictionary"] .dict-rowfam {
+body[data-page="k3_dictionary"] .dict-rowfam {
   color: #99a0ac;
   font-size: 11.5px;
   white-space: nowrap;
@@ -425,7 +425,7 @@ body[data-page="dictionary"] .dict-rowfam {
 
 /* Only the exceptions are badged: the eleven measures that do not reach all
    fifty wards. A chip on the other 160 would say nothing. */
-body[data-page="dictionary"] .dict-gap {
+body[data-page="k3_dictionary"] .dict-gap {
   background: #fdf3e6;
   border-radius: 99px;
   color: #8a5a1c;
@@ -435,14 +435,14 @@ body[data-page="dictionary"] .dict-gap {
   white-space: nowrap;
 }
 
-body[data-page="dictionary"] .dict-row mark {
+body[data-page="k3_dictionary"] .dict-row mark {
   background: #fbf0c4;
   border-radius: 2px;
   color: inherit;
   padding: 0 1px;
 }
 
-body[data-page="dictionary"] .dict-row.is-found {
+body[data-page="k3_dictionary"] .dict-row.is-found {
   animation: dict-flash 2.2s ease;
 }
 
@@ -452,31 +452,31 @@ body[data-page="dictionary"] .dict-row.is-found {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  body[data-page="dictionary"] .dict-row.is-found { animation: none; }
-  body[data-page="dictionary"] .dict-group > summary::after,
-  body[data-page="dictionary"] .dict-row > summary::after { transition: none; }
+  body[data-page="k3_dictionary"] .dict-row.is-found { animation: none; }
+  body[data-page="k3_dictionary"] .dict-group > summary::after,
+  body[data-page="k3_dictionary"] .dict-row > summary::after { transition: none; }
 }
 
 /* ---------- the opened entry ---------- */
 
 /* A left rule ties the opened entry to the row it came from, which matters
    when it opens in the middle of thirty other rows. */
-body[data-page="dictionary"] .dict-body {
+body[data-page="k3_dictionary"] .dict-body {
   border-left: 2px solid var(--k3-hue-soft);
   margin: 0 0 4px;
   padding: 3px 0 17px 14px;
 }
 
-body[data-page="dictionary"] .dict-body p {
+body[data-page="k3_dictionary"] .dict-body p {
   color: var(--k3-soft);
   font-size: 13px;
   margin: 0 0 9px;
   max-width: 66ch;
 }
 
-body[data-page="dictionary"] .dict-body b { color: var(--k3-ink); font-weight: 700; }
+body[data-page="k3_dictionary"] .dict-body b { color: var(--k3-ink); font-weight: 700; }
 
-body[data-page="dictionary"] .dict-meta {
+body[data-page="k3_dictionary"] .dict-meta {
   border-top: 1px solid var(--k3-hair);
   display: grid;
   gap: 10px 22px;
@@ -485,7 +485,7 @@ body[data-page="dictionary"] .dict-meta {
   padding-top: 12px;
 }
 
-body[data-page="dictionary"] .dict-meta dt {
+body[data-page="k3_dictionary"] .dict-meta dt {
   color: var(--k3-soft);
   font-size: 10.5px;
   font-weight: 700;
@@ -494,13 +494,13 @@ body[data-page="dictionary"] .dict-meta dt {
   text-transform: uppercase;
 }
 
-body[data-page="dictionary"] .dict-meta dd {
+body[data-page="k3_dictionary"] .dict-meta dd {
   color: var(--k3-ink);
   font-size: 12.5px;
   margin: 0;
 }
 
-body[data-page="dictionary"] .dict-meta code {
+body[data-page="k3_dictionary"] .dict-meta code {
   background: #f4f5f8;
   border-radius: 4px;
   color: #4b525f;
@@ -508,7 +508,7 @@ body[data-page="dictionary"] .dict-meta code {
   padding: 1px 5px;
 }
 
-body[data-page="dictionary"] .dict-inlists {
+body[data-page="k3_dictionary"] .dict-inlists {
   align-items: center;
   display: flex;
   flex-wrap: wrap;
@@ -518,12 +518,12 @@ body[data-page="dictionary"] .dict-inlists {
 
 /* Deliberately not the uppercase eyebrow the meta grid uses, so this reads as
    a sentence about the measure rather than one more field. */
-body[data-page="dictionary"] .dict-inlists span {
+body[data-page="k3_dictionary"] .dict-inlists span {
   color: var(--k3-soft);
   font-size: 12.5px;
 }
 
-body[data-page="dictionary"] .dict-chip {
+body[data-page="k3_dictionary"] .dict-chip {
   background: var(--k3-hue-soft);
   border-radius: 99px;
   color: var(--k3-hue);
@@ -533,48 +533,48 @@ body[data-page="dictionary"] .dict-chip {
   text-decoration: none;
 }
 
-body[data-page="dictionary"] .dict-chip:hover { background: #e4dcfa; }
+body[data-page="k3_dictionary"] .dict-chip:hover { background: #e4dcfa; }
 
-body[data-page="dictionary"] .dict-nom {
+body[data-page="k3_dictionary"] .dict-nom {
   color: var(--k3-soft);
   font-size: 11.5px;
   margin-top: 11px;
 }
 
-body[data-page="dictionary"] .dict-jump { margin: 18px 0 0; }
+body[data-page="k3_dictionary"] .dict-jump { margin: 18px 0 0; }
 
-body[data-page="dictionary"] .dict-jump a {
+body[data-page="k3_dictionary"] .dict-jump a {
   font-size: 12.5px;
   font-weight: 650;
   text-decoration: none;
 }
 
-body[data-page="dictionary"] .dict-jump a:hover { text-decoration: underline; }
+body[data-page="k3_dictionary"] .dict-jump a:hover { text-decoration: underline; }
 
-body[data-page="dictionary"] .dict-empty {
+body[data-page="k3_dictionary"] .dict-empty {
   color: var(--k3-soft);
   font-size: 13.5px;
   padding: 28px 0;
 }
 
-body[data-page="dictionary"] .dict-empty b { color: var(--k3-ink); }
+body[data-page="k3_dictionary"] .dict-empty b { color: var(--k3-ink); }
 
 @media (max-width: 620px) {
   /* Six pills wrapping onto three lines would put a 150px bar above every
      screen of a phone. One scrolling line keeps the labels and the height. */
-  body[data-page="dictionary"] .dict-knobs {
+  body[data-page="k3_dictionary"] .dict-knobs {
     flex-wrap: nowrap;
     gap: 16px;
     overflow-x: auto;
     scrollbar-width: none;
   }
 
-  body[data-page="dictionary"] .dict-knobs::-webkit-scrollbar { display: none; }
-  body[data-page="dictionary"] .dict-knob { flex: none; flex-wrap: nowrap; }
-  body[data-page="dictionary"] .dict-knob button { white-space: nowrap; }
-  body[data-page="dictionary"] .dict-rowfam { display: none; }
-  body[data-page="dictionary"] .dict-groupblurb { max-width: none; }
-  body[data-page="dictionary"] .dict-meta { gap: 10px 16px; }
+  body[data-page="k3_dictionary"] .dict-knobs::-webkit-scrollbar { display: none; }
+  body[data-page="k3_dictionary"] .dict-knob { flex: none; flex-wrap: nowrap; }
+  body[data-page="k3_dictionary"] .dict-knob button { white-space: nowrap; }
+  body[data-page="k3_dictionary"] .dict-rowfam { display: none; }
+  body[data-page="k3_dictionary"] .dict-groupblurb { max-width: none; }
+  body[data-page="k3_dictionary"] .dict-meta { gap: 10px 16px; }
 }
 
 /* ---------- Support ---------- */

@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Penlight metric icons — gallery</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    /* Dev-only contact sheet. Renders every metric icon defined in explorer.js
+       at real size on the Penlight surface, so icon edits can be reviewed
+       visually instead of blind. Open at /static/icon_gallery.html. */
+    body { background: var(--background); color: var(--text); font-family: system-ui, sans-serif; margin: 0; padding: 24px; }
+    h1 { font-size: 18px; font-weight: 500; margin: 0 0 4px; }
+    .meta { color: var(--muted-text); font-size: 13px; margin: 0 0 16px; }
+    .controls { display: flex; gap: 16px; align-items: center; margin-bottom: 20px; font-size: 13px; color: var(--muted-text); }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+    .cell { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px 8px;
+            border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+    .swatch { width: 52px; height: 52px; border-radius: 8px; background: var(--background);
+              display: flex; align-items: center; justify-content: center; color: var(--text); }
+    .id { font-size: 11px; text-align: center; line-height: 1.3; color: var(--muted-text); word-break: break-word; }
+  </style>
+</head>
+<body>
+  <h1>Penlight metric icons</h1>
+  <p class="meta" id="count">Loading icons from metric_icons.js…</p>
+  <div class="controls">
+    <label>Size <input type="range" id="size" min="14" max="40" value="24" /></label>
+    <span id="sizeval">24px</span>
+  </div>
+  <div class="grid" id="grid"></div>
+  <script>
+    // Single source of truth: parse the icon map straight out of metric_icons.js so
+    // this gallery never drifts from what the app actually renders.
+    async function loadIcons() {
+      const src = await (await fetch("metric_icons.js")).text();
+      const start = src.indexOf("const icons = {");
+      const block = src.slice(start, src.indexOf("const fallbackByCategory", start));
+      // Resolve any template-literal consts referenced by name (e.g. beanIcon).
+      const named = {};
+      for (const m of src.matchAll(/const\s+(\w+)\s*=\s*`([\s\S]*?)`/g)) named[m[1]] = m[2];
+      const icons = {};
+      for (const m of block.matchAll(/^\s+([a-z_0-9]+):\s+`([\s\S]*?)`,\s*$/gm)) icons[m[1]] = m[2];
+      for (const m of block.matchAll(/^\s+([a-z_0-9]+):\s+([A-Za-z_]\w*),\s*$/gm)) {
+        if (named[m[2]] != null) icons[m[1]] = named[m[2]];
+      }
+      return icons;
+    }
+
+    function render(icons, size) {
+      const grid = document.getElementById("grid");
+      grid.innerHTML = "";
+      for (const [id, body] of Object.entries(icons)) {
+        const cell = document.createElement("div");
+        cell.className = "cell";
+        const swatch = document.createElement("div");
+        swatch.className = "swatch";
+        swatch.innerHTML =
+          `<svg width="${size}" height="${size}" viewBox="0 0 20 20" fill="none" stroke="currentColor" ` +
+          `stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
+        const label = document.createElement("div");
+        label.className = "id";
+        label.textContent = id;
+        cell.append(swatch, label);
+        grid.appendChild(cell);
+      }
+    }
+
+    loadIcons().then((icons) => {
+      const ids = Object.keys(icons);
+      document.getElementById("count").textContent = `${ids.length} icons defined in metric_icons.js`;
+      const sizeInput = document.getElementById("size");
+      const sizeVal = document.getElementById("sizeval");
+      const update = () => {
+        sizeVal.textContent = `${sizeInput.value}px`;
+        render(icons, Number(sizeInput.value));
+      };
+      sizeInput.addEventListener("input", update);
+      update();
+    }).catch((err) => {
+      document.getElementById("count").textContent = "Failed to load metric_icons.js: " + err;
+    });
+  </script>
+</body>
+</html>

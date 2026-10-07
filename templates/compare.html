@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Compare areas — Ward Wise Penlight{% endblock %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='report_ui.css', v=asset_version) }}">
+{% endblock %}
+
+{% block content %}
+  <main class="report-layout compare-layout" id="compare-root" aria-live="polite">
+    <p class="report-loading">Loading the comparison…</p>
+  </main>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='common.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='metric_icons.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='presets.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='geography.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='scoring.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='report_charts.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='compare.js', v=asset_version) }}"></script>
+{% endblock %}

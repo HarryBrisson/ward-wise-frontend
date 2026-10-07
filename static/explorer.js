@@ -1,32 +1,7 @@
-// The map/ranker/score views work over any of three geographies (area_type). Each score and geojson
-// feature carries a uniform area_id (ward_id for wards); these configs say how to load + label each.
-const AREA_TYPES = {
-  ward: {
-    label: "Wards",
-    noun: "ward",
-    idProp: "ward_id",
-    loadAreas: () => WardWiseExplorer.fetchExplorerWards().then((r) => r.wards || []),
-    loadGeojson: () => WardWiseExplorer.fetchWardGeojson(),
-    rankerTitle: "Top wards by weighted composite",
-  },
-  community_area: {
-    label: "Neighborhoods",
-    noun: "neighborhood",
-    idProp: "community_area_id",
-    loadAreas: () => WardWiseExplorer.fetchCommunityAreas().then((r) => r.community_areas || []),
-    loadGeojson: () => WardWiseExplorer.fetchCommunityAreaGeojson(),
-    rankerTitle: "Top neighborhoods by weighted composite",
-  },
-  chi: {
-    // User-facing labels use the χGRID brand mark; the area_type key stays the ASCII "chi".
-    label: "χGRIDs",
-    noun: "χGRID",
-    idProp: "chi_id",
-    loadAreas: () => WardWiseExplorer.fetchChis().then((r) => r.chis || []),
-    loadGeojson: () => WardWiseExplorer.fetchChigridGeojson(),
-    rankerTitle: "Top χGRIDs by weighted composite",
-  },
-};
+// The map/ranker/score views work over any geography (area_type). Each score and geojson feature
+// carries a uniform area_id (ward_id for wards); the shared registry in geography.js says how to
+// load + label each — this page is the one place the explorer-only precinct lens is visible.
+const AREA_TYPES = window.WardWiseGeography.AREA_TYPES;
 
 // Singular geography noun for the active area type ("ward" / "neighborhood" / "χGRID").
 function areaNoun() {
@@ -48,6 +23,9 @@ function labelLower() {
 
 const explorerState = {
   areaType: "ward",
+  lensWardId: null, // set only while areaType is "precinct": the ward whose precincts are shown
+  cityScores: [],   // every scored area before the lens narrows to one ward (for "rank citywide")
+  scaleScope: "ward", // lens colour range: "ward" (this ward's precincts) or "city" (all precincts)
   wards: [], // areas for the current area_type (named "wards" for history)
   areaById: new Map(),
   geojsonCache: new Map(),
@@ -66,7 +44,7 @@ const explorerState = {
   profileCache: new Map(),
   currentWardId: null,
   hoveredWardId: null,
-  currentDetailsWardId: null,
+  miniOpenMetric: null,   // mini report: the rank box whose real-scale strip is open
   currentVisualizer: "visualizer-map",
   fullCityBounds: null,
   scoreRefreshId: 0,
@@ -79,6 +57,14 @@ const explorerState = {
   metricMethodology: {},   // area_type -> {metric_id: [caveat keys]} for the Methodology notes panel
   selectedYear: null,     // null = latest; otherwise repoint scores to this data year
   deltaMode: false,       // when true, map shows change between deltaFromYear and deltaToYear
+  pickerLayout: "curated", // curated | domains | flat — how the input panel offers metrics
+  activePresetId: null,   // the curated list the weights currently equal, or null for a custom mix
+  customizing: false,     // curated mode: the per-metric picker is open ("Advanced options")
+  urlDirty: false,        // once the reader changes anything, the URL carries the basket
+  rankerQuery: "",        // leaderboard filter text (lowercased)
+  metricQuery: "",        // metric picker filter text (lowercased)
+  areaLoadId: 0,          // token: a stale geography load never paints over a newer one
+  areaLoading: false,     // the geography toggle is disabled while a load is in flight
 };
 
 function areaConfig() {
@@ -109,13 +95,118 @@ const map = L.map("map", {
   zoomControl: false,
   zoomSnap: 0, // fractional zoom: fitBounds frames the city exactly (integer snap wastes ~half the pane at narrow widths); safe because the map is non-interactive
 }).setView([41.8781, -87.6298], 10);
-const mapDetailsLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-  maxZoom: 18,
-  attribution: "&copy; OpenStreetMap contributors",
+// Street-detail tiles follow the theme: CARTO light on classic, CARTO dark on the dark theme.
+// CARTO's basemaps need a (public, client-side) key since 2026-09; shared with happiness-walk.
+const MAP_TILES = {
+  classic: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=cb1_2jye_1_91a0198a0781fa7a84176b2a",
+  dark: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=cb1_2jye_1_91a0198a0781fa7a84176b2a",
+};
+let mapTilesTheme = "classic";
+let mapDetailsLayer = makeMapDetailsLayer("classic");
+
+function makeMapDetailsLayer(theme) {
+  return L.tileLayer(MAP_TILES[theme] || MAP_TILES.classic, {
+    maxZoom: 18,
+    subdomains: "abcd",
+    attribution: "&copy; OpenStreetMap contributors &copy; CARTO",
+  });
+}
+
+function currentThemeName() {
+  return document.documentElement.dataset.theme === "dark" ? "dark" : "classic";
+}
+
+function syncMapTilesToTheme() {
+  const theme = currentThemeName();
+  if (theme === mapTilesTheme) return;
+  const visible = map.hasLayer(mapDetailsLayer);
+  if (visible) map.removeLayer(mapDetailsLayer);
+  mapDetailsLayer = makeMapDetailsLayer(theme);
+  mapTilesTheme = theme;
+  if (visible) mapDetailsLayer.addTo(map);
+}
+syncMapTilesToTheme();
+
+document.addEventListener("wardwise:themechange", () => {
+  syncMapTilesToTheme();
+  updateMapStyles();
+  renderWeightedRanker();
 });
 
 function cssVariable(name, fallback) {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
+}
+
+// The /survey page stashes a finished equation here; the map picks it up once and clears it, so a
+// survey leads straight to "here is your Chicago" instead of a random starting five.
+function surveyEquationWeights() {
+  let stashed = null;
+  try {
+    stashed = window.localStorage.getItem("penlightSurveyEquation");
+    if (stashed) window.localStorage.removeItem("penlightSurveyEquation");
+  } catch (error) {
+    return null;  // private browsing / storage disabled
+  }
+  if (!stashed) return null;
+  try {
+    const parsed = JSON.parse(stashed);
+    const weights = parsed && parsed.weights;
+    if (!weights || typeof weights !== "object") return null;
+    explorerState.pendingSurvey = parsed;
+    // Direction overrides are the reader's own call on contested metrics.
+    for (const [metricId, direction] of Object.entries(parsed.directions || {})) {
+      const metric = explorerState.metrics.find((m) => m.metric_id === metricId);
+      if (metric) metric.direction = direction;
+    }
+    const known = Object.fromEntries(explorerState.metrics.map((m) => [m.metric_id, 0]));
+    let any = false;
+    for (const [metricId, weight] of Object.entries(weights)) {
+      if (metricId in known && Number.isFinite(Number(weight))) {
+        known[metricId] = Number(weight);
+        if (Number(weight) > 0) any = true;
+      }
+    }
+    return any ? known : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+// The wizard (/survey) keeps the reader's index in localStorage; it renders as a "My index" chip
+// in the curated tray and applies like any list, keeping its own 1× / 10× weights.
+const MY_INDEX_ID = "mine";
+const MY_INDEX_KEY = "penlightMyIndex";
+
+function loadMyIndex() {
+  try {
+    const raw = window.localStorage.getItem(MY_INDEX_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed.weights !== "object") return null;
+    return parsed;
+  } catch (error) {
+    return null;
+  }
+}
+
+function myIndexPreset() {
+  const stored = loadMyIndex();
+  if (!stored) return null;
+  const metricIds = Object.keys(stored.weights).filter((id) => Number(stored.weights[id]) > 0);
+  if (!metricIds.length) return null;
+  return {
+    id: MY_INDEX_ID,
+    name: stored.name || "My index",
+    short: "Mine",
+    tagline: "Built from your answers in the index wizard",
+    metric_ids: metricIds,
+    weights: stored.weights,
+  };
+}
+
+// A curated list by id, or the reader's own index.
+function activePreset(presetId = explorerState.activePresetId) {
+  return WardWisePresetTools.byId(presetId) || (presetId === MY_INDEX_ID ? myIndexPreset() : null);
 }
 
 function randomInitialWeights(metrics, count) {
@@ -162,10 +253,18 @@ async function initExplorer() {
   initMobileControls();
   initMapDetailToggle();
   initAreaTypeToggle();
+  await loadManifestAndStart();
+}
+
+// Everything that depends on the manifest. Separate from initExplorer so an error state's
+// "Try again" can rerun it without registering the page's listeners a second time.
+async function loadManifestAndStart() {
   setMetricControlsLoading(true);
   try {
     const metricData = await WardWiseExplorer.fetchExplorerManifest();
     explorerState.metrics = shuffledMetrics(applyMetricView(metricData.metrics));
+    const countEl = document.getElementById("metric-count-total");
+    if (countEl) countEl.textContent = `these ${explorerState.metrics.length}`;
     explorerState.metricCoverage = metricData.coverage || {};
     explorerState.metricAreaTypes = metricData.metric_area_types || {};
     explorerState.snapshots = metricData.snapshots || [];
@@ -175,17 +274,80 @@ async function initExplorer() {
     explorerState.metricValidFrom = metricData.metric_valid_from || {};
     explorerState.forwardCarryYears = metricData.forward_carry_years || 0;
     explorerState.metricMethodology = metricData.metric_methodology || {};
-    explorerState.weights = randomInitialWeights(explorerState.metrics, 5);
+    // Basket precedence: a survey equation the reader just built, then a basket carried in the
+    // URL, then one of the curated lists at random — never five random metrics, so the first map
+    // anyone sees has a name and an explanation.
+    const params = new URLSearchParams(window.location.search);
+    // The geography is resolved BEFORE the basket: a preset picked while "ward" was still assumed
+    // can have zero precinct metrics, which would paint the lens grey. ?area=precinct needs its
+    // ?ward=; without one it falls back to wards (a citywide precinct map is not offered).
+    const requestedArea = AREA_TYPES[params.get("area")] ? params.get("area") : "ward";
+    const requestedWard = params.get("ward");
+    explorerState.lensWardId = requestedArea === "precinct" && requestedWard
+      ? AREA_TYPES.ward.normalizeId(requestedWard) : null;
+    explorerState.areaType = requestedArea === "precinct" && !explorerState.lensWardId ? "ward" : requestedArea;
+    explorerState.scaleScope = params.get("scale") === "city" ? "city" : "ward";
+    const survey = surveyEquationWeights();
+    const fromUrl = basketFromUrl(params);
+    if (survey) {
+      explorerState.weights = survey;
+      explorerState.activePresetId = myIndexPreset() ? MY_INDEX_ID : null;
+      explorerState.urlDirty = true;
+    } else if (fromUrl) {
+      explorerState.weights = fromUrl.weights;
+      explorerState.activePresetId = fromUrl.presetId;
+      explorerState.urlDirty = true;
+    } else {
+      applyRandomPreset();
+    }
 
     renderMetricControls();
     initMetricSelectionActions();
+    initMiniReportActions();
+    initRankerSearch();
+    initFormulaChips();
+    initMetricSearch();
+    window.matchMedia?.("(max-width: 640px)").addEventListener?.("change", () => renderMetricControls());
     initTimeControls();
     initMethodology();
-    await loadAreaType("ward");
+    // A shared link's year (?y=2024) applies on load, exactly as if chosen in Change time: the
+    // selector, the button label, the basket (metrics with no data that year drop out) and the
+    // scores all follow it. Unknown years are ignored and the page opens on Latest.
+    const requestedYear = params.get("y");
+    if (requestedYear && /^\d{4}$/.test(requestedYear) && (explorerState.dataYears || []).map(Number).includes(Number(requestedYear))) {
+      explorerState.selectedYear = requestedYear;
+      const yearSelect = document.getElementById("year-selector");
+      if (yearSelect) yearSelect.value = requestedYear;
+      updateTimeButtonLabel();
+      pruneUnavailableSelections();
+      explorerState.urlDirty = true;
+    }
+    syncAreaTypeToggle();
+    await loadAreaType(explorerState.areaType);
+    applyPendingSurveyWindow();
+    const selected = params.get("sel");
+    if (selected && findArea(selected)) selectWard(selected);
   } catch (error) {
-    renderMetricLoadError(error);
-    renderMetricError(error);
+    renderMetricLoadError(error, loadManifestAndStart);
+    renderMetricError(error, loadManifestAndStart);
   }
+}
+
+// A wizard reader who said change matters most lands in the change view, on the window the
+// wizard fitted to their measures (the toggle's own handler prunes and re-renders).
+function applyPendingSurveyWindow() {
+  const pending = explorerState.pendingSurvey;
+  explorerState.pendingSurvey = null;
+  if (!pending || !pending.delta_mode) return;
+  const toggle = document.getElementById("delta-mode-toggle");
+  if (!toggle || toggle.checked) return;
+  const setIfPresent = (select, value) => {
+    if (select && value != null && [...select.options].some((o) => o.value === String(value))) select.value = String(value);
+  };
+  setIfPresent(document.getElementById("delta-from-year"), pending.delta_from);
+  setIfPresent(document.getElementById("delta-to-year"), pending.delta_to);
+  toggle.checked = true;
+  toggle.dispatchEvent(new Event("change", { bubbles: true }));
 }
 
 function initTimeControls() {
@@ -291,6 +453,7 @@ async function ensureYears(areaType, yearKeys) {
         )
           .then((data) => {
             Object.assign(store, data.matrix || {});
+            Object.assign(((explorerState.matrixPeriods ||= {})[areaType] ||= {}), data.periods || {});
           })
           .finally(() => {
             delete inflight[cacheKey];
@@ -318,28 +481,121 @@ function neededYearKeys() {
 }
 
 // The only weight-dependent step, run client-side: weighted average of each area's precomputed
-// components. Matches the server's compute_weighted_scores exactly (verified to the displayed digit).
+// components. Delegates to WardWiseScoring so the leaderboard, the mini report, the full report and
+// the comparison page can never disagree on a rank (the module mirrors the server's
+// compute_weighted_scores to the displayed digit).
 function computeScores(weights, yearKey) {
   const matrix = explorerState.scoreMatrices[explorerState.areaType] || {};
   const slice = matrix[yearKey] || matrix.latest || {};
-  const active = Object.entries(weights).filter(([, weight]) => Number(weight) > 0);
-  const rows = Object.entries(slice).map(([areaId, cells]) => {
-    let total = 0;
-    let applied = 0;
-    for (const [metricId, weight] of active) {
-      if (metricId in cells) {
-        total += cells[metricId].s * Number(weight);
-        applied += Number(weight);
+  return WardWiseScoring.computeComposite(slice, weights).rows;
+}
+
+function currentSlice() {
+  const matrix = explorerState.scoreMatrices[explorerState.areaType] || {};
+  return matrix[explorerState.selectedYear || "latest"] || matrix.latest || {};
+}
+
+// ---- curated lists ----
+
+function presetWeights(preset) {
+  const ok = new Set(availableMetricIds());
+  const allIds = explorerState.metrics.map((metric) => metric.metric_id);
+  if (preset.weights) {
+    // the reader's own index carries 1× / 10× weights of its own
+    const known = new Set(allIds);
+    const weights = Object.fromEntries(allIds.map((id) => [id, 0]));
+    const used = [];
+    const missing = [];
+    for (const id of preset.metric_ids) {
+      if (known.has(id) && ok.has(id)) {
+        weights[id] = Number(preset.weights[id]) || 1;
+        used.push(id);
+      } else {
+        missing.push(id);
       }
     }
-    return { area_id: areaId, score: applied ? Math.round((total / applied) * 100) / 100 : null };
-  });
-  rows.sort(
-    (a, b) => (b.score ?? -Infinity) - (a.score ?? -Infinity) || String(a.area_id).localeCompare(String(b.area_id)),
-  );
-  let rank = 1;
-  for (const row of rows) if (row.score != null) row.rank = rank++;
-  return rows;
+    return { weights, used, missing };
+  }
+  return WardWisePresetTools.resolveWeights(preset, allIds, (id) => ok.has(id));
+}
+
+function applyRandomPreset() {
+  const tried = new Set();
+  for (let attempt = 0; attempt < 24; attempt += 1) {
+    const preset = WardWisePresetTools.random();
+    if (tried.has(preset.id)) continue;
+    tried.add(preset.id);
+    const { weights, used } = presetWeights(preset);
+    if (used.length) {
+      explorerState.weights = weights;
+      explorerState.activePresetId = preset.id;
+      return true;
+    }
+  }
+  explorerState.weights = randomInitialWeights(explorerState.metrics, 5);
+  explorerState.activePresetId = null;
+  return false;
+}
+
+function applyPreset(presetId) {
+  const preset = activePreset(presetId);
+  if (!preset) return;
+  const { weights, used } = presetWeights(preset);
+  if (!used.length) return;
+  explorerState.weights = weights;
+  explorerState.activePresetId = preset.id;
+  explorerState.customizing = false;
+  explorerState.urlDirty = true;
+  renderMetricControls();
+  // The first-party selection log only accepts toggle/surprise/all/none, so a list applies through
+  // GA alone until the backend allowlist learns "preset".
+  WardWiseExplorer.track("explore_preset", { preset_id: preset.id, selected_count: used.length });
+  refreshMetricViews();
+}
+
+// Any hand edit turns the basket into "Your list": the chip stays honest about what is counted.
+function markCustom() {
+  explorerState.activePresetId = null;
+  explorerState.urlDirty = true;
+}
+
+function basketFromUrl(params) {
+  const presetId = params.get("p");
+  const parsed = WardWiseGeography.parseMix(params.get("m"));
+  if (!parsed) {
+    // `p=` on its own names a curated list; the basket is that list resolved for the geography.
+    const preset = activePreset(presetId);
+    if (!preset) return null;
+    const { weights, used } = presetWeights(preset);
+    return used.length ? { weights, presetId: preset.id } : null;
+  }
+  const known = new Set(explorerState.metrics.map((metric) => metric.metric_id));
+  const weights = weightsForAllMetrics(0);
+  let any = false;
+  for (const [id, weight] of Object.entries(parsed)) {
+    if (known.has(id)) {
+      weights[id] = weight;
+      any = true;
+    }
+  }
+  if (!any) return null;
+  return { weights, presetId: activePreset(presetId) ? presetId : null };
+}
+
+// The URL carries the basket once the reader has changed anything, so a link reproduces this view.
+function writeLandingUrl() {
+  if (!explorerState.urlDirty || !window.history?.replaceState) return;
+  const params = new URLSearchParams();
+  if (explorerState.areaType !== "ward") params.set("area", explorerState.areaType);
+  if (lensActive()) params.set("ward", explorerState.lensWardId);
+  if (lensActive() && explorerState.scaleScope === "city") params.set("scale", "city");
+  const mix = WardWiseGeography.serializeMix(explorerState.weights);
+  if (mix) params.set("m", mix);
+  if (explorerState.activePresetId) params.set("p", explorerState.activePresetId);
+  if (explorerState.selectedYear) params.set("y", String(explorerState.selectedYear));
+  if (explorerState.currentWardId) params.set("sel", String(explorerState.currentWardId));
+  const query = params.toString();
+  window.history.replaceState(null, "", query ? `?${query}` : window.location.pathname);
 }
 
 function computeDeltaScores() {
@@ -385,44 +641,236 @@ function computeDeltaScores() {
 
 async function loadAreaType(areaType) {
   explorerState.areaType = AREA_TYPES[areaType] ? areaType : "ward";
+  const loadId = ++explorerState.areaLoadId;
   setMapShadeLoading(true); // spinner while the (slow) geojson loads + first scores render
   const config = areaConfig();
+  if (explorerState.areaType !== "precinct") explorerState.lensWardId = null;
+  const loadOptions = { wardId: explorerState.lensWardId };
+  const cacheKey = geojsonCacheKey(explorerState.areaType, explorerState.lensWardId);
   const [areas, geojson] = await Promise.all([
-    config.loadAreas(),
-    explorerState.geojsonCache.get(explorerState.areaType) || config.loadGeojson(),
+    config.loadAreas(loadOptions),
+    explorerState.geojsonCache.get(cacheKey) || config.loadGeojson(loadOptions),
   ]);
-  explorerState.geojsonCache.set(explorerState.areaType, geojson);
+  if (loadId !== explorerState.areaLoadId) return; // a newer geography load overtook this one
+  explorerState.geojsonCache.set(cacheKey, geojson);
   explorerState.wards = areas;
   explorerState.areaById = new Map(areas.map((area) => [String(areaIdOf(area)), area]));
   explorerState.currentWardId = null;
-  explorerState.currentDetailsWardId = null;
   explorerState.hoveredWardId = null;
   explorerState.metricTimeline = null;
   explorerState.timelineMetricKey = "";
-  hideWardDetails();
   updateSelectedWardLabel(null);
+  explorerState.rankerQuery = "";
+  const search = document.getElementById("ranker-search");
+  if (search) {
+    search.value = "";
+    search.placeholder = `Filter ${labelLower()}…`;
+  }
   renderMap(geojson);
+  renderLensOutline();
+  renderMapHint();
   renderMetricControls(); // re-filter the metric picker to what's available for this geography
+  // A basket carried over from wards can be empty on precincts (few families ship there);
+  // fall back to a curated list that has something to show rather than a grey map.
+  if (!selectedMetricWeights().length && availableMetricIds().length) applyRandomPreset();
   await refreshMetricViews();
+}
+
+// The geography switch, guarded: one load at a time, the buttons disabled while it runs, and a
+// failed load leaves the page on the geography it actually has (with a retry) instead of a stuck
+// spinner and a highlighted button that lies. options.wardId enters the precinct lens.
+async function switchAreaType(areaType, options = {}) {
+  if (!AREA_TYPES[areaType] || explorerState.areaLoading) return;
+  const wardId = areaType === "precinct" ? (options.wardId || null) : null;
+  if (areaType === "precinct" && !wardId) return; // the lens always needs its ward
+  if (areaType === explorerState.areaType && wardId === explorerState.lensWardId) return;
+  const group = document.getElementById("area-type-toggle");
+  const buttons = group ? [...group.querySelectorAll("button[data-area-type]")] : [];
+  const previous = { areaType: explorerState.areaType, lensWardId: explorerState.lensWardId };
+  const exitingLensTo = previous.areaType === "precinct" && areaType === "ward" ? previous.lensWardId : null;
+  explorerState.areaLoading = true;
+  explorerState.lensWardId = wardId;
+  explorerState.areaType = areaType;
+  syncAreaTypeToggle();
+  buttons.forEach((b) => { b.disabled = true; });
+  group?.setAttribute("aria-busy", "true");
+  WardWiseExplorer.track("explore_area_type", { area_type: areaType, ward_id: wardId || undefined });
+  explorerState.urlDirty = true;
+  try {
+    await loadAreaType(areaType);
+    // Leaving the lens lands on the ward it was showing, so the reader keeps their place.
+    if (exitingLensTo && explorerState.areaType === "ward" && findArea(exitingLensTo)) selectWard(exitingLensTo);
+  } catch (error) {
+    explorerState.areaType = previous.areaType;
+    explorerState.lensWardId = previous.lensWardId;
+    setMapShadeLoading(false);
+    renderMetricError(error, () => switchAreaType(areaType, options));
+  } finally {
+    explorerState.areaLoading = false;
+    group?.removeAttribute("aria-busy");
+    buttons.forEach((b) => { b.disabled = false; });
+    syncAreaTypeToggle();
+  }
 }
 
 function initAreaTypeToggle() {
   const group = document.getElementById("area-type-toggle");
-  if (!group) return;
-  group.querySelectorAll("button[data-area-type]").forEach((button) => {
-    button.addEventListener("click", async () => {
-      const areaType = button.dataset.areaType;
-      if (areaType === explorerState.areaType) return;
-      group.querySelectorAll("button").forEach((b) => b.classList.toggle("is-active", b === button));
-      group.setAttribute("aria-busy", "true");
-      WardWiseExplorer.track("explore_area_type", { area_type: areaType });
-      try {
-        await loadAreaType(areaType);
-      } finally {
-        group.removeAttribute("aria-busy");
-      }
+  if (group) {
+    group.querySelectorAll("button[data-area-type]").forEach((button) => {
+      button.addEventListener("click", () => switchAreaType(button.dataset.areaType));
+    });
+  }
+  // The lens's colour-range switch lives in the legend: recolour in place, no reload.
+  document.querySelectorAll("#map-legend .map-legend-scope button[data-scope]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const scope = button.dataset.scope === "city" ? "city" : "ward";
+      if (scope === explorerState.scaleScope) return;
+      explorerState.scaleScope = scope;
+      explorerState.urlDirty = true;
+      WardWiseExplorer.track("explore_precinct_scale", { scope });
+      updateMapStyles();
+      renderMapLegend();
+      writeLandingUrl();
     });
   });
+}
+
+// ---- the precinct lens: one ward's precincts, entered from that ward ----------------------
+// Precincts are not a fourth peer geography. The toggle keeps its three segments; while the lens
+// is open they give way to a single exit ("‹ Ward 4 · Precincts") in the same slot, scores and
+// colours are re-ranked within the ward, and the ward's outline is drawn heavy underneath.
+
+function lensActive() {
+  return explorerState.areaType === "precinct" && Boolean(explorerState.lensWardId);
+}
+
+function lensWardLabel() {
+  return lensActive() ? `Ward ${Number(explorerState.lensWardId)}` : "";
+}
+
+// Height of the hint + legend group that sits in the map's bottom-right corner while the lens
+// is open (a sane default before the legend has rendered).
+function lensOverlayHeight() {
+  const group = document.querySelector("#visualizer-map .map-overlays-tr");
+  const height = group ? group.offsetHeight : 0;
+  return height > 0 ? height : 150;
+}
+
+function geojsonCacheKey(areaType, wardId) {
+  return `${areaType}:${areaType === "precinct" && wardId ? wardId : ""}`;
+}
+
+function syncAreaTypeToggle() {
+  const group = document.getElementById("area-type-toggle");
+  if (!group) return;
+  const lens = lensActive();
+  document.getElementById("visualizer-map")?.classList.toggle("is-lens", lens);
+  if (!lens) explorerState.lensLegendHeight = null;
+  group.querySelectorAll("button[data-area-type]").forEach((button) => {
+    const isExit = button.hasAttribute("data-lens-exit");
+    button.hidden = lens ? !isExit : isExit;
+    button.classList.toggle("is-active", lens ? isExit : (!isExit && button.dataset.areaType === explorerState.areaType));
+    if (isExit) button.textContent = lens ? `‹ ${lensWardLabel()} · Precincts` : "‹ Precincts";
+  });
+}
+
+async function enterPrecinctLens(wardId) {
+  const normalized = AREA_TYPES.ward.normalizeId(wardId);
+  if (!normalized) return;
+  WardWiseExplorer.track("explore_precinct_lens", { ward_id: normalized });
+  await switchAreaType("precinct", { wardId: normalized });
+  // On the phone the lens is the map: bring it forward so the zoomed ward is what the reader sees.
+  if (window.matchMedia && window.matchMedia("(max-width: 640px)").matches) setMobileView("map");
+}
+
+// Within-ward scoring: keep the ward's precincts, re-rank 1..N among them, and remember each
+// row's citywide rank. Everything downstream (colour ramp, legend, leaderboard, mini report)
+// reads explorerState.scores, so this one filter makes the whole lens within-ward.
+function applyLens(scores) {
+  if (!lensActive()) return scores;
+  const inWard = scores.filter((row) => String(findArea(row.area_id)?.ward_id || "") === explorerState.lensWardId);
+  inWard
+    .filter((row) => row.score !== null && row.score !== undefined)
+    .sort((a, b) => a.rank - b.rank)
+    .forEach((row, index) => { row.city_rank = row.rank; row.rank = index + 1; });
+  return inWard;
+}
+
+async function renderLensOutline() {
+  if (explorerState.lensOutlineLayer) {
+    map.removeLayer(explorerState.lensOutlineLayer);
+    explorerState.lensOutlineLayer = null;
+  }
+  if (!lensActive()) return;
+  const wardId = explorerState.lensWardId;
+  let wards = explorerState.geojsonCache.get(geojsonCacheKey("ward"));
+  if (!wards) {
+    wards = await WardWiseExplorer.fetchWardGeojson();
+    explorerState.geojsonCache.set(geojsonCacheKey("ward"), wards);
+  }
+  if (!lensActive() || explorerState.lensWardId !== wardId) return; // the lens moved on meanwhile
+  const feature = (wards.features || []).find((f) => AREA_TYPES.ward.normalizeId(f.properties?.ward_id) === wardId);
+  if (!feature) return;
+  explorerState.lensOutlineLayer = L.geoJSON(feature, {
+    interactive: false,
+    style: { fill: false, weight: 3, opacity: 0.9, color: cssVariable("--selected-ward", "#0f766e") },
+  }).addTo(map);
+}
+
+// "● Click a ward to inspect": the map's one affordance, said in the geography's own noun, hidden
+// once something is selected.
+function renderMapHint() {
+  const hint = document.getElementById("map-hint");
+  if (!hint) return;
+  const noun = areaConfig().noun || "ward";
+  hint.textContent = `Click a ${noun} to inspect`;
+  hint.hidden = Boolean(explorerState.currentWardId);
+}
+
+// The legend says what the colours mean on THIS list: the ramp is relative (min → median → max,
+// with log-compressed tails), so it prints the real endpoints rather than an imaginary 0–100.
+function renderMapLegend() {
+  const legend = document.getElementById("map-legend");
+  if (!legend) return;
+  const scored = explorerState.scores.filter((s) => Number.isFinite(Number(s.score)));
+  legend.hidden = !scored.length;
+  if (!scored.length) return;
+  const preset = activePreset();
+  const title = legend.querySelector(".map-legend-title");
+  const lo = legend.querySelector("[data-lo]");
+  const mid = legend.querySelector("[data-mid]");
+  const hi = legend.querySelector("[data-hi]");
+  const fmt = (v) => WardWiseExplorer.formatNumber(v, { maximumFractionDigits: 0 });
+  if (explorerState.deltaMode) {
+    legend.classList.add("is-delta");
+    const scope = legend.querySelector(".map-legend-scope");
+    if (scope) scope.hidden = true; // change colours are absolute, not a range
+    title.textContent = `Change on ${preset ? preset.name : "your list"}`;
+    lo.textContent = "Declined";
+    mid.textContent = "No change";
+    hi.textContent = "Improved";
+    return;
+  }
+  legend.classList.remove("is-delta");
+  const scale = mapColorScale();
+  // In the lens the ramp spans one ward's precincts (or every precinct), so the legend says whose range this is.
+  const rangeLabel = !lensActive() ? "" : explorerState.scaleScope === "city" ? " · all precincts" : ` · ${lensWardLabel()}`;
+  title.textContent = `${preset ? preset.name : "Wellbeing"}${rangeLabel}`;
+  const scope = legend.querySelector(".map-legend-scope");
+  if (scope) {
+    scope.hidden = !lensActive();
+    scope.querySelectorAll("button[data-scope]").forEach((button) =>
+      button.classList.toggle("is-active", button.dataset.scope === explorerState.scaleScope));
+  }
+  // The lens fit reserves room for the overlay group; refit once its rendered height is known or changes.
+  const overlayHeight = lensOverlayHeight();
+  if (lensActive() && overlayHeight !== explorerState.lensLegendHeight) {
+    explorerState.lensLegendHeight = overlayHeight;
+    fitFullCity();
+  }
+  lo.textContent = `${fmt(scale.min)} (Low)`;
+  mid.textContent = `${fmt(scale.median)} (Med)`;
+  hi.textContent = `${fmt(scale.max)} (High)`;
 }
 
 // Phone layout (≤640px): a Map/Leaderboard segmented toggle shows one card at a time, and the input
@@ -433,9 +881,16 @@ function initSettingsModal() {
   const modal = document.getElementById("settings-modal");
   const openBtn = document.getElementById("open-settings-modal");
   if (!modal || !openBtn) return;
-  explorerState.pickerLayout = localStorage.getItem("penlightPickerLayout") === "flat" ? "flat" : "domains";
+  // New storage key: readers who had stored "domains"/"flat" before curated lists existed see the
+  // curated default once; their next choice is remembered under the new key.
+  const storedLayout = localStorage.getItem("penlightPickerLayout2");
+  explorerState.pickerLayout = PICKER_LAYOUTS.includes(storedLayout) ? storedLayout : "curated";
   const radio = modal.querySelector(`input[name="picker-layout"][value="${explorerState.pickerLayout}"]`);
   if (radio) radio.checked = true;
+  const themeRadio = modal.querySelector(`input[name="theme-pref"][value="${window.WardWiseTheme?.preference() || "system"}"]`);
+  if (themeRadio) themeRadio.checked = true;
+  modal.querySelectorAll('input[name="theme-pref"]').forEach((input) =>
+    input.addEventListener("change", () => window.WardWiseTheme?.set(input.value)));
   openBtn.addEventListener("click", () => { modal.hidden = false; });
   modal.querySelectorAll("[data-close-settings-modal]").forEach((el) =>
     el.addEventListener("click", () => { modal.hidden = true; }));
@@ -444,30 +899,43 @@ function initSettingsModal() {
   });
   modal.querySelectorAll('input[name="picker-layout"]').forEach((input) =>
     input.addEventListener("change", () => {
-      explorerState.pickerLayout = input.value === "flat" ? "flat" : "domains";
-      localStorage.setItem("penlightPickerLayout", explorerState.pickerLayout);
+      explorerState.pickerLayout = PICKER_LAYOUTS.includes(input.value) ? input.value : "curated";
+      localStorage.setItem("penlightPickerLayout2", explorerState.pickerLayout);
+      explorerState.customizing = false;
       renderMetricControls();
     }));
 }
 
-function initMobileControls() {
+function setMobileView(view) {
   const cards = document.querySelector(".visualizer-cards");
+  cards?.setAttribute("data-mobile-view", view);
+  document.querySelectorAll(".mobile-view-toggle button").forEach((b) => {
+    b.classList.toggle("is-active", b.dataset.mobileView === view);
+  });
+  // The map tile/overlay sizes were computed while hidden; recompute once it's visible again.
+  if (view === "map") requestAnimationFrame(() => map.invalidateSize());
+}
+
+function initMobileControls() {
   document.querySelectorAll(".mobile-view-toggle button").forEach((button) => {
-    button.addEventListener("click", () => {
-      const view = button.dataset.mobileView;
-      cards?.setAttribute("data-mobile-view", view);
-      document.querySelectorAll(".mobile-view-toggle button").forEach((b) => {
-        b.classList.toggle("is-active", b === button);
-      });
-      // The map tile/overlay sizes were computed while hidden; recompute once it's visible again.
-      if (view === "map") requestAnimationFrame(() => map.invalidateSize());
-    });
+    button.addEventListener("click", () => setMobileView(button.dataset.mobileView));
   });
   const expander = document.getElementById("input-panel-expander");
   const panel = document.querySelector(".input-panel");
   expander?.addEventListener("click", () => {
     const expanded = panel.classList.toggle("is-expanded");
     expander.setAttribute("aria-expanded", String(expanded));
+    if (!expanded && explorerState.customizing) {
+      explorerState.customizing = false;
+      renderMetricControls();
+    }
+  });
+  // "Advanced options" on the phone strip opens the sheet straight into the per-metric picker.
+  document.getElementById("mobile-customize")?.addEventListener("click", () => {
+    explorerState.customizing = true;
+    panel.classList.add("is-expanded");
+    expander?.setAttribute("aria-expanded", "true");
+    renderMetricControls();
   });
   // The strip pills are shorthands for the full panel's own actions.
   const delegate = [
@@ -529,9 +997,74 @@ function setActiveVisualizer(panelId) {
 }
 
 const WEIGHT_CYCLE = [0, 1, 10];
+const PICKER_LAYOUTS = ["curated", "list", "domains", "flat"];
+const PRIORITY_WEIGHT = 10;
 
-function weightStateClass(weight) {
-  return weight === 0 ? "is-off" : weight === 1 ? "is-on" : "is-high";
+// The phone strip flattens the metric grid into one scrolling row of tiles, so the list layout
+// (a row per metric) is a desktop affordance: on a phone the customizing view falls back to tiles.
+function effectivePickerLayout() {
+  const layout = explorerState.pickerLayout;
+  const phone = window.matchMedia && window.matchMedia("(max-width: 640px)").matches;
+  if (layout === "curated") return phone ? "domains" : "list";
+  if (layout === "list" && phone) return "domains";
+  return layout;
+}
+
+function isHighWeight(weight) {
+  return isPriorityWeight(weight);
+}
+
+// One place for everything a weight change touches: the tray ("Your list"), the formula chips,
+// the domain counters, the selection log, and the scores.
+function setMetricWeight(metricId, weight, { refresh = true } = {}) {
+  explorerState.weights[metricId] = weight;
+  markCustom();
+  renderPresetTray();
+  syncMetricControl(metricId);
+  renderWellbeingEquation();
+  renderDomainCounters();
+  recordMetricSelection("toggle", { changedMetricId: metricId });
+  if (refresh) refreshMetricViews();
+}
+
+// Update the one control for a metric (tile or list row) in place, without re-rendering the grid.
+function syncMetricControl(metricId) {
+  const weight = explorerState.weights[metricId] ?? 0;
+  const label = explorerState.metrics.find((m) => m.metric_id === metricId)?.label || metricId;
+  document.querySelectorAll(`.metric-toggle[data-metric-id="${CSS.escape(metricId)}"]`).forEach((button) => {
+    button.classList.remove("is-off", "is-on", "is-high");
+    button.classList.add(weightStateClass(weight));
+    button.setAttribute("aria-label", `${label}: ${weightLabel(weight)}`);
+    button.setAttribute("aria-pressed", weight > 0);
+  });
+  document.querySelectorAll(`.metric-row[data-metric-id="${CSS.escape(metricId)}"]`).forEach((row) => {
+    row.classList.toggle("is-off", !(weight > 0));
+    row.querySelectorAll(".metric-weight-choice").forEach((choice) => {
+      const on = Number(choice.dataset.weight) === (weight > 0 ? (isHighWeight(weight) ? PRIORITY_WEIGHT : 1) : 0);
+      choice.classList.toggle("is-active", on);
+      choice.setAttribute("aria-pressed", on);
+    });
+  });
+}
+
+function weightStateClass(weight, weights) {
+  // Proportional, not exact-match: hand-tuning still yields exactly off/on/high from WEIGHT_CYCLE
+  // [0, 1, 10], but survey-derived weights are fractional (normalized by domain size) and used to
+  // read as "high priority" across the board.
+  if (!(weight > 0)) return "is-off";
+  const values = Object.values(weights || explorerState.weights || {}).filter((w) => w > 0);
+  const max = values.length ? Math.max(...values) : weight;
+  return weight >= max * 0.6 ? "is-high" : "is-on";
+}
+
+// "Priority" means heavier than the rest of the basket, not merely on: a flat basket of 1× has no
+// priorities, while the proportional class above still styles a survey basket's top weights.
+function isPriorityWeight(weight, weights) {
+  if (!(weight > 0)) return false;
+  const values = Object.values(weights || explorerState.weights || {}).map(Number).filter((w) => w > 0);
+  const max = values.length ? Math.max(...values) : weight;
+  const min = values.length ? Math.min(...values) : weight;
+  return max > min && weight >= max * 0.6;
 }
 
 function weightLabel(weight) {
@@ -598,6 +1131,15 @@ function renderMetricControls() {
   const available = explorerState.metrics.filter(
     (metric) => metricAvailableForArea(metric.metric_id) && metricAvailableForYear(metric.metric_id),
   );
+  const inputPanel = document.querySelector(".input-panel");
+  const curated = explorerState.pickerLayout === "curated";
+  if (inputPanel) {
+    inputPanel.dataset.picker = explorerState.pickerLayout;
+    inputPanel.classList.toggle("is-customizing", curated && explorerState.customizing);
+  }
+  renderPresetTray();
+  // Curated mode shows the per-metric grid only while the reader is building their own list.
+  container.hidden = curated && !explorerState.customizing;
   // One row per wellbeing domain. Domain order is shuffled once per load (explorerState.domainOrder);
   // metric order within a domain inherits the load-time shuffle. Domains with nothing available for
   // the current view simply don't render.
@@ -606,41 +1148,97 @@ function renderMetricControls() {
   }
   const byDomain = new Map();
   for (const metric of available) {
-    if (!byDomain.has(metric.category)) byDomain.set(metric.category, []);
-    byDomain.get(metric.category).push(metric);
+    for (const category of metricCategories(metric)) {
+      if (!byDomain.has(category)) byDomain.set(category, []);
+      byDomain.get(category).push(metric);
+    }
   }
+  const esc = WardWiseExplorer.escapeHtml;
   const tile = (metric) => {
     const weight = explorerState.weights[metric.metric_id] ?? 0;
-    const weightIdx = WEIGHT_CYCLE.indexOf(weight) >= 0 ? WEIGHT_CYCLE.indexOf(weight) : 0;
     return `
       <button
         type="button"
         class="metric-toggle ${weightStateClass(weight)}"
-        data-metric-id="${WardWiseExplorer.escapeHtml(metric.metric_id)}"
-        data-metric-label="${WardWiseExplorer.escapeHtml(metric.label)}"
-        data-weight-idx="${weightIdx}"
-        aria-label="${WardWiseExplorer.escapeHtml(metric.label)}: ${weightLabel(weight)}"
+        data-metric-id="${esc(metric.metric_id)}"
+        data-metric-label="${esc(metric.label)}"
+        aria-label="${esc(metric.label)}: ${weightLabel(weight)}"
         aria-pressed="${weight > 0}"
-        title="${WardWiseExplorer.escapeHtml(metric.label)}"
+        title="${esc(metric.label)}"
       >
         ${metricIcon(metric)}
       </button>
     `;
   };
+  // The list layout: a row per metric with its description and an explicit Off / 1× / 10× control.
+  const row = (metric, category) => {
+    const weight = explorerState.weights[metric.metric_id] ?? 0;
+    const also = category && category !== metric.category ? ` <span class="metric-row-also" title="Primary domain: ${esc(domainLabel(metric.category))}">also</span>` : "";
+    const level = weight > 0 ? (isHighWeight(weight) ? PRIORITY_WEIGHT : 1) : 0;
+    const source = WardWiseMetricDetails.metricSource(metric, metricCoverage(metric.metric_id)) || "";
+    const choices = [[0, "Off", "Off"], [1, "1×", "Standard"], [PRIORITY_WEIGHT, "★10×", "Priority"]]
+      .map(([w, text, word]) => `<button type="button" class="metric-weight-choice${level === w ? " is-active" : ""}${w === PRIORITY_WEIGHT ? " is-priority" : ""}" data-weight="${w}" aria-pressed="${level === w}" aria-label="${esc(metric.label)}: ${word}">${text}</button>`)
+      .join("");
+    return `
+      <div class="metric-row${weight > 0 ? "" : " is-off"}" data-metric-id="${esc(metric.metric_id)}">
+        <span class="metric-row-icon" aria-hidden="true">${metricIcon(metric)}</span>
+        <span class="metric-row-copy">
+          <span class="metric-row-title">${esc(metric.label)}${metric.direction === "lower" ? ` <span class="metric-row-inverse" title="Lower raw values earn higher wellbeing scores">Inverse</span>` : ""}${also}</span>
+          <span class="metric-row-desc" title="${esc(source)}">${esc(metric.description || source)}</span>
+        </span>
+        <span class="metric-weight-control" role="group" aria-label="${esc(metric.label)} weight">${choices}</span>
+      </div>`;
+  };
+  const query = explorerState.metricQuery;
+  const matches = query ? available.filter((m) => metricMatchesQuery(m, query)) : available;
+  const byDomainShown = new Map();
+  for (const metric of matches) {
+    for (const category of metricCategories(metric)) {
+      if (!byDomainShown.has(category)) byDomainShown.set(category, []);
+      byDomainShown.get(category).push(metric);
+    }
+  }
+  if (!explorerState.domainOrder.includes("other")) {
+    for (const category of byDomainShown.keys()) {
+      if (!explorerState.domainOrder.includes(category)) explorerState.domainOrder.push(category);
+    }
+  }
+  const layout = effectivePickerLayout();
+  container.dataset.layout = layout;
+  container.classList.toggle("is-searching", Boolean(query));
+  const status = document.getElementById("metric-search-status");
+  if (status) status.textContent = query ? `${matches.length} of ${available.length} metrics match` : "";
   explorerState.expandedDomains = explorerState.expandedDomains || new Set();
-  container.innerHTML = explorerState.pickerLayout === "flat"
-    ? `<div class="metric-domain-tiles">${available.map(tile).join("")}</div>`
-    : explorerState.domainOrder
-        .filter((category) => (byDomain.get(category) || []).length)
-        .map((category) => {
-          const metrics = byDomain.get(category);
-          const expanded = explorerState.expandedDomains.has(category);
-          return `
-          <section class="metric-domain-row${expanded ? " is-expanded" : ""}" data-domain="${WardWiseExplorer.escapeHtml(category)}">
+  const counter = (category) => `<span class="metric-domain-active" data-domain-active="${esc(category)}" hidden>0 active</span>`;
+  if (query && !matches.length) {
+    container.innerHTML = `<p class="metric-search-empty">No metrics match “${esc(query)}”.</p>`;
+  } else if (layout === "flat") {
+    container.innerHTML = `<div class="metric-domain-tiles">${matches.map(tile).join("")}</div>`;
+  } else if (layout === "list") {
+    container.innerHTML = explorerState.domainOrder
+      .filter((category) => (byDomainShown.get(category) || []).length)
+      .map((category) => `
+          <section class="metric-domain-row is-expanded is-list" data-domain="${esc(category)}">
             <div class="metric-domain-head">
-              <p class="metric-domain-label">${WardWiseExplorer.escapeHtml(domainLabel(category))}</p>
+              <p class="metric-domain-label">${esc(domainLabel(category))}</p>
+              ${counter(category)}
+            </div>
+            <div class="metric-rows">${byDomainShown.get(category).map((m) => row(m, category)).join("")}</div>
+          </section>`)
+      .join("");
+  } else {
+    container.innerHTML = explorerState.domainOrder
+        .filter((category) => (byDomainShown.get(category) || []).length)
+        .map((category) => {
+          const metrics = byDomainShown.get(category);
+          const expanded = explorerState.expandedDomains.has(category) || Boolean(query);
+          return `
+          <section class="metric-domain-row${expanded ? " is-expanded" : ""}" data-domain="${esc(category)}">
+            <div class="metric-domain-head">
+              <p class="metric-domain-label">${esc(domainLabel(category))}</p>
+              ${counter(category)}
               <button type="button" class="metric-domain-expand" aria-expanded="${expanded}"
-                aria-label="${expanded ? "Collapse" : "Expand"} ${WardWiseExplorer.escapeHtml(domainLabel(category))} (${metrics.length} metrics)">
+                aria-label="${expanded ? "Collapse" : "Expand"} ${esc(domainLabel(category))} (${metrics.length} metrics)">
                 ${metrics.length} <span class="metric-domain-chevron">${expanded ? "▴" : "▾"}</span>
               </button>
             </div>
@@ -649,11 +1247,172 @@ function renderMetricControls() {
         `;
         })
         .join("");
+  }
   attachDomainAccordion(container);
 
   attachMetricToggleHandlers();
+  attachMetricRowHandlers();
   initMetricButtonTooltip();
+  renderDomainCounters();
   renderWellbeingEquation();
+}
+
+// "N active" in every domain head: how many of that domain's measures currently count. Counts the
+// available set, not the search matches, so the number holds still while the reader types.
+// Every domain a metric lives in: its catalog category plus the editorial extras in metric_tags.js.
+function metricCategories(metric) {
+  const extras = window.WardWiseMetricTags?.extraCategoriesFor(metric.metric_id) || [];
+  return [metric.category || "other", ...extras.filter((c) => c !== metric.category)];
+}
+
+// The search haystack: label, description, every domain it sits in, the source, the id's words,
+// and the plain-language keywords. Built once per metric.
+function metricSearchText(metric) {
+  if (!explorerState._searchText) explorerState._searchText = new Map();
+  const cached = explorerState._searchText.get(metric.metric_id);
+  if (cached) return cached;
+  const parts = [
+    metric.label,
+    metric.description,
+    ...metricCategories(metric).map((c) => domainLabel(c)),
+    metric.source,
+    metric.metric_id.replace(/_/g, " "),
+    window.WardWiseMetricTags?.keywordsFor(metric.metric_id),
+  ];
+  const text = parts.filter(Boolean).join(" ").toLowerCase();
+  explorerState._searchText.set(metric.metric_id, text);
+  return text;
+}
+
+// Every query word must match a haystack word by prefix, or by one typo when the word is long
+// enough for a typo to be the likelier explanation ("grocry" finds groceries).
+function metricMatchesQuery(metric, query) {
+  const text = metricSearchText(metric);
+  const words = text.split(/[^a-z0-9%$]+/).filter(Boolean);
+  return query.split(/\s+/).filter(Boolean).every((term) => {
+    if (text.includes(term)) return true;
+    if (term.length < 5) return false;
+    return words.some((word) => word.length >= 5 && withinOneEdit(term, word.slice(0, Math.max(term.length, Math.min(word.length, term.length + 1)))));
+  });
+}
+
+function withinOneEdit(a, b) {
+  if (a === b) return true;
+  if (Math.abs(a.length - b.length) > 1) return false;
+  let i = 0;
+  let j = 0;
+  let edits = 0;
+  while (i < a.length && j < b.length) {
+    if (a[i] === b[j]) { i += 1; j += 1; continue; }
+    if (edits) return false;
+    edits = 1;
+    if (a.length > b.length) i += 1;
+    else if (b.length > a.length) j += 1;
+    else { i += 1; j += 1; }
+  }
+  return edits + (a.length - i) + (b.length - j) <= 1;
+}
+
+function renderDomainCounters() {
+  const counters = document.querySelectorAll("[data-domain-active]");
+  if (!counters.length) return;
+  const active = new Map();
+  for (const metric of explorerState.metrics) {
+    if (!metricAvailableForArea(metric.metric_id) || !metricAvailableForYear(metric.metric_id)) continue;
+    if ((explorerState.weights[metric.metric_id] ?? 0) > 0) {
+      for (const category of metricCategories(metric)) active.set(category, (active.get(category) || 0) + 1);
+    }
+  }
+  counters.forEach((el) => {
+    const n = active.get(el.dataset.domainActive) || 0;
+    el.textContent = `${n} active`;
+    el.hidden = n === 0;
+  });
+}
+
+function attachMetricRowHandlers() {
+  document.querySelectorAll(".metric-weight-choice").forEach((button) => {
+    button.addEventListener("click", () => {
+      const row = button.closest(".metric-row");
+      const metricId = row?.dataset.metricId;
+      if (!metricId) return;
+      const weight = Number(button.dataset.weight);
+      if ((explorerState.weights[metricId] ?? 0) === weight) return;
+      setMetricWeight(metricId, weight);
+      button.focus({ preventScroll: true });
+    });
+  });
+}
+
+// The curated tray: which list is being counted, every list as a chip (with "n/m" when a
+// geography lacks some of its measures), and "Advanced options" into the per-metric picker.
+function renderPresetTray() {
+  const tray = document.getElementById("preset-tray");
+  if (!tray) return;
+  if (explorerState.pickerLayout !== "curated") {
+    tray.hidden = true;
+    tray.innerHTML = "";
+    return;
+  }
+  tray.hidden = false;
+  const esc = WardWiseExplorer.escapeHtml;
+  const ok = new Set(availableMetricIds());
+  const allIds = explorerState.metrics.map((metric) => metric.metric_id);
+  const active = activePreset();
+  const selectedCount = selectedMetricWeights().length;
+  const chips = WardWisePresets.map((preset) => {
+    const { used, missing } = WardWisePresetTools.resolveWeights(preset, allIds, (id) => ok.has(id));
+    const on = active && active.id === preset.id;
+    const disabled = !used.length;
+    const count = missing.length && used.length ? ` <em>${used.length}/${preset.metric_ids.length}</em>` : "";
+    const title = disabled
+      ? `${preset.name}: none of these measures exist for ${labelLower()}`
+      : preset.tagline;
+    return `<button type="button" class="preset-chip${on ? " is-on" : ""}" data-preset-id="${esc(preset.id)}"` +
+      ` title="${esc(title)}"${disabled ? " disabled" : ""}>` +
+      WardWisePresetTools.iconHtml(preset, (explorerState.metrics.find((m) => m.metric_id === preset.icon_metric) || {}).category) +
+      `<span class="preset-chip-name">${esc(preset.name)}</span>` +
+      `<span class="preset-chip-short">${esc(preset.short)}</span>${count}</button>`;
+  }).join("");
+  const TILE_ICONS = {
+    list: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="6" y1="5" x2="17" y2="5"/><line x1="6" y1="10" x2="17" y2="10"/><line x1="6" y1="15" x2="17" y2="15"/><circle cx="3" cy="5" r="0.8"/><circle cx="3" cy="10" r="0.8"/><circle cx="3" cy="15" r="0.8"/></svg>',
+    build: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="10" cy="10" r="7"/><line x1="10" y1="6.5" x2="10" y2="13.5"/><line x1="6.5" y1="10" x2="13.5" y2="10"/></svg>',
+    mine: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M10 2.5 L12.3 7.3 L17.5 8 L13.7 11.6 L14.7 16.8 L10 14.3 L5.3 16.8 L6.3 11.6 L2.5 8 L7.7 7.3 Z"/></svg>',
+    advanced: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="3" y1="6" x2="17" y2="6"/><line x1="3" y1="14" x2="17" y2="14"/><circle cx="7" cy="6" r="2" fill="var(--surface)"/><circle cx="13" cy="14" r="2" fill="var(--surface)"/></svg>',
+  };
+  const tileIcon = (key) => `<span class="preset-chip-icon" aria-hidden="true">${TILE_ICONS[key]}</span>`;
+  const mine = myIndexPreset();
+  let mineChip;
+  if (mine) {
+    const { used, missing } = presetWeights(mine);
+    const on = active && active.id === MY_INDEX_ID;
+    const count = missing.length && used.length ? ` <em>${used.length}/${mine.metric_ids.length}</em>` : "";
+    mineChip = `<button type="button" class="preset-chip preset-chip-mine${on ? " is-on" : ""}" data-preset-id="${MY_INDEX_ID}"` +
+      ` title="${esc(mine.tagline)}"${used.length ? "" : " disabled"}>${tileIcon("mine")}` +
+      `<span class="preset-chip-name">${esc(mine.name)}</span><span class="preset-chip-short">Mine</span>${count}</button>`;
+  } else {
+    mineChip = `<a class="preset-chip preset-chip-mine" href="/survey" title="Five questions, then a list of your own">${tileIcon("build")}` +
+      `<span class="preset-chip-name">Build your own index</span><span class="preset-chip-short">Build</span></a>`;
+  }
+  const customChip = active
+    ? ""
+    : `<span class="preset-chip is-on is-custom" title="the measures you picked">${tileIcon("list")}` +
+      `<span class="preset-chip-name">Your list</span><span class="preset-chip-short">Yours</span></span>`;
+  const createChip = `<button type="button" class="preset-chip preset-chip-create" data-preset-create="1"` +
+    ` aria-expanded="${explorerState.customizing}">${tileIcon("advanced")}<span class="preset-chip-name">${explorerState.customizing ? "Done" : "Advanced options"}</span></button>`;
+  const heading = `Counting <b>${esc(active ? active.name : "Your list")}</b><span>${selectedCount} measures</span>`;
+  const note = active ? esc(active.tagline) : "the measures you picked — the map scores on exactly these";
+  tray.innerHTML =
+    `<div class="preset-mixbar"><div class="preset-mixhead">${heading}</div>` +
+    `<p class="preset-note">${note}</p></div>` +
+    `<div class="preset-chips">${customChip}${mineChip}${chips}${createChip}</div>`;
+  // On the phone strip the chips scroll sideways: bring the active list into view so the reader
+  // sees which list the map is scored on without hunting for it.
+  const row = tray.querySelector(".preset-chips");
+  const onChip = row?.querySelector(".preset-chip.is-on");
+  if (row && onChip && row.scrollWidth > row.clientWidth) {
+    row.scrollLeft = Math.max(0, onChip.offsetLeft - row.offsetLeft - 12);
+  }
 }
 
 function setMetricControlsLoading(isLoading) {
@@ -663,16 +1422,19 @@ function setMetricControlsLoading(isLoading) {
   container.classList.toggle("metric-button-grid-loading", isLoading);
 }
 
-function renderMetricLoadError(error) {
+function renderMetricLoadError(error, retry) {
   const container = document.querySelector("#metric-weights");
   if (!container) return;
   setMetricControlsLoading(false);
+  container.hidden = false;
   const message = WardWiseExplorer.escapeHtml(error.message || "Unable to load metrics.");
   container.innerHTML = `
     <div class="metric-loading-error" role="alert">
       <span>${message}</span>
+      ${retry ? `<button type="button" class="ww-cta ghost" data-act="retry">Try again</button>` : ""}
     </div>
   `;
+  container.querySelector('[data-act="retry"]')?.addEventListener("click", () => retry(), { once: true });
 }
 
 // Caveat compiler: surface, for the metrics the user has weighted on the current geography, only the
@@ -683,6 +1445,7 @@ const METHODOLOGY_CAVEATS = [
   { key: "acs_5yr", title: "ACS 5-year estimate", note: "U.S. Census American Community Survey 5-year rolling estimate, dated to its final year." },
   { key: "current_boundaries", title: "Current boundaries", note: "Historical values use today's ward boundaries for comparability." },
   { key: "forward_carried", title: "Point-in-time, carried forward", note: "Measured for a specific period and shown for up to 3 years after, until newer data exists." },
+  { key: "small_base", title: "Small base", note: "Some values on this geography rest on fewer than 20 underlying records (a precinct's handful of 311 requests, say). Shown rather than hidden, because even a small count is real." },
 ];
 
 function compileMethodologyNotes() {
@@ -702,27 +1465,26 @@ function updateMethodologyLink() {
   const link = document.getElementById("open-methodology");
   if (!link) return;
   // Always reachable: it now also holds the full equation when the bar has truncated it.
-  const formula = document.getElementById("wellbeing-equation-formula");
-  link.hidden = compileMethodologyNotes().length === 0 && !(formula && formula.textContent.trim());
+  link.hidden = compileMethodologyNotes().length === 0 && !equationText();
 }
 
 function renderMethodologyPanel() {
   const body = document.getElementById("methodology-body");
   if (!body) return;
-  const formula = document.getElementById("wellbeing-equation-formula");
-  const full = formula ? formula.textContent.trim() : "";
+  const full = equationText();
   // The bar clamps to one line so it never eats the map; the untruncated equation belongs here.
   const equationHtml = full
     ? `<div class="methodology-equation"><p class="eyebrow">Your equation</p>
          <p><strong>wellbeing</strong> = ${WardWiseExplorer.escapeHtml(full)}</p></div>`
     : "";
+  const measuresHtml = renderMethodologyMeasures();
   const notes = compileMethodologyNotes();
   if (!notes.length) {
-    body.innerHTML = equationHtml +
+    body.innerHTML = equationHtml + measuresHtml +
       '<p class="methodology-empty">Your weighted metrics are all directly measured for this geography — no caveats to flag.</p>';
     return;
   }
-  body.innerHTML = equationHtml + notes
+  body.innerHTML = equationHtml + measuresHtml + notes
     .map(
       (note) => `
       <div class="methodology-caveat">
@@ -732,6 +1494,52 @@ function renderMethodologyPanel() {
       </div>`,
     )
     .join("");
+}
+
+// One block per weighted measure: what it is in a sentence, where it comes from, which years it
+// was measured, and — the honest part — whether the year on screen is a real measurement or the
+// latest value carried forward.
+function renderMethodologyMeasures() {
+  const esc = WardWiseExplorer.escapeHtml;
+  const terms = equationTerms();
+  if (!terms.length) return "";
+  const selectedYear = explorerState.selectedYear ? Number(explorerState.selectedYear) : null;
+  const blocks = terms.map(({ metric }) => {
+    const id = metric.metric_id;
+    const years = [...(explorerState.metricDataYears[id] || [])].map(Number).filter(Number.isFinite).sort((a, b) => a - b);
+    const fixed = explorerState.timeInvariantMetrics.has(id);
+    let time;
+    if (fixed) {
+      time = "A fixed fact of the geography, not a dated series.";
+    } else if (!years.length) {
+      time = "Measured once, at the latest data collection.";
+    } else {
+      const first = years[0];
+      const last = years.at(-1);
+      const span = first === last ? `${first}` : `${first}–${last}`;
+      const count = years.length === 1 ? "one year of data" : `${years.length} years of data`;
+      if (selectedYear == null) {
+        time = `${span} (${count}); showing ${last}, the latest year measured.`;
+      } else if (years.includes(selectedYear)) {
+        time = `${span} (${count}); ${selectedYear} is a measured year.`;
+      } else {
+        const carried = years.filter((y) => y < selectedYear).at(-1);
+        time = carried != null
+          ? `${span} (${count}); no ${selectedYear} value yet, so ${carried} is carried forward.`
+          : `${span} (${count}); nothing measured on or before ${selectedYear}.`;
+      }
+    }
+    const how = metric.methodology_short || metric.methodology || metric.description || "";
+    const source = metric.source_label || metric.source || "";
+    return `
+      <div class="methodology-measure">
+        <h4>${esc(metric.label || id)}</h4>
+        ${how ? `<p>${esc(how)}</p>` : ""}
+        ${source ? `<p class="methodology-source">Source: ${esc(source)}</p>` : ""}
+        <p class="methodology-time">${esc(time)}</p>
+      </div>`;
+  });
+  return `<div class="methodology-measures"><p class="eyebrow">Your measures</p>${blocks.join("")}</div>`;
 }
 
 function initMethodology() {
@@ -749,17 +1557,32 @@ function initMethodology() {
   });
 }
 
+function equationTerms() {
+  return explorerState.metrics
+    .map((metric) => ({ metric, weight: Number(explorerState.weights[metric.metric_id] ?? 0) }))
+    .filter(({ metric, weight }) => Number.isFinite(weight) && weight > 0 && metricAvailableForArea(metric.metric_id));
+}
+
+// The equation as one line of text (the methodology panel prints it in full).
+function equationText() {
+  const selected = equationTerms();
+  if (!selected.length) return "";
+  return selected.map(({ metric, weight }, index) => {
+    const sign = metric.direction === "lower" ? "-" : "+";
+    const variable = metricEquationVariable(metric);
+    const weighted = weight === 1 ? variable : `${WardWiseExplorer.formatNumber(weight, { maximumFractionDigits: 1 })} x ${variable}`;
+    return sign === "+" && index === 0 ? weighted : `${sign} ${weighted}`;
+  }).join(" ");
+}
+
+// The formula bar: one chip per counted measure — weight badge (click: Standard ↔ Priority), the
+// label, and × to drop it. Editing here is the same edit as in the picker.
 function renderWellbeingEquation() {
   updateMethodologyLink();
   const formula = document.getElementById("wellbeing-equation-formula");
   if (!formula) return;
-
-  const selected = explorerState.metrics
-    .map((metric) => ({
-      metric,
-      weight: Number(explorerState.weights[metric.metric_id] ?? 0),
-    }))
-    .filter(({ metric, weight }) => Number.isFinite(weight) && weight > 0 && metricAvailableForArea(metric.metric_id));
+  const esc = WardWiseExplorer.escapeHtml;
+  const selected = equationTerms();
 
   if (!selected.length) {
     if (explorerState.deltaMode) {
@@ -770,16 +1593,45 @@ function renderWellbeingEquation() {
       formula.textContent = "choose metrics in the panel";
     }
   } else {
-    const terms = selected.map(({ metric, weight }, index) => {
-      const sign = metric.direction === "lower" ? "-" : "+";
-      const variable = WardWiseExplorer.escapeHtml(metricEquationVariable(metric));
-      const weightedVariable = weight === 1
-        ? variable
-        : `${WardWiseExplorer.formatNumber(weight, { maximumFractionDigits: 1 })} x ${variable}`;
-      return sign === "+" && index === 0 ? weightedVariable : `${sign} ${weightedVariable}`;
-    });
-    formula.innerHTML = terms.join(" ");
+    formula.innerHTML = selected.map(({ metric, weight }) => {
+      const high = isHighWeight(weight);
+      const sign = metric.direction === "lower" ? "−" : "";
+      const badge = `${sign}${high ? "★" : ""}${WardWiseExplorer.formatNumber(weight, { maximumFractionDigits: 1 })}×`;
+      return `<span class="eq-chip${high ? " is-high" : ""}" role="listitem" data-metric-id="${esc(metric.metric_id)}">` +
+        `<button type="button" class="eq-chip-w num" data-act="weight" aria-pressed="${high}" aria-label="${esc(metric.label)}: ${high ? "Priority weight, set to Standard" : "Standard weight, set to Priority"}">${badge}</button>` +
+        `<span class="eq-chip-label">${esc(metric.label)}</span>` +
+        `<button type="button" class="eq-chip-x" data-act="remove" aria-label="Remove ${esc(metric.label)}">×</button></span>`;
+    }).join("");
   }
+  // The left-hand side names the curated list being counted, so "Housing Squeeze = rent + …" reads
+  // as the definition it is; a custom mix keeps the generic "wellbeing".
+  const lhs = document.getElementById("wellbeing-equation-lhs") || formula.closest("p")?.querySelector("strong");
+  if (lhs) {
+    const active = activePreset();
+    lhs.textContent = active ? active.name : "wellbeing";
+  }
+}
+
+function initFormulaChips() {
+  const formula = document.getElementById("wellbeing-equation-formula");
+  if (!formula) return;
+  formula.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-act]");
+    const chip = button?.closest(".eq-chip");
+    if (!button || !chip) return;
+    const metricId = chip.dataset.metricId;
+    if (button.dataset.act === "remove") {
+      // the bar re-renders, so remember the neighbour by id and find it again afterwards
+      const neighbour = (chip.nextElementSibling || chip.previousElementSibling)?.dataset.metricId;
+      setMetricWeight(metricId, 0);
+      const target = neighbour ? formula.querySelector(`.eq-chip[data-metric-id="${CSS.escape(neighbour)}"] .eq-chip-x`) : null;
+      (target || document.getElementById("open-methodology"))?.focus({ preventScroll: true });
+    } else if (button.dataset.act === "weight") {
+      const weight = explorerState.weights[metricId] ?? 0;
+      setMetricWeight(metricId, isHighWeight(weight) ? 1 : PRIORITY_WEIGHT);
+      formula.querySelector(`.eq-chip[data-metric-id="${CSS.escape(metricId)}"] .eq-chip-w`)?.focus({ preventScroll: true });
+    }
+  });
 }
 
 function metricEquationVariable(metric) {
@@ -809,7 +1661,7 @@ function renderMetricTooltipContent(tooltip, metric, metricId) {
     ${notableStatus ? `<div class="metric-tooltip-row">${notableStatus}</div>` : ""}
     ${methodology ? `<small>Methodology: ${WardWiseExplorer.escapeHtml(methodology)}</small>` : ""}
     ${source ? `<small>Source: ${WardWiseExplorer.escapeHtml(source)}</small>` : ""}
-    <small>Weight: ${WardWiseExplorer.escapeHtml(weightLabel(currentWeight))} (${currentWeight})</small>
+    <small>Weight: ${WardWiseExplorer.escapeHtml(weightLabel(currentWeight))} (${currentWeight})${isHighWeight(currentWeight) ? "" : " — set Priority (10×) on the formula chip"}</small>
   `;
 }
 
@@ -817,26 +1669,14 @@ function attachMetricToggleHandlers() {
   const tooltip = document.getElementById("metric-button-tooltip");
   document.querySelectorAll(".metric-toggle").forEach((button) => {
     button.addEventListener("click", () => {
+      // Tiles are a plain Off ↔ On toggle; Priority (10×) lives on the formula chip and the list rows.
       const metricId = button.dataset.metricId;
-      const currentIdx = Number(button.dataset.weightIdx);
-      const nextIdx = (currentIdx + 1) % WEIGHT_CYCLE.length;
-      const nextWeight = WEIGHT_CYCLE[nextIdx];
-      explorerState.weights[metricId] = nextWeight;
-      button.dataset.weightIdx = nextIdx;
-      button.classList.remove("is-off", "is-on", "is-high");
-      button.classList.add(weightStateClass(nextWeight));
-      button.setAttribute(
-        "aria-label",
-        `${button.dataset.metricLabel}: ${weightLabel(nextWeight)}`,
-      );
-      button.setAttribute("aria-pressed", nextWeight > 0);
-      renderWellbeingEquation();
+      const nextWeight = (explorerState.weights[metricId] ?? 0) > 0 ? 0 : 1;
+      setMetricWeight(metricId, nextWeight);
       if (tooltip && !tooltip.hidden) {
         const metric = explorerState.metrics.find((m) => m.metric_id === metricId);
         if (metric) renderMetricTooltipContent(tooltip, metric, metricId);
       }
-      recordMetricSelection("toggle", { changedMetricId: metricId });
-      refreshMetricViews();
     });
   });
 }
@@ -876,6 +1716,7 @@ function initMetricSelectionActions() {
     const ok = new Set(availableMetricIds());
     const pool = explorerState.metrics.filter((m) => ok.has(m.metric_id));
     explorerState.weights = randomInitialWeights(pool.length ? pool : explorerState.metrics, 5);
+    markCustom();
     renderMetricControls();
     recordMetricSelection("surprise_me");
     refreshMetricViews();
@@ -885,15 +1726,33 @@ function initMetricSelectionActions() {
     explorerState.weights = Object.fromEntries(
       explorerState.metrics.map((m) => [m.metric_id, ok.has(m.metric_id) ? 1 : 0]),
     );
+    markCustom();
     renderMetricControls();
     recordMetricSelection("select_all");
     refreshMetricViews();
   });
   document.getElementById("deselect-all-metrics")?.addEventListener("click", () => {
     explorerState.weights = weightsForAllMetrics(0);
+    markCustom();
     renderMetricControls();
     recordMetricSelection("deselect_all");
     refreshMetricViews();
+  });
+  // One delegated listener for the curated tray: chips apply a list, "Advanced options" opens the
+  // per-metric picker (and, on the phone, the sheet).
+  document.getElementById("preset-tray")?.addEventListener("click", (event) => {
+    const create = event.target.closest("[data-preset-create]");
+    if (create) {
+      explorerState.customizing = !explorerState.customizing;
+      if (explorerState.customizing) {
+        document.querySelector(".input-panel")?.classList.add("is-expanded");
+        document.getElementById("input-panel-expander")?.setAttribute("aria-expanded", "true");
+      }
+      renderMetricControls();
+      return;
+    }
+    const chip = event.target.closest("[data-preset-id]");
+    if (chip && !chip.disabled) applyPreset(chip.dataset.presetId);
   });
 }
 
@@ -1073,8 +1932,7 @@ function renderMap(geojson) {
       explorerState.mapLayers.set(areaId, mapLayer);
       mapLayer.on({
         click: () => selectWard(areaId),
-        mouseover: (event) => previewWard(areaId, event),
-        mousemove: (event) => repositionHoverDetails(areaId, event),
+        mouseover: () => previewWard(areaId, mapLayer),
         mouseout: () => clearWardPreview(areaId),
       });
     },
@@ -1093,6 +1951,10 @@ function renderMap(geojson) {
   if (!explorerState.mapResizeObserver && window.ResizeObserver) {
     explorerState.mapResizeObserver = new ResizeObserver(() => fitFullCity());
     explorerState.mapResizeObserver.observe(document.getElementById("map"));
+    // The lens fit reserves the hint + legend group's height; when that group grows (legend
+    // appears, title wraps, range switch shows) the ward must move up out from under it.
+    const overlays = document.querySelector("#visualizer-map .map-overlays-tr");
+    if (overlays) explorerState.mapResizeObserver.observe(overlays);
   }
 }
 
@@ -1111,9 +1973,12 @@ function fitFullCity() {
   map.invalidateSize({ animate: false });
   // Asymmetric padding clears the overlays that float on the map: the geography toggle across the
   // top and the "Map details" control at the bottom — a symmetric 16px let the city run into both.
+  // In the precinct lens the ward fills the frame and the hint + legend group drops to the
+  // bottom-right corner (styles: .map-card.is-lens), so the fit clears that corner by the whole
+  // group's rendered height (on a phone the hint stacks above a two-line legend title).
   map.fitBounds(explorerState.fullCityBounds, {
     paddingTopLeft: [20, 60],
-    paddingBottomRight: [20, 52],
+    paddingBottomRight: [20, lensActive() ? Math.max(52, lensOverlayHeight() + 44) : 52],
     animate: false,
   });
 }
@@ -1121,13 +1986,16 @@ function fitFullCity() {
 function wardStyle(wardId) {
   const score = scoreForWard(wardId)?.score;
   const isSelected = wardId === explorerState.currentWardId;
+  const isHovered = !isSelected && wardId === explorerState.hoveredWardId;
   return {
-    color: isSelected
+    color: isSelected || isHovered
       ? cssVariable("--selected-ward", "#0f766e")
-      : cssVariable("--action", "#155e75"),
+      : cssVariable("--map-stroke", "") || cssVariable("--action", "#155e75"),
     fillColor: fillColorForScore(score),
-    fillOpacity: isSelected ? 0.72 : 0.44,
-    weight: isSelected ? 3 : 1,
+    fillOpacity: isSelected
+      ? Number(cssVariable("--map-fill-opacity-selected", "0.72"))
+      : Number(cssVariable("--map-fill-opacity", "0.44")),
+    weight: isSelected ? 3 : isHovered ? 2.5 : 1,
   };
 }
 
@@ -1146,8 +2014,8 @@ function fillColorForDelta(delta) {
   const t = Math.max(-1, Math.min(1, delta / maxAbs));
   const neutral = cssVariable("--score-mid", "#94a3b8");
   return t >= 0
-    ? interpolateHexColor(neutral, "#15803d", t) // good / positive change → green
-    : interpolateHexColor(neutral, "#b91c1c", -t); // bad / negative change → red
+    ? interpolateHexColor(neutral, cssVariable("--delta-up", "#15803d"), t) // improvement
+    : interpolateHexColor(neutral, cssVariable("--delta-down", "#b91c1c"), -t); // decline
 }
 
 function fillColorForScore(score) {
@@ -1174,7 +2042,10 @@ function fillColorForScore(score) {
 }
 
 function mapColorScale() {
-  const scores = explorerState.scores
+  // In the lens the ramp spans the ward's precincts by default; "All precincts" widens it to
+  // every precinct in the city so a uniformly high or low ward reads against the whole.
+  const source = lensActive() && explorerState.scaleScope === "city" ? explorerState.cityScores : explorerState.scores;
+  const scores = source
     .map((score) => Number(score.score))
     .filter(Number.isFinite)
     .sort((a, b) => a - b);
@@ -1281,17 +2152,18 @@ async function refreshMetricViews() {
     const scores = explorerState.deltaMode
       ? computeDeltaScores()
       : computeScores(explorerState.weights, explorerState.selectedYear || "latest");
-    explorerState.scores = scores;
+    explorerState.cityScores = scores;
+    explorerState.scores = applyLens(scores);
     updateMapStyles();
     renderDeltaCoverageNote();
     renderWeightedRanker();
     if (explorerState.currentVisualizer === "visualizer-timeline") {
       await refreshTimelineForSelectedMetrics();
     }
-    refreshVisibleWardDetails();
+    writeLandingUrl();
   } catch (error) {
     if (refreshId !== explorerState.scoreRefreshId) return;
-    renderMetricError(error);
+    renderMetricError(error, () => refreshMetricViews());
   } finally {
     if (refreshId === explorerState.scoreRefreshId) {
       setMapShadeLoading(false);
@@ -1350,48 +2222,83 @@ function updateMapStyles() {
   for (const [wardId, layer] of explorerState.mapLayers.entries()) {
     layer.setStyle(wardStyle(wardId));
   }
+  renderMapLegend();
 }
 
 function selectWard(wardId) {
   explorerState.currentWardId = String(wardId);
+  renderMapHint();
   const ward = findArea(wardId);
   if (!ward) return;
 
   WardWiseExplorer.track("explore_area_select", { area_type: explorerState.areaType, area_id: wardId });
+  explorerState.miniOpenMetric = null;
+  explorerState.urlDirty = true;
   updateMapStyles();
   updateSelectedWardLabel(wardId);
-  showWardDetails(wardId);
   renderWeightedRanker();
   renderCompositeTimeline();
+  writeLandingUrl();
+  // On the phone the report lives in the leaderboard pane: bring it forward.
+  if (window.matchMedia && window.matchMedia("(max-width: 640px)").matches) setMobileView("ranker");
+  syncMobileViewLabel();
 }
 
 function clearSelectedWard() {
   explorerState.currentWardId = null;
+  renderMapHint();
   explorerState.hoveredWardId = null;
+  explorerState.miniOpenMetric = null;
   updateMapStyles();
   updateSelectedWardLabel(null);
   renderWeightedRanker();
   renderCompositeTimeline();
-  hideWardDetails();
+  writeLandingUrl();
+  syncMobileViewLabel();
 }
 
-function previewWard(wardId, event) {
+// The phone toggle's second pane is the leaderboard until an area is selected, then its report.
+function syncMobileViewLabel() {
+  const button = document.querySelector('.mobile-view-toggle button[data-mobile-view="ranker"]');
+  if (button) button.textContent = explorerState.currentWardId ? "Report" : "Leaderboard";
+}
+
+// Hover: outline the area on the map, lift its leaderboard row, and (from the map) show a sticky
+// "Name · 14th of 50" tip. The old detail popover is gone; the mini report is the click.
+function previewWard(wardId, layer) {
+  const previous = explorerState.hoveredWardId;
   explorerState.hoveredWardId = wardId;
-  highlightRankerRow(wardId); // elevate the matching leaderboard entry
-  // On a map hover we pass the Leaflet event so the details tooltip follows the cursor; a ranker-row
-  // hover (no event) leaves it in its anchored spot.
-  showWardDetails(wardId, event);
+  if (previous) restyleArea(previous);
+  restyleArea(wardId);
+  highlightRankerRow(wardId);
+  if (layer && String(wardId) !== explorerState.currentWardId) {
+    const area = findArea(wardId);
+    const standing = scoreForWard(wardId);
+    const n = rankedScoreCount();
+    const where = standing?.rank
+      ? ` · ${explorerState.deltaMode ? rankerScoreText(standing.score) : `${WardWiseScoring.ordinal(standing.rank)} of ${n}`}`
+      : "";
+    layer.bindTooltip(`${WardWiseExplorer.escapeHtml(area?.display_name || wardId)}${where}`, {
+      sticky: true,
+      direction: "top",
+      className: "ward-hover-tip",
+      opacity: 1,
+    }).openTooltip();
+  }
 }
 
 function clearWardPreview(wardId) {
   if (explorerState.hoveredWardId !== wardId) return;
   explorerState.hoveredWardId = null;
+  restyleArea(wardId);
   highlightRankerRow(null);
-  if (explorerState.currentWardId) {
-    showWardDetails(explorerState.currentWardId);
-  } else {
-    hideWardDetails();
-  }
+  const layer = explorerState.mapLayers.get(String(wardId));
+  if (layer && String(wardId) !== explorerState.currentWardId) layer.unbindTooltip();
+}
+
+function restyleArea(wardId) {
+  const layer = explorerState.mapLayers.get(String(wardId));
+  if (layer) layer.setStyle(wardStyle(String(wardId)));
 }
 
 // Emphasize the hovered area's row in the leaderboard (and scroll it into view) without a full re-render.
@@ -1407,70 +2314,8 @@ function highlightRankerRow(wardId) {
   }
 }
 
-// Keep the tooltip under the cursor as it moves across a map area (mousemove fires continuously).
-function repositionHoverDetails(wardId, event) {
-  if (explorerState.hoveredWardId !== wardId) return;
-  const panel = document.querySelector("#ward-details-popover");
-  if (panel && !panel.hidden) positionWardDetails(panel, event);
-}
-
-// Map hover -> place the tooltip beside the mouse (fixed to the viewport, flipped/clamped to stay on
-// screen). Any other trigger (selection, ranker-row hover, score refresh) clears the inline overrides so
-// it falls back to its CSS-anchored position.
-function positionWardDetails(panel, event) {
-  const mouse = event?.originalEvent || (event && "clientX" in event ? event : null);
-  if (!mouse) {
-    panel.style.position = "";
-    panel.style.left = "";
-    panel.style.top = "";
-    panel.style.right = "";
-    return;
-  }
-  const gap = 16;
-  const width = panel.offsetWidth || 320;
-  const height = panel.offsetHeight || 240;
-  let left = mouse.clientX + gap;
-  if (left + width + gap > window.innerWidth) left = mouse.clientX - width - gap; // flip left near the edge
-  left = Math.max(gap, left);
-  let top = mouse.clientY + gap;
-  if (top + height + gap > window.innerHeight) top = Math.max(gap, window.innerHeight - height - gap);
-  panel.style.position = "fixed";
-  panel.style.right = "auto";
-  panel.style.left = `${left}px`;
-  panel.style.top = `${top}px`;
-}
-
-function hideWardDetails() {
-  const detailsPanel = document.querySelector("#ward-details-popover");
-  if (!detailsPanel) return;
-  explorerState.currentDetailsWardId = null;
-  detailsPanel.hidden = true;
-  detailsPanel.innerHTML = "";
-}
-
-function refreshVisibleWardDetails() {
-  if (!explorerState.currentDetailsWardId) return;
-  showWardDetails(explorerState.currentDetailsWardId);
-}
-
-function showWardDetails(wardId, event) {
-  const detailsPanel = document.querySelector("#ward-details-popover");
-  const ward = findArea(wardId);
-  if (!detailsPanel || !ward) return;
-
-  explorerState.currentDetailsWardId = String(wardId);
-  detailsPanel.hidden = false;
-  detailsPanel.innerHTML = renderMetricWardDetails(wardId, ward);
-  attachWardDetailsActions();
-  positionWardDetails(detailsPanel, event); // beside the cursor on map hover, anchored otherwise
-}
-
-function attachWardDetailsActions() {
-  document.querySelector("#ward-details-popover .details-close")?.addEventListener("click", clearSelectedWard);
-}
-
-// The hover popover's per-metric breakdown, computed client-side from the already-loaded matrix — the
-// score AND the raw value are both in each cell — so there's no per-hover fetch and no "loading" state.
+// Per-metric components of an area's score, computed client-side from the already-loaded matrix —
+// the score AND the raw value are both in each cell — so there is no per-selection fetch.
 function wardScoreComponents(wardId) {
   const matrix = explorerState.scoreMatrices[explorerState.areaType] || {};
   if (explorerState.deltaMode) {
@@ -1515,90 +2360,6 @@ function wardScoreComponents(wardId) {
   return components;
 }
 
-function renderMetricWardDetails(wardId, ward) {
-  // In delta mode rank by magnitude of weighted change so the biggest movers (either direction) surface;
-  // otherwise by weighted contribution to the score.
-  const contribution = (c) =>
-    explorerState.deltaMode ? c.weight * Math.abs(c.normalized_score) : c.weight * c.normalized_score;
-  const components = wardScoreComponents(wardId)
-    .sort((a, b) => contribution(b) - contribution(a))
-    .slice(0, 5);
-  const componentRows = components.length
-    ? components.map(renderMetricComponentRow).join("")
-    : `<p>No weighted metric components are available for this ${areaNoun()}.</p>`;
-  return `
-    <button class="details-close" type="button">Close</button>
-    <div class="panel-heading">
-      <p class="eyebrow">Metric focus</p>
-      <h2>${WardWiseExplorer.escapeHtml(ward.display_name)}</h2>
-    </div>
-    ${renderWardScore(wardId)}
-    <section class="metric-breakdown">
-      <p class="eyebrow">${explorerState.deltaMode ? "Biggest changes" : "Top weighted inputs"}</p>
-      <div class="metric-component-list">${componentRows}</div>
-    </section>
-  `;
-}
-
-function renderMetricComponentRow(component) {
-  const metric = explorerState.metrics.find((item) => item.metric_id === component.metric_id);
-  const label = WardWiseExplorer.escapeHtml(metric?.label || component.metric_id);
-  const weight = `weight ${WardWiseExplorer.formatNumber(component.weight, { maximumFractionDigits: 1 })}`;
-  if (component.isDelta) {
-    // Change-over-time: show the raw movement (pre → post) and the SIGNED normalized change.
-    const fmt = (v) => WardWiseExplorer.formatMetricValue(v, metric);
-    const sign = component.normalized_score > 0 ? "+" : "";
-    const change = `${sign}${WardWiseExplorer.formatNumber(component.normalized_score, { maximumFractionDigits: 1 })}`;
-    return `
-      <article class="metric-component-row">
-        <div>
-          <strong>${label}</strong>
-          <span>${fmt(component.value_from)} → ${fmt(component.value_to)}</span>
-        </div>
-        <div>
-          <strong>${change}</strong>
-          <span>${weight}</span>
-        </div>
-      </article>
-    `;
-  }
-  return `
-    <article class="metric-component-row">
-      <div>
-        <strong>${label}</strong>
-        <span>${WardWiseExplorer.formatMetricValue(component.value, metric)} raw value</span>
-      </div>
-      <div>
-        <strong>${WardWiseExplorer.formatNumber(component.normalized_score, { maximumFractionDigits: 1 })}</strong>
-        <span>${weight}</span>
-      </div>
-    </article>
-  `;
-}
-
-function renderWardScore(wardId) {
-  const score = scoreForWard(wardId);
-  const delta = explorerState.deltaMode;
-  const hasScore = !(score?.score === null || score?.score === undefined);
-  const scoreLabel = hasScore ? rankerScoreText(score.score) : (delta ? "No change data" : "No score");
-  const eyebrow = delta ? "Change over time" : "Current weighted score";
-  const fromYear = document.getElementById("delta-from-year")?.value;
-  const toYear = document.getElementById("delta-to-year")?.value;
-  const subline = delta
-    ? (hasScore ? `${fromYear} → ${toYear} · wellbeing points` : "")
-    : (score?.rank ? `Rank ${score.rank} of ${rankedScoreCount()}` : "No rank");
-  const scoreAccent = !hasScore
-    ? cssVariable("--map-fill", "#94a3b8")
-    : (delta ? fillColorForDelta(score.score) : fillColorForScore(score.score));
-  return `
-    <section class="score-card metric-score-card" style="--score-accent: ${scoreAccent};">
-      <p class="eyebrow">${eyebrow}</p>
-      <strong>${scoreLabel}</strong>
-      <span>${subline}</span>
-    </section>
-  `;
-}
-
 function renderWardTopCommunityAreasMarkup(ward) {
   const overlaps = [...(ward?.community_area_overlaps || [])]
     .filter((area) => area.name && (area.ward_area_pct ?? 0) > 0)
@@ -1629,6 +2390,8 @@ function renderWardVisualSignifierMarkup(ward) {
     } else if (explorerState.areaType === "chi") {
       // χGRID: the bare coordinate (chi_id), dropping the "χ:" prefix to save space.
       badge = ward?.chi_id ?? "";
+    } else if (explorerState.areaType === "precinct") {
+      badge = ward?.precinct_number ?? "";
     } else {
       badge = ward?.ward_number ?? areaIdOf(ward) ?? "";
     }
@@ -1655,27 +2418,192 @@ function rankerScoreText(score) {
   return explorerState.deltaMode && Number(score) > 0 ? `+${text}` : text;
 }
 
+// "Why it ranks": every scored area badged with the measures where it lands top-3 among the whole
+// geography (competition ranking, so ties share a rank and the next one skips). Computed over
+// everyone before any leaderboard filter, so the tags never change as the reader types; memoised
+// per score refresh because it re-ranks every active metric.
+function leaderboardMetricRanks() {
+  const key = `${explorerState.scoreRefreshId}|${explorerState.areaType}|${explorerState.deltaMode}`;
+  if (explorerState._metricRanks?.key === key) return explorerState._metricRanks.byArea;
+  const byMetric = new Map();
+  for (const row of explorerState.scores) {
+    if (row.score == null) continue;
+    for (const c of wardScoreComponents(row.area_id)) {
+      if (!Number.isFinite(Number(c.normalized_score))) continue;
+      if (!byMetric.has(c.metric_id)) byMetric.set(c.metric_id, []);
+      byMetric.get(c.metric_id).push({ areaId: String(row.area_id), score: Number(c.normalized_score) });
+    }
+  }
+  const byArea = new Map();
+  for (const [metricId, entries] of byMetric) {
+    entries.sort((a, b) => b.score - a.score);
+    let rank = 0;
+    let previous = null;
+    entries.forEach((entry, index) => {
+      if (previous === null || entry.score < previous) rank = index + 1;
+      previous = entry.score;
+      if (rank > 3) return;
+      if (!byArea.has(entry.areaId)) byArea.set(entry.areaId, []);
+      byArea.get(entry.areaId).push({ metricId, rank });
+    });
+  }
+  const labelOf = (id) => metricLabelById(id);
+  for (const tags of byArea.values()) tags.sort((a, b) => a.rank - b.rank || labelOf(a.metricId).localeCompare(labelOf(b.metricId)));
+  explorerState._metricRanks = { key, byArea };
+  return byArea;
+}
+
+function metricLabelById(metricId) {
+  return explorerState.metrics.find((m) => m.metric_id === metricId)?.label || metricId;
+}
+
+// The number behind a score: the raw value in the metric's own unit and, where the pipeline
+// recorded them, the count of underlying records and the residents it was divided by
+// ("12.4 per 10k · 8 requests among 6,470 residents"). Reads the score-matrix cell (v / n / p).
+function countNouns(metricId) {
+  if (/^voter_turnout/.test(metricId)) return { count: ["ballot", "ballots"], base: "registered voters" };
+  if (/vote_share|winner_share/.test(metricId)) return { count: ["vote", "votes"], base: null };
+  if (/^c311_|flooding|sewer/.test(metricId)) return { count: ["request", "requests"], base: "residents" };
+  if (/^licensed_/.test(metricId)) return { count: ["business", "businesses"], base: "residents" };
+  return { count: ["record", "records"], base: "residents" };
+}
+
+// How recent a figure is, in a few words: "in 2025", "2026 so far, through Sep 28",
+// "as of Apr 2023", "collected Sep 2026". The slice carries one period per metric; a cell
+// carried forward from another year carries its own.
+function currentPeriods() {
+  const periods = (explorerState.matrixPeriods || {})[explorerState.areaType] || {};
+  return periods[explorerState.selectedYear || "latest"] || periods.latest || {};
+}
+
+function periodOf(metricId, cell) {
+  if (cell?.e) return { e: cell.e, partial: Boolean(cell.ip) };
+  return currentPeriods()[metricId] || null;
+}
+
+function recencyLabel(period) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(period?.e || "");
+  if (!match) return "";
+  const [, year, month, day] = match;
+  const monthName = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][Number(month) - 1];
+  if (period.partial) return `${year} so far, through ${monthName} ${Number(day)}`;
+  if (period.collected) return `collected ${monthName} ${year}`;
+  if (month === "12" && day === "31") return `in ${year}`;
+  return `as of ${monthName} ${year}`;
+}
+
+// One quiet line for the leaderboard: only when a weighted measure is a year in progress.
+function partialYearNote() {
+  const periods = currentPeriods();
+  const partial = selectedMetricWeights()
+    .map(([metricId]) => periods[metricId])
+    .filter((period) => period?.partial);
+  if (!partial.length) return "";
+  const newest = partial.map((period) => period.e).sort().pop();
+  const label = recencyLabel({ e: newest, partial: true });
+  const all = partial.length === selectedMetricWeights().length;
+  return all ? `Figures are ${label}.` : `Some figures are ${label}.`;
+}
+
+function rawValueLine(metricId, areaId) {
+  const cell = (currentSlice()[String(areaId)] || {})[metricId];
+  const metric = explorerState.metrics.find((m) => m.metric_id === metricId);
+  if (!cell || !metric || cell.v == null) return "";
+  const parts = [`Measured: ${WardWiseExplorer.formatMetricValueWithUnit(cell.v, metric)}`];
+  const nouns = countNouns(metricId);
+  const fmt = (x) => WardWiseExplorer.formatNumber(x, { maximumFractionDigits: 0 });
+  const counted = (x) => `${fmt(x)} ${Number(x) === 1 ? nouns.count[0] : nouns.count[1]}`;
+  const hasN = Number.isFinite(Number(cell.n));
+  const hasP = Number.isFinite(Number(cell.p)) && nouns.base;
+  if (hasN && hasP) parts.push(`${counted(cell.n)} among ${fmt(cell.p)} ${nouns.base}`);
+  else if (hasN) parts.push(counted(cell.n));
+  else if (hasP) parts.push(`${fmt(cell.p)} ${nouns.base}`);
+  const recency = recencyLabel(periodOf(metricId, cell));
+  if (recency) parts.push(recency);
+  return parts.join(" · ");
+}
+
+// What the leaderboard filter matches on: the name, plus the places people actually know — a
+// ward's neighborhoods, a neighborhood's wards, a χGRID's long name.
+function rankerSearchText(area) {
+  const parts = [area?.display_name, area?.name, area?.long_name];
+  // precincts have no names: match their number, their five-digit key and their neighborhood
+  if (area?.ward_precinct) parts.push(area.ward_precinct, String(area.precinct_number ?? ""), area.primary_community_area);
+  for (const o of area?.community_area_overlaps || []) parts.push(o.name);
+  for (const w of area?.ward_overlaps || []) parts.push(w.display_name, w.ward_id ? `ward ${Number(w.ward_id)}` : "");
+  return parts.filter(Boolean).join(" ").toLowerCase();
+}
+
+function renderRankTags(areaId) {
+  const tags = leaderboardMetricRanks().get(String(areaId)) || [];
+  if (!tags.length) return "";
+  const shown = tags.slice(0, 4);
+  const more = tags.length - shown.length;
+  return `<span class="comparison-row-tags">${shown
+    .map((t) => `<span class="comparison-row-tag${WardWiseScoring.medalClass(t.rank, " m-")}">#${t.rank} ${WardWiseExplorer.escapeHtml(metricLabelById(t.metricId))}</span>`)
+    .join("")}${more > 0 ? `<span class="comparison-row-tag">+${more}</span>` : ""}</span>`;
+}
+
 function renderWeightedRanker() {
   const table = document.querySelector("#comparison-table");
+  const mini = document.querySelector("#mini-report");
   if (!table) return;
-  const heading = document.getElementById("ranker-title");
-  if (heading) heading.textContent = areaConfig().rankerTitle;
-  const rows = [...explorerState.scores]
+  const head = document.getElementById("ranker-head") || document.getElementById("ranker-title");
+  const status = document.getElementById("ranker-search-status");
+  const selected = explorerState.currentWardId && findArea(explorerState.currentWardId);
+  if (head) head.hidden = Boolean(selected);
+  if (mini) mini.hidden = !selected;
+  table.hidden = Boolean(selected);
+  const title = document.getElementById("ranker-title");
+  if (title) title.textContent = lensActive() ? `Precincts in ${lensWardLabel()}` : "Leaderboard";
+  if (selected) {
+    renderMiniReport(explorerState.currentWardId, mini);
+    return;
+  }
+  const query = explorerState.rankerQuery;
+  const scored = [...explorerState.scores]
     .filter((score) => score.score !== null && score.score !== undefined)
-    .sort((a, b) => a.rank - b.rank)
-    .slice(0, 10);
+    .sort((a, b) => a.rank - b.rank);
+  // A ward's precincts (at most 40) all fit: the top-10 cap is for the citywide lists.
+  const rows = query
+    ? scored.filter((row) => rankerSearchText(findArea(row.area_id)).includes(query))
+    : (lensActive() ? scored : scored.slice(0, 10));
+  if (status) {
+    status.textContent = query
+      ? (rows.length ? `${rows.length} of ${scored.length} ${labelLower()} match` : `No ${labelLower()} match`)
+      : "";
+  }
+  if (query && !rows.length) {
+    table.innerHTML = `<div class="comparison-empty"><p>No ${WardWiseExplorer.escapeHtml(labelLower())} match “${WardWiseExplorer.escapeHtml(query)}”.</p></div>`;
+    return;
+  }
+  if (!rows.length) {
+    table.innerHTML = `
+      <div class="comparison-empty">
+        <p><strong>No metrics selected.</strong></p>
+        <p>Tap metric squares in the panel — or let <button type="button" class="comparison-empty-surprise">Surprise me</button> pick a starting mix.</p>
+      </div>`;
+    table.querySelector(".comparison-empty-surprise")?.addEventListener("click", () =>
+      document.getElementById("surprise-me")?.click());
+    return;
+  }
   table.innerHTML = `
     <div class="comparison-header">
       <span>${WardWiseExplorer.escapeHtml(areaConfig().label)}</span>
       <span>${explorerState.deltaMode ? "Change" : "Score"}</span>
     </div>
+    ${!explorerState.deltaMode && partialYearNote() ? `<p class="comparison-note">${WardWiseExplorer.escapeHtml(partialYearNote())}</p>` : ""}
     ${rows
       .map((row) => {
         const isSelected = String(row.area_id) === explorerState.currentWardId;
         const ward = findArea(row.area_id);
+        const bar = explorerState.deltaMode || !Number.isFinite(Number(row.score))
+          ? ""
+          : `<span class="comparison-row-bar" aria-hidden="true"><i style="width:${Math.max(0, Math.min(100, Number(row.score))).toFixed(1)}%"></i></span>`;
         return `
           <button class="comparison-row${isSelected ? " is-selected" : ""}" type="button" data-ward-id="${row.area_id}">
             <span class="comparison-row-main">
+              <span class="comparison-row-rank num">${row.rank ? String(row.rank).padStart(2, "0") : "—"}</span>
               ${renderWardVisualSignifierMarkup(ward)}
               <span class="comparison-row-copy">
                 <span class="comparison-row-title">${WardWiseExplorer.escapeHtml(ward?.display_name || row.area_id)}</span>
@@ -1683,6 +2611,8 @@ function renderWeightedRanker() {
               </span>
             </span>
             <strong>${rankerScoreText(row.score)}</strong>
+            ${bar}
+            ${renderRankTags(row.area_id)}
           </button>
         `;
       })
@@ -1692,6 +2622,307 @@ function renderWeightedRanker() {
     row.addEventListener("click", () => selectWard(row.dataset.wardId));
     row.addEventListener("mouseenter", () => previewWard(row.dataset.wardId));
     row.addEventListener("mouseleave", () => clearWardPreview(row.dataset.wardId));
+  });
+}
+
+// ---- the mini report ----
+// What the leaderboard card shows once an area is selected: where it stands on the current list,
+// the whole field with it pinned, its strongest and weakest measures, and the way to the full report.
+// Rendered from the already-loaded slice, so every weight / year / geography change re-renders it.
+const MINI_REPORT_LINKS = { report: true, compare: true }; // flipped on as those pages ship
+
+function renderMiniReport(areaId, container) {
+  if (!container) return;
+  const esc = WardWiseExplorer.escapeHtml;
+  const area = findArea(areaId);
+  const geo = WardWiseGeography.byApi(explorerState.areaType);
+  const nameFor = (id) => findArea(id)?.display_name || String(id);
+  const standing = scoreForWard(areaId);
+  const n = rankedScoreCount();
+  const listName = activePreset()?.name || "your list";
+  const slice = currentSlice();
+  const selectedIds = selectedMetricWeights().map(([metricId]) => metricId);
+  const standings = WardWiseScoring.metricStandings(slice, areaId, selectedIds);
+  const metricById = new Map(explorerState.metrics.map((metric) => [metric.metric_id, metric]));
+  const missing = selectedIds.filter((id) => !standings.some((item) => item.metric_id === id));
+
+  // identity
+  let sub = "";
+  if (explorerState.areaType === "ward") {
+    sub = renderWardTopCommunityAreasMarkup(area).replace("comparison-row-community-areas", "mini-sub");
+  } else if (explorerState.areaType === "community_area") {
+    const wards = [...(area?.ward_overlaps || [])]
+      .filter((w) => (w.community_area_pct ?? 0) >= 1)
+      .sort((a, b) => (b.community_area_pct ?? 0) - (a.community_area_pct ?? 0))
+      .slice(0, 4);
+    sub = wards.length
+      ? `<span class="mini-sub">${wards
+          .map((w) => `<button type="button" class="mini-chip" data-act="goto" data-area-type="ward" data-area-id="${esc(w.ward_id)}" title="${esc(`${WardWiseExplorer.formatNumber(w.community_area_pct ?? 0, { maximumFractionDigits: 0 })}% of this neighborhood is in ${w.display_name}`)}">${esc(w.display_name)}</button>`)
+          .join("")}</span>`
+      : "";
+  } else if (explorerState.areaType === "precinct") {
+    sub = area?.primary_community_area ? `<span class="mini-sub">${esc(area.primary_community_area)}</span>` : "";
+  } else {
+    // unnamed cells carry their coordinate as both name and long name: no point saying it twice
+    const longName = area?.long_name && !area.long_name.startsWith(area.display_name || "\u0000") ? area.long_name : "";
+    sub = longName ? `<span class="mini-sub">${esc(longName)}</span>` : "";
+  }
+  // The mockup's trio: SCORE / RANK / who holds the seat (or, off wards, the places it overlaps).
+  let stats = "";
+  if (!explorerState.deltaMode) {
+    const scoreText = standing?.score != null ? WardWiseExplorer.formatNumber(standing.score, { maximumFractionDigits: 1 }) : "—";
+    const rankText = standing?.rank ? `<b>#${standing.rank}</b> <small>/ ${n}</small>` : "<b>—</b>";
+    let third;
+    if (explorerState.areaType === "ward") {
+      third = `<span class="mini-stat"><small>Alderman</small><b class="mini-stat-name" data-alder>${renderMiniAlderName(areaId)}</b></span>`;
+    } else if (explorerState.areaType === "community_area") {
+      const wards = [...(area?.ward_overlaps || [])].filter((w) => (w.community_area_pct ?? 0) >= 1).sort((a, b) => (b.community_area_pct ?? 0) - (a.community_area_pct ?? 0)).slice(0, 3);
+      third = `<span class="mini-stat"><small>Wards</small><b class="mini-stat-name">${wards.length ? esc(wards.map((w) => Number(w.ward_id)).join(" · ")) : "—"}</b></span>`;
+    } else if (explorerState.areaType === "precinct") {
+      const cityN = explorerState.cityScores.filter((s) => s.score !== null && s.score !== undefined).length;
+      const cityRank = standing?.city_rank ? `<b>#${standing.city_rank}</b> <small>/ ${cityN}</small>` : "<b>—</b>";
+      third = `<span class="mini-stat"><small>Citywide</small><span class="num">${cityRank}</span></span>`;
+    } else {
+      third = `<span class="mini-stat"><small>Cell</small><b class="mini-stat-name">${esc(area?.chi_id || areaId)}</b></span>`;
+    }
+    stats = `<div class="mini-stats" aria-label="At a glance">
+      <span class="mini-stat"><small>Score</small><b class="num">${esc(scoreText)}</b></span>
+      <span class="mini-stat"><small>Rank</small><span class="num">${rankText}</span></span>
+      ${third}
+    </div>`;
+    const top = wardScoreComponents(areaId)
+      .filter((c) => Number.isFinite(Number(c.normalized_score)))
+      .sort((a, b) => b.normalized_score * b.weight - a.normalized_score * a.weight)
+      .slice(0, 3);
+    if (top.length) {
+      stats += `<div class="mini-contrib"><span class="mini-contrib-row mini-contrib-head"><span>Measure</span><span>Score (0-100)</span><span>Weight</span></span>${top.map((c) => {
+        const high = isPriorityWeight(c.weight);
+        const raw = rawValueLine(c.metric_id, areaId);
+        return `<span class="mini-contrib-row"><span class="mini-contrib-label">${esc(metricById.get(c.metric_id)?.label || c.metric_id)}</span>` +
+          `<b class="num">${WardWiseExplorer.formatNumber(c.normalized_score, { maximumFractionDigits: 1 })}</b>` +
+          `<span class="mini-weight${high ? " is-high" : ""}">${high ? "★" : ""}${WardWiseExplorer.formatNumber(c.weight, { maximumFractionDigits: 1 })}×</span>` +
+          (raw ? `<span class="mini-contrib-raw">${esc(raw)}</span>` : "") + `</span>`;
+      }).join("")}</div>`;
+    }
+  }
+  const represented = "";
+
+  // standing
+  let hero;
+  let lede;
+  if (explorerState.deltaMode) {
+    const fromYear = document.getElementById("delta-from-year")?.value;
+    const toYear = document.getElementById("delta-to-year")?.value;
+    const hasScore = standing?.score != null;
+    hero = `<div class="ww-hero-big num${hasScore && standing.score < 0 ? " down" : ""}">${hasScore ? esc(rankerScoreText(standing.score)) : "—"}` +
+      `<small>${hasScore ? `wellbeing points, ${esc(fromYear)} → ${esc(toYear)}` : "no change data for this window"}</small></div>`;
+    lede = hasScore
+      ? `<p class="ww-lede">${standing.rank ? `<b>${WardWiseScoring.ordinal(standing.rank)}</b> biggest improvement of ${n} ${esc(geo.plural)} on ${esc(listName)}.` : ""}</p>`
+      : "";
+  } else if (standing?.rank) {
+    const ahead = standings.filter((item) => item.rank <= Math.ceil(item.n / 2)).length;
+    const podium = standings.filter((item) => item.rank <= 3).length;
+    hero = WardWiseCharts.heroRank({ rank: standing.rank, of: n, plural: geo.plural });
+    const clauses = [];
+    clauses.push(`On <b>${esc(listName)}</b>, ${esc(nameFor(areaId))} is ahead of the middle ${esc(geo.noun)} on <b>${ahead} of ${standings.length}</b> measures`);
+    if (podium) clauses.push(`and on the podium for ${podium}`);
+    let text = `${clauses.join(" ")}.`;
+    if (missing.length) {
+      const names = missing.slice(0, 3).map((id) => metricById.get(id)?.label || id);
+      const more = missing.length > 3 ? ` and ${missing.length - 3} more` : "";
+      text += ` <span class="soft">${missing.length === 1 ? "One measure has" : `${missing.length} measures have`} no record for ${esc(WardWiseGeography.labelLower(geo))} here: ${esc(names.join(", "))}${more}.</span>`;
+    }
+    lede = `<p class="ww-lede">${text}</p>`;
+  } else {
+    hero = `<div class="ww-hero-big num">—<small>not scored on ${esc(listName)}</small></div>`;
+    lede = `<p class="ww-lede"><span class="soft">None of the selected measures has a record for this ${esc(geo.noun)}.</span></p>`;
+  }
+
+  // the field
+  let field = "";
+  if (!explorerState.deltaMode && standing?.rank) {
+    field = WardWiseCharts.densityField({
+      rows: explorerState.scores, areaId, nameFor, noun: geo.noun, plural: geo.plural, listName,
+    });
+  }
+
+  // strongest / weakest, or biggest movers in change mode
+  let peek = "";
+  if (explorerState.deltaMode) {
+    const movers = wardScoreComponents(areaId)
+      .sort((a, b) => Math.abs(b.normalized_score) * b.weight - Math.abs(a.normalized_score) * a.weight)
+      .slice(0, 5);
+    if (movers.length) {
+      peek = `<div class="ww-peekhead">Biggest changes</div><div class="mini-movers">${movers
+        .map((c) => {
+          const metric = metricById.get(c.metric_id);
+          const fmt = (v) => WardWiseExplorer.formatMetricValue(v, metric);
+          const sign = c.normalized_score > 0 ? "+" : "";
+          return `<div class="mini-mover"><span class="lbl">${esc(metric?.label || c.metric_id)}</span>` +
+            `<span class="vals">${esc(fmt(c.value_from))} → ${esc(fmt(c.value_to))}</span>` +
+            `<b class="num ${c.normalized_score >= 0 ? "up" : "down"}">${sign}${WardWiseExplorer.formatNumber(c.normalized_score, { maximumFractionDigits: 1 })}</b></div>`;
+        })
+        .join("")}</div>`;
+    }
+  } else if (standings.length) {
+    const strongest = standings.slice(0, 3);
+    const weakest = standings.length > 3 ? standings.slice(-2).reverse() : [];
+    const box = (item, weak) => WardWiseCharts.rankBox({
+      metricId: item.metric_id,
+      label: metricById.get(item.metric_id)?.label || item.metric_id,
+      rank: item.rank,
+      of: item.n,
+      weak: weak && item.rank > item.n / 2,
+      open: explorerState.miniOpenMetric === item.metric_id,
+    });
+    peek = `<div class="ww-peekhead">Strongest</div><div class="ww-rankboxes">${strongest.map((i) => box(i, false)).join("")}</div>`;
+    if (weakest.length) {
+      peek += `<div class="ww-peekhead">Weakest</div><div class="ww-rankboxes">${weakest.map((i) => box(i, true)).join("")}</div>`;
+    }
+    const openId = explorerState.miniOpenMetric;
+    if (openId && standings.some((item) => item.metric_id === openId)) {
+      const entries = Object.entries(slice)
+        .filter(([, cells]) => cells && openId in cells)
+        .map(([id, cells]) => ({ area_id: id, s: Number(cells[openId].s), v: cells[openId].v }))
+        .sort((a, b) => b.s - a.s || String(a.area_id).localeCompare(String(b.area_id)))
+        .map((entry, index) => ({ ...entry, rank: index + 1 }));
+      peek += WardWiseCharts.relativeStrip({ metric: metricById.get(openId), entries, areaId, nameFor });
+    }
+    peek += `<p class="mini-peeknote">Tap a box to see everyone on that measure's real scale.</p>`;
+  }
+
+  // Some values rest on a small base (a precinct's handful of 311 requests): say so rather than
+  // hide them. The tag is precomputed per (geography, metric) by the pipeline.
+  const methodology = explorerState.metricMethodology[explorerState.areaType] || {};
+  const smallBase = selectedIds.some((id) => (methodology[id] || []).includes("small_base"));
+  const smallBaseNote = smallBase
+    ? `<p class="mini-peeknote">Some measures here rest on fewer than 20 underlying records — shown, not hidden, with that caveat.</p>`
+    : "";
+
+  // the way onward (the report / compare pages speak peer geographies only; the lens stays here)
+  const ctas = [];
+  if (MINI_REPORT_LINKS.report && !geo.explorerOnly) {
+    ctas.push(`<a class="ww-cta" href="${esc(WardWiseGeography.reportUrl(explorerState.areaType, areaId, { weights: explorerState.weights, presetId: explorerState.activePresetId, year: explorerState.selectedYear }))}">Open full report →</a>`);
+  }
+  if (explorerState.areaType === "ward") {
+    ctas.push(`<button type="button" class="ww-cta ghost" data-act="precincts" data-area-id="${esc(areaId)}">See its precincts</button>`);
+  }
+  if (MINI_REPORT_LINKS.compare && !geo.explorerOnly) {
+    ctas.push(`<a class="ww-cta ghost" href="${esc(WardWiseGeography.compareUrl(explorerState.areaType, areaId, null, { weights: explorerState.weights, year: explorerState.selectedYear }))}">Compare with another ${esc(geo.noun)}</a>`);
+  }
+  if (lensActive()) {
+    ctas.push(`<button type="button" class="ww-cta ghost" data-act="goto" data-area-type="ward" data-area-id="${esc(explorerState.lensWardId)}">Back to ${esc(lensWardLabel())}</button>`);
+  }
+
+  container.innerHTML = `
+    <div class="mini-head">
+      <button type="button" class="ww-linkbtn mini-back" data-act="back">← Leaderboard</button>
+    </div>
+    <div class="mini-ident">
+      ${renderWardVisualSignifierMarkup(area)}
+      <div class="mini-ident-copy">
+        <h3 class="ww-areaname">${esc(area?.display_name || areaId)}</h3>
+        ${sub}
+      </div>
+    </div>
+    ${represented}
+    ${stats}
+    ${smallBaseNote}
+    ${explorerState.deltaMode ? hero : ""}
+    ${lede}
+    ${field}
+    ${peek}
+    ${ctas.length ? `<div class="ww-ctas">${ctas.join("")}</div>` : ""}
+  `;
+  WardWiseCharts.attachTips(container);
+  if (explorerState.areaType === "ward") loadMiniAlderLine(areaId, container);
+}
+
+function renderMiniAlderName(wardId) {
+  const cached = explorerState.profileCache.get(`ward:${wardId}`);
+  if (cached === undefined) return `<span class="soft">…</span>`;
+  const alder = cached?.alderperson;
+  return alder?.name ? WardWiseExplorer.escapeHtml(alder.name) : `<span class="soft">—</span>`;
+}
+
+function renderMiniAlderLine(wardId) {
+  const cached = explorerState.profileCache.get(`ward:${wardId}`);
+  if (cached === undefined) return `<span class="soft">Finding the alderperson…</span>`;
+  const alder = cached?.alderperson;
+  if (!alder?.name) return `<span class="soft">No alderperson profile on file.</span>`;
+  return `Represented by <b>${WardWiseExplorer.escapeHtml(alder.name)}</b>`;
+}
+
+async function loadMiniAlderLine(wardId, container) {
+  const key = `ward:${wardId}`;
+  if (explorerState.profileCache.has(key)) return;
+  try {
+    const details = await WardWiseExplorer.fetchWardDetails(wardId);
+    explorerState.profileCache.set(key, details);
+  } catch (_error) {
+    explorerState.profileCache.set(key, null);
+  }
+  // Only refresh the one line, and only if this ward is still the one on screen.
+  if (explorerState.currentWardId !== String(wardId)) return;
+  const line = container.querySelector("[data-alder]");
+  if (line) line.innerHTML = line.classList.contains("mini-stat-name") ? renderMiniAlderName(wardId) : renderMiniAlderLine(wardId);
+}
+
+function initMiniReportActions() {
+  document.getElementById("mini-report")?.addEventListener("click", (event) => {
+    const target = event.target.closest("[data-act]");
+    if (!target) return;
+    const act = target.dataset.act;
+    if (act === "back") {
+      clearSelectedWard();
+      WardWiseExplorer.track("mini_report_back", { area_type: explorerState.areaType });
+    } else if (act === "rankbox") {
+      const metricId = target.dataset.metricbox;
+      explorerState.miniOpenMetric = explorerState.miniOpenMetric === metricId ? null : metricId;
+      renderWeightedRanker();
+    } else if (act === "goto") {
+      // a ward chip on a neighborhood's report: jump geographies and select that ward
+      const areaType = target.dataset.areaType;
+      const areaId = target.dataset.areaId;
+      switchAreaType(areaType).then(() => {
+        if (explorerState.areaType === areaType && findArea(areaId)) selectWard(areaId);
+      });
+    } else if (act === "precincts") {
+      enterPrecinctLens(target.dataset.areaId);
+    }
+  });
+}
+
+function initMetricSearch() {
+  const input = document.getElementById("metric-search");
+  if (!input) return;
+  input.addEventListener("input", () => {
+    explorerState.metricQuery = input.value.trim().toLowerCase();
+    renderMetricControls();
+  });
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && input.value) {
+      input.value = "";
+      explorerState.metricQuery = "";
+      renderMetricControls();
+    }
+  });
+}
+
+function initRankerSearch() {
+  const input = document.getElementById("ranker-search");
+  if (!input) return;
+  input.placeholder = `Filter ${labelLower()}…`;
+  input.addEventListener("input", () => {
+    explorerState.rankerQuery = input.value.trim().toLowerCase();
+    renderWeightedRanker();
+  });
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && input.value) {
+      input.value = "";
+      explorerState.rankerQuery = "";
+      renderWeightedRanker();
+    }
   });
 }
 
@@ -1722,6 +2953,7 @@ async function refreshTimelineForSelectedMetrics() {
     const timelineData = await WardWiseExplorer.fetchTimeline({
       areaType: explorerState.areaType,
       metricIds,
+      wardId: explorerState.lensWardId, // the lens fetches one ward's precinct series, not 1,291
     });
     if (explorerState.timelineMetricKey !== metricKey) return;
     explorerState.metricTimeline = timelineData;
@@ -2049,11 +3281,7 @@ function attachTimelineHoverHandlers(container) {
 }
 
 function positionTimelineTooltip(event, tooltip, container) {
-  const bounds = container.getBoundingClientRect();
-  const x = event.clientX - bounds.left + 12;
-  const y = event.clientY - bounds.top + 12;
-  tooltip.style.left = `${Math.max(8, Math.min(x, bounds.width - 190))}px`;
-  tooltip.style.top = `${Math.max(8, y)}px`;
+  WardWiseExplorer.positionTimelineTooltip(event, tooltip, container);
 }
 
 function timelinePoint(observation, timeline) {
@@ -2070,10 +3298,22 @@ function roundChartCoordinate(value) {
   return Number(value).toFixed(2).replace(/\.?0+$/, "");
 }
 
-function renderMetricError(error) {
+// A failed score/geography fetch lands where the reader is looking (the leaderboard column), says
+// what happened, and offers to try again. Always clears the map spinner so no caller can leave it on.
+function renderMetricError(error, retry) {
   const message = WardWiseExplorer.escapeHtml(error.message || "Unable to load metric data.");
-  document.querySelector("#comparison-table").innerHTML = "";
-  document.querySelector("#time-series").innerHTML = `<p>${message}</p>`;
+  const table = document.querySelector("#comparison-table");
+  const mini = document.getElementById("mini-report");
+  setMapShadeLoading(false);
+  if (mini) mini.hidden = true;
+  if (!table) return;
+  table.hidden = false;
+  table.innerHTML = `
+    <div class="comparison-error" role="alert">
+      <p>${message}</p>
+      ${retry ? `<button type="button" class="ww-cta ghost" data-act="retry">Try again</button>` : ""}
+    </div>`;
+  table.querySelector('[data-act="retry"]')?.addEventListener("click", () => retry(), { once: true });
 }
 
 function renderTimelineError(error) {
@@ -2089,7 +3329,7 @@ function updateSelectedWardLabel(wardId) {
   if (!wardId) return;
   const selectedLayer = explorerState.mapLayers.get(String(wardId));
   const props = selectedLayer?.feature?.properties || {};
-  const labelText = props.ward_number ?? props.community_area_number ?? props.chi_id ?? props.label;
+  const labelText = props.precinct_number ?? props.ward_number ?? props.community_area_number ?? props.chi_id ?? props.label;
   if (!selectedLayer || labelText == null) return;
   selectedLayer
     .bindTooltip(labelText.toString(), {

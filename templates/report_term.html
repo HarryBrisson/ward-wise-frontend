@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Term report — Ward Wise Penlight{% endblock %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='report_ui.css', v=asset_version) }}">
+{% endblock %}
+
+{% block content %}
+  <main class="metrics-layout">
+    <div class="metrics-header panel-heading">
+      <p class="eyebrow"><a href="{{ url_for('ui.reports_page') }}">Reports</a></p>
+      <h1>Term report</h1>
+      <p>Every alderperson's ward on two measures across one term — scored on the ward map that term actually used.</p>
+    </div>
+    <section class="panel metrics-panel" id="alder-view" aria-live="polite">
+      <div class="metric-tool-controls">
+        <label>Term
+          <select id="alder-term"><option value="2023">2023 → latest (current term)</option></select>
+        </label>
+        <label>X axis
+          <select id="alder-metric-x"></select>
+        </label>
+        <label>Y axis
+          <select id="alder-metric-y"></select>
+        </label>
+        <details class="alder-advanced">
+          <summary>Advanced</summary>
+          <div class="alder-advanced-body">
+            <label>X standard
+              <input id="alder-threshold-x" type="number" step="any" placeholder="average">
+            </label>
+            <label>Y standard
+              <input id="alder-threshold-y" type="number" step="any" placeholder="average">
+            </label>
+          </div>
+        </details>
+      </div>
+      <details class="alder-honesty">
+        <summary><span class="alder-honesty-mark">?</span> How to read this</summary>
+        <div class="alder-honesty-body">
+          <p><strong>Better is up and to the right.</strong> Each ward sits where its numbers put it,
+            against the average ward or a standard you set above.</p>
+          <p>Only measures an alderperson plausibly reaches appear here, each read the way it can be
+            read fairly. What they <strong>decide</strong> — menu money, attendance, legislation,
+            whether they hand the ward's budget to a resident vote — shows as a <strong>level</strong>,
+            because the value is the choice. What they only <strong>influence</strong> — crime,
+            businesses opening and closing — shows as <strong>change across the term</strong>: nobody
+            should be judged on the ward they inherited, but the direction of travel is a fair
+            question. The shape of the ward itself is offered as context: drawn by the council in the
+            remap, scored on each term's own map. Health, demographics and the rest of the catalog
+            stay out entirely.</p>
+          <p>Nothing here is anyone's doing alone. Wards differ in ways no alderperson chose, and
+            plenty of what moves these numbers sits well outside the ward office.</p>
+        </div>
+      </details>
+      <div id="alder-content"><p>Loading term report…</p></div>
+    </section>
+  </main>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='common.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='metric_icons.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='scoring.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='report_charts.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='report_alder.js', v=asset_version) }}"></script>
+{% endblock %}

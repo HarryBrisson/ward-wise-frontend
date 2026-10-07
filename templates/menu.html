@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Menu money — Ward Wise Penlight{% endblock %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='report_ui.css', v=asset_version) }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='editorial.css', v=asset_version) }}">
+{% endblock %}
+
+{% block content %}
+  <main class="ed-page" id="menu-root" aria-live="polite">
+    <header class="ed-masthead">
+      <p class="ed-kicker">Aldermanic menu money</p>
+      <h1>Where each ward spends its million and a half.</h1>
+      <p class="ed-standfirst">Every year each of Chicago's fifty ward offices gets roughly $1.5 million in "menu" money to spend on
+        local infrastructure, and chooses how. This page shows the choices: what share went to streets, lighting, sidewalks,
+        alleys, parks, cameras, schools and walking or biking, ward by ward and year by year since 2005.</p>
+    </header>
+
+    <section class="ed-howto" aria-label="How to read this">
+      <p class="ed-section-label">How to read this</p>
+      <div class="howto-grid">
+        <div><h3>A percent is a share, not a score.</h3><p>Forty percent on streets means forty cents of every menu dollar that year went to resurfacing. It says what the office chose, not whether the choice was good.</p></div>
+        <div><h3>Whose decision this is.</h3><p>The alderperson's office proposes the projects. Residents may be asked (some wards run a participatory vote), but the signature is the office's. This is a fact about an office, not a condition of a neighborhood.</p></div>
+        <div><h3>What "budget used" means.</h3><p>The share of that year's allotment actually committed to projects. Money left over rolls forward, so a low year is often followed by a high one.</p></div>
+        <div><h3>Where the numbers come from.</h3><p>The city's published menu program books, one line per project. Shares are computed from the dollars on those lines. Before 2019 some lines could not be placed on a map; that affects the "spread" measure, not the shares.</p></div>
+      </div>
+    </section>
+
+    <div id="menu-body"><p class="report-loading">Loading the menu books…</p></div>
+  </main>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='common.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='geography.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='scoring.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='report_charts.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='menu.js', v=asset_version) }}"></script>
+{% endblock %}

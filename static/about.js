@@ -94,166 +94,75 @@
     return `${head}<div class="spark-tip-head">${esc(headline)} · ${esc(p.metric_count)} tracked</div>`;
   }
 
-  // Round numbers a person would actually put on an axis.
-  function niceStep(span, target) {
-    const rough = span / target;
-    const magnitude = 10 ** Math.floor(Math.log10(Math.max(rough, 1)));
-    return [1, 2, 2.5, 5, 10].map((m) => m * magnitude).find((step) => step >= rough) || magnitude * 10;
-  }
-
-  function monthLabel(time) {
-    return new Date(time).toLocaleDateString(undefined, { month: "short" });
-  }
-
-  // The catalog is one number climbing over time, so this is an area chart with
-  // a real aspect ratio. The old version stretched a 100x100 box to the full
-  // width, which sheared every slope and turned the day markers into smears.
   function buildSparkline(points) {
-    const W = 720;
-    const H = 190;
-    const padL = 34;
-    const padR = 30;
-    const padT = 12;
-    const padB = 22;
-    const plotW = W - padL - padR;
-    const plotH = H - padT - padB;
-
+    const W = 100;
+    const H = 100;
+    const padX = 4;
+    const padY = 8;
     const times = points.map((p) => new Date(p.collected_at).getTime());
+    const counts = points.map((p) => p.metric_count);
     const tMin = Math.min(...times);
     const tMax = Math.max(...times);
-    const cMax = Math.max(...points.map((p) => p.metric_count), 1);
-    const top = Math.ceil(cMax / niceStep(cMax, 4)) * niceStep(cMax, 4);
-    const x = (t) => (tMax === tMin ? padL : padL + ((t - tMin) / (tMax - tMin)) * plotW);
-    const y = (c) => padT + plotH - (c / top) * plotH;
+    const cMax = Math.max(...counts, 1);
+    const x = (t) => (tMax === tMin ? padX : padX + ((t - tMin) / (tMax - tMin)) * (W - 2 * padX));
+    const y = (c) => H - padY - (c / cMax) * (H - 2 * padY);
 
-    // Gridlines and their labels, recessive: they orient, they do not compete.
-    const step = niceStep(top, 4);
-    let grid = "";
-    for (let value = 0; value <= top + 0.001; value += step) {
-      const gy = y(value).toFixed(1);
-      grid +=
-        `<line class="spark-grid" x1="${padL}" y1="${gy}" x2="${W - padR}" y2="${gy}"/>` +
-        `<text class="spark-ylab" x="${padL - 8}" y="${gy}" dy="3.5" text-anchor="end">${value}</text>`;
-    }
-
-    // One tick per month start inside the range.
-    let ticks = "";
-    const cursor = new Date(tMin);
-    cursor.setDate(1);
-    cursor.setMonth(cursor.getMonth() + 1);
-    while (cursor.getTime() <= tMax) {
-      const tx = x(cursor.getTime()).toFixed(1);
-      ticks +=
-        `<line class="spark-tick" x1="${tx}" y1="${padT}" x2="${tx}" y2="${padT + plotH}"/>` +
-        `<text class="spark-xlab" x="${tx}" y="${H - 6}" text-anchor="middle">${monthLabel(cursor.getTime())}</text>`;
-      cursor.setMonth(cursor.getMonth() + 1);
-    }
-
-    const xs = times.map(x);
-    const ys = points.map((p) => y(p.metric_count));
-    const line = points.map((p, i) => `${xs[i].toFixed(1)},${ys[i].toFixed(1)}`).join(" ");
-    const area =
-      `${xs[0].toFixed(1)},${(padT + plotH).toFixed(1)} ${line} ` +
-      `${xs[xs.length - 1].toFixed(1)},${(padT + plotH).toFixed(1)}`;
-
-    // Only the days that actually added something get a marker, and only the
-    // bigger jumps get one at all, so the line stays readable.
-    const biggest = Math.max(...points.map((p) => p.added_count || 0), 1);
-    const marks = points
-      .map((p, i) =>
-        (p.added_count || 0) >= Math.max(2, biggest * 0.15)
-          ? `<circle class="spark-dot is-add" data-i="${i}" cx="${xs[i].toFixed(1)}" cy="${ys[i].toFixed(1)}" r="3"/>`
-          : "",
-      )
+    const xs = points.map((p) => x(new Date(p.collected_at).getTime()));
+    const coords = points.map((p, i) => `${xs[i].toFixed(2)},${y(p.metric_count).toFixed(2)}`);
+    const isAddDay = (p) => p.snapshot_id !== "project-start" && p.added_count > 0;
+    const circles = points
+      .map((p, i) => {
+        const [cx, cy] = coords[i].split(",");
+        const add = isAddDay(p);
+        return `<circle class="spark-dot${add ? " is-add" : ""}" data-i="${i}" cx="${cx}" cy="${cy}" r="${add ? 2.4 : 1.8}"></circle>`;
+      })
       .join("");
-
-    const lastX = xs[xs.length - 1];
-    const lastY = ys[ys.length - 1];
-    const lastCount = points[points.length - 1].metric_count;
-
-    // Invisible full-height bands so hovering "a day" is easy without needing
-    // to land on the line itself.
+    // Full-height transparent bands so "hover over a day" is easy despite the tiny dots.
     const bands = points
       .map((p, i) => {
-        const half = points.length > 1 ? plotW / (points.length - 1) / 2 : plotW / 2;
+        const half = points.length > 1 ? (W - 2 * padX) / (points.length - 1) / 2 : W / 2;
         const x0 = Math.max(0, xs[i] - half);
         const w = Math.min(W, xs[i] + half) - x0;
-        return (
-          `<rect class="spark-band" data-i="${i}" data-x="${xs[i].toFixed(1)}" ` +
-          `data-y="${ys[i].toFixed(1)}" x="${x0.toFixed(1)}" y="0" ` +
-          `width="${w.toFixed(1)}" height="${H}"/>`
-        );
+        return `<rect class="spark-band" data-i="${i}" x="${x0.toFixed(2)}" y="0" width="${w.toFixed(2)}" height="${H}"></rect>`;
       })
       .join("");
 
     return `
-      <svg class="sparkline about-sparkline" viewBox="0 0 ${W} ${H}" role="img"
-           data-w="${W}" data-top="${padT}" data-bottom="${padT + plotH}"
-           aria-label="Metrics tracked over time, ${points[0].metric_count} at launch rising to ${lastCount}">
-        ${grid}${ticks}
-        <polygon class="spark-area" points="${area}"/>
-        <polyline class="spark-line" points="${line}" fill="none"/>
-        ${marks}
-        <circle class="spark-now-halo" cx="${lastX.toFixed(1)}" cy="${lastY.toFixed(1)}" r="6.5"/>
-        <circle class="spark-now" cx="${lastX.toFixed(1)}" cy="${lastY.toFixed(1)}" r="4"/>
-        <text class="spark-nowlab" x="${(lastX - 10).toFixed(1)}" y="${(lastY - 12).toFixed(1)}"
-              text-anchor="end">${lastCount}</text>
-        <g class="spark-cursor" hidden>
-          <line class="spark-cursor-rule" x1="0" y1="${padT}" x2="0" y2="${padT + plotH}"/>
-          <circle class="spark-cursor-dot" cx="0" cy="0" r="4.5"/>
-        </g>
+      <svg class="sparkline about-sparkline" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Number of metrics tracked over time">
+        <polyline points="${coords.join(" ")}" fill="none" stroke="currentColor" stroke-width="2.5" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"></polyline>
+        ${circles}
         ${bands}
       </svg>
     `;
   }
 
-  // Hover layer: a crosshair on the line plus a tooltip for that day. The
-  // crosshair moves rather than being redrawn, so hovering stays cheap.
+  // Custom hover tooltip for the growth sparkline (richer than a native <title>).
   function wireSparkTip(node, points) {
     const plot = node.querySelector(".about-growth-plot");
     const svg = plot && plot.querySelector("svg.about-sparkline");
     const tip = plot && plot.querySelector(".spark-tip");
-    const cursor = svg && svg.querySelector(".spark-cursor");
-    if (!plot || !svg || !tip || !cursor) return;
-    const rule = cursor.querySelector(".spark-cursor-rule");
-    const dot = cursor.querySelector(".spark-cursor-dot");
+    if (!plot || !svg || !tip) return;
     let activeI = -1;
-
-    const show = (band) => {
-      const i = Number(band.dataset.i);
+    const show = (i) => {
       if (i === activeI || !points[i]) return;
       activeI = i;
-      const vx = Number(band.dataset.x);
-      const vy = Number(band.dataset.y);
-      rule.setAttribute("x1", vx);
-      rule.setAttribute("x2", vx);
-      dot.setAttribute("cx", vx);
-      dot.setAttribute("cy", vy);
-      cursor.removeAttribute("hidden");
-
       tip.innerHTML = sparkTipHtml(points[i]);
       tip.hidden = false;
-      // viewBox units to CSS pixels: the aspect ratio is preserved now, so one
-      // uniform scale covers both axes.
-      const box = svg.getBoundingClientRect();
-      const scale = box.width / Number(svg.dataset.w);
-      const cx = vx * scale;
-      const cy = vy * scale;
-      const half = tip.offsetWidth / 2;
-      tip.style.left = `${Math.max(half + 4, Math.min(box.width - half - 4, cx))}px`;
+      const dot = svg.querySelector(`circle.spark-dot[data-i="${i}"]`);
+      if (!dot) return;
+      const pr = plot.getBoundingClientRect();
+      const dr = dot.getBoundingClientRect();
+      const cx = dr.left - pr.left + dr.width / 2;
+      const cy = dr.top - pr.top;
+      const tw = tip.offsetWidth;
+      tip.style.left = `${Math.max(tw / 2 + 4, Math.min(pr.width - tw / 2 - 4, cx))}px`;
       tip.style.top = `${cy}px`;
-      tip.classList.toggle("below", cy < tip.offsetHeight + 12); // flip under the point near the top
+      tip.classList.toggle("below", cy < tip.offsetHeight + 12); // flip under the dot near the top
     };
-
-    const hide = () => {
-      activeI = -1;
-      tip.hidden = true;
-      cursor.setAttribute("hidden", "");
-    };
-
+    const hide = () => { activeI = -1; tip.hidden = true; };
     svg.addEventListener("mousemove", (event) => {
       const band = event.target.closest(".spark-band");
-      if (band) show(band);
+      if (band) show(Number(band.dataset.i));
     });
     svg.addEventListener("mouseleave", hide);
   }
@@ -321,80 +230,14 @@
         ${buildSparkline(points)}
         <div class="spark-tip" role="status" hidden></div>
       </div>
-      <p class="about-growth-axis">
-        Dots mark the days a batch of measures landed. Hover for what arrived when.
-        Tracking started ${esc(startLabel)}.
-      </p>
+      <div class="about-growth-axis"><span>${esc(startLabel)}</span><span>${esc(endLabel)}</span></div>
     `;
     wireSparkTip(node, points);
-  }
-
-  // --- Visual signifiers: a small rotating sample -----------------------------
-  // Upstream picked these server-side, which meant rendering the Support page read the
-  // civic-data repo (S3, in prod) inline. The same photos are already on the area
-  // endpoints, so the page can choose its own — same daily rotation, so returning
-  // visitors still see different corners of the city.
-  //
-  // Wards + neighborhoods only: χGRID labels are grid coordinates, meaningless as a
-  // photo caption here.
-  const SIGNIFIER_COUNT = 4;
-
-  function signifierEntries(areas, label) {
-    return areas
-      .map((area) => ({ area: label(area), signifier: area.visual_signifier || {} }))
-      .filter((entry) => entry.signifier.image_url)
-      .map((entry) => ({
-        area: entry.area,
-        subject: entry.signifier.name || entry.area,
-        image: entry.signifier.image_url,
-        alt: entry.signifier.alt || entry.signifier.name || entry.area,
-      }));
-  }
-
-  async function renderSignifiers() {
-    const node = document.getElementById("signifier-examples");
-    if (!node) return;
-    let entries = [];
-    try {
-      const [wards, areas] = await Promise.all([
-        getJson("/api/explorer/wards"),
-        getJson("/api/community-areas"),
-      ]);
-      entries = [
-        ...signifierEntries(wards.wards || [], (w) => `Ward ${w.ward_number || w.ward_id}`),
-        ...signifierEntries(areas.community_areas || [], (a) => a.display_name || a.name),
-      ];
-    } catch (error) {
-      return;  // the section reads fine without photos; no error state needed
-    }
-    if (!entries.length) return;
-
-    const offset = Math.floor(Date.now() / 86400000);  // rotate once a day
-    const step = Math.max(1, Math.floor(entries.length / SIGNIFIER_COUNT));
-    const picks = [];
-    for (let i = 0; i < Math.min(SIGNIFIER_COUNT, entries.length); i += 1) {
-      picks.push(entries[(offset + i * step) % entries.length]);
-    }
-
-    node.innerHTML = picks
-      .map(
-        (pick) => `
-      <figure class="signifier-example">
-        <img src="${esc(pick.image)}" alt="${esc(pick.alt)}" loading="lazy" referrerpolicy="no-referrer">
-        <figcaption>
-          <strong>${esc(pick.area)}</strong>
-          <span>${esc(pick.subject)}</span>
-        </figcaption>
-      </figure>`
-      )
-      .join("");
-    node.hidden = false;
   }
 
   function init() {
     renderNominations();
     renderGrowth();
-    renderSignifiers();
   }
 
   if (document.readyState === "loading") {
@@ -402,4 +245,31 @@
   } else {
     init();
   }
+})();
+
+
+// Signifier photo examples on the Support page. The page is static, so the daily-rotating sample
+// the server used to render is fetched instead; same markup as before.
+(function () {
+  var root = document.getElementById("signifier-examples");
+  if (!root || !window.fetch) return;
+  var esc = (window.WardWiseExplorer && window.WardWiseExplorer.escapeHtml) || function (value) {
+    return String(value).replace(/[&<>"']/g, function (ch) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch];
+    });
+  };
+  fetch("/api/signifiers/examples?count=4", { headers: { Accept: "application/json" } })
+    .then(function (response) { return response.ok ? response.json() : { examples: [] }; })
+    .then(function (payload) {
+      var examples = (payload && payload.examples) || [];
+      if (!examples.length) return;
+      root.innerHTML = examples.map(function (example) {
+        return '<figure class="signifier-example">' +
+          '<img src="' + esc(example.image) + '" alt="' + esc(example.subject) + '" loading="lazy" referrerpolicy="no-referrer">' +
+          '<figcaption><strong>' + esc(example.area) + '</strong><span>' + esc(example.subject) + '</span></figcaption>' +
+          '</figure>';
+      }).join("");
+      root.hidden = false;
+    })
+    .catch(function () { /* the Support page reads fine without the photos */ });
 })();

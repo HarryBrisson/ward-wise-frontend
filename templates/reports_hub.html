@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Reports — Ward Wise Penlight{% endblock %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='report_ui.css', v=asset_version) }}">
+{% endblock %}
+
+{% block content %}
+  <script>
+    // Old deep links (/reports#view=comparison&x=…) and the /metrics 301 arrive with a fragment
+    // the server never sees. Each view now has its own page, so forward before anything paints.
+    (function () {
+      var p = new URLSearchParams((location.hash || "").replace(/^#/, ""));
+      var view = p.get("view");
+      if (!view) return;
+      p.delete("view");
+      var ward = p.get("ward"); p.delete("ward");
+      var q = p.toString() ? "?" + p.toString() : "";
+      var target = {
+        comparison: "/reports/comparison" + q,
+        deepdive: "/reports/deep-dive" + q,
+        alder: "/reports/term" + q,
+        years: "/reports/data-years" + q,
+        dictionary: "/dictionary" + q,
+        ward: ward ? "/report/ward/" + encodeURIComponent(ward) : "/report",
+        changes: ward ? "/report/ward/" + encodeURIComponent(ward) + "?tab=changes" : "/report?tab=changes"
+      }[view];
+      if (target) location.replace(target);
+    })();
+  </script>
+  <main class="metrics-layout reports-hub">
+    <div class="metrics-header panel-heading">
+      <p class="eyebrow">Ward Wise Penlight</p>
+      <h1>Reports</h1>
+      <p>Read a place in full, compare two, plot any two measures against each other, or check what each measure covers. Every page here is public.</p>
+    </div>
+    {% for group, views in groups %}
+      <section class="hub-group" aria-labelledby="hub-{{ group|lower }}">
+        <h2 id="hub-{{ group|lower }}" class="hub-group-title">{{ group }}</h2>
+        <div class="hub-cards">
+          {% for view in views %}
+            <a class="hub-card" href="{{ url_for(view.endpoint) }}" data-view="{{ view.key }}">
+              <span class="hub-card-title">{{ view.label }}</span>
+              <span class="hub-card-blurb">{{ view.blurb }}</span>
+            </a>
+          {% endfor %}
+        </div>
+      </section>
+    {% endfor %}
+  </main>
+{% endblock %}
