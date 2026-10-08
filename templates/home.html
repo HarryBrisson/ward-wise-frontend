@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}Ward Wise{% endblock %}
+{% block body_class %}fd-theme{% endblock %}
+
+{% block content %}
+  <script>
+    // Share links from the map used to live at the root (/?m=…&p=…&y=…&area=…). The map is at
+    // /map now; forward before anything paints so old links keep working.
+    (function () {
+      var q = new URLSearchParams(location.search);
+      if (["m", "p", "y", "area", "lens", "precinct"].some(function (k) { return q.has(k); })) {
+        location.replace("/map" + location.search + location.hash);
+      }
+    })();
+  </script>
+  <main>
+    <section class="fd-hero fd-center">
+      <div class="fd-wrap">
+        <p class="fd-eyebrow">Ward Wise</p>
+        <h1 class="fd-display">Chicago, measured.</h1>
+        <p class="fd-sub" style="margin-top: 20px">
+          <span data-fd-count="metrics">271</span> measures of daily life for every ward and
+          neighborhood, built from public records and free for everyone.
+        </p>
+        <div class="fd-actions">
+          <a class="fd-btn" href="{{ url_for('ui.map_page') }}">Explore the map</a>
+          <a class="fd-more" href="{{ url_for('ui.residents') }}">See your ward's report card</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="fd-section-tight">
+      <div class="fd-wrap">
+        <div class="fd-explore is-loading" data-fd-explore>
+          <div class="fd-explore-bar">
+            <div class="fd-seg" role="group" aria-label="Geography" data-fd-geo>
+              <button type="button" data-value="ward" aria-pressed="true">Wards</button>
+              <button type="button" data-value="community_area" aria-pressed="false">Neighborhoods</button>
+            </div>
+            <div class="fd-chips" role="group" aria-label="Measure" data-fd-measures></div>
+          </div>
+          <div class="fd-explore-body">
+            <div class="fd-explore-map">
+              <div class="fd-map-canvas" data-fd-map><div class="fd-skel fd-map-skel" aria-hidden="true"></div></div>
+              <div class="fd-legend" aria-hidden="true">
+                <span data-fd-legend-lo>Worse</span><i style="background:#e3eefc"></i><i style="background:#b7d3f7"></i><i style="background:#7fb1ee"></i><i style="background:#3f86e0"></i><i style="background:#0a5cc2"></i><span data-fd-legend-hi>Better</span>
+              </div>
+            </div>
+            <aside class="fd-explore-panel" data-fd-panel aria-live="polite"></aside>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="fd-section">
+      <div class="fd-wrap">
+        <div class="fd-figures">
+          <div class="fd-figure"><strong data-fd-count="metrics">271</strong><span>measures</span></div>
+          <div class="fd-figure"><strong data-fd-count="sources">58</strong><span>public data sources</span></div>
+          <div class="fd-figure"><strong>50</strong><span>wards</span></div>
+          <div class="fd-figure"><strong>77</strong><span>community areas</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="fd-section fd-fill">
+      <div class="fd-wrap fd-stack-lg">
+        <div class="fd-stack">
+          <h2 class="fd-h1">Built to be trusted.</h2>
+          <p class="fd-sub">The same method for every ward, and a source behind every number.</p>
+        </div>
+        <div class="fd-principles">
+          <div class="fd-principle"><h3 class="fd-h3">Every number cites its source</h3><p>Each measure lists where it comes from, how it is calculated and which years it covers.</p></div>
+          <div class="fd-principle"><h3 class="fd-h3">One method for all 50 wards</h3><p>No ward is measured differently, and no member can change or hide a result.</p></div>
+          <div class="fd-principle"><h3 class="fd-h3">No data about individuals</h3><p>Ward Wise measures neighborhoods and holds no records about individual residents.</p></div>
+          <div class="fd-principle"><h3 class="fd-h3">Open to check</h3><p>The data is available through a public API, and the method is documented in full.</p></div>
+        </div>
+        <div class="fd-stack">
+          <p class="fd-small">Sources include</p>
+          <div class="fd-sources">
+            <span>City of Chicago Data Portal</span>
+            <span>U.S. Census Bureau</span>
+            <span>Chicago Department of Public Health</span>
+            <span>CDC</span>
+            <span>Cook County Assessor</span>
+            <span>Illinois Report Card</span>
+            <span>CTA and Divvy</span>
+            <span>EPA and NOAA</span>
+            <span>OpenStreetMap</span>
+          </div>
+        </div>
+        <div class="fd-actions"><a class="fd-more" href="{{ url_for('ui.dictionary_page') }}">Read the metric dictionary</a></div>
+      </div>
+    </section>
+
+    <section class="fd-section fd-center">
+      <div class="fd-wrap fd-narrow fd-stack">
+        <p class="fd-eyebrow">Ward alerts</p>
+        <h2 class="fd-h1">Know before it's decided.</h2>
+        <p class="fd-sub">An email when your alderperson introduces legislation, a hearing opens for comment, or a building permit lands on your block.</p>
+        <div class="fd-actions" style="margin-top: 12px">
+          <a class="fd-btn" href="{{ url_for('ui.alerts') }}">Get ward alerts</a>
+          <a class="fd-more" href="{{ url_for('ui.residents') }}">Contact your alderperson</a>
+        </div>
+      </div>
+    </section>
+
+  </main>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='common.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='civic_map.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='frontdoor.js', v=asset_version) }}"></script>
+  <script>
+    (function () {
+      var button = document.querySelector(".fd-mcp [data-mcp-copy]");
+      if (!button) return;
+      var timer = null;
+      button.addEventListener("click", function () {
+        var target = document.getElementById(button.getAttribute("data-mcp-copy"));
+        if (!target) return;
+        var done = function (ok) {
+          clearTimeout(timer);
+          button.textContent = ok ? "Copied" : "Select and copy";
+          button.classList.toggle("is-copied", ok);
+          timer = setTimeout(function () { button.textContent = "Copy"; button.classList.remove("is-copied"); }, 1800);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(target.textContent.trim()).then(function () { done(true); }, function () { done(false); });
+        } else {
+          done(false);
+        }
+      });
+    })();
+  </script>
+{% endblock %}

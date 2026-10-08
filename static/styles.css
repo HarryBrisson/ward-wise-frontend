@@ -5081,3 +5081,1936 @@ body:has(#near-picker:not([hidden])) .near-layout { max-width: 1180px; }
 .team-card strong { font-weight: 600; }
 .team-card span { color: var(--muted-text); }
 .team-card a { font-size: 0.85rem; }
+
+
+/* ==========================================================================
+   The redesign (Connor Florczyk): global nav + footer, and the fd-theme pages (home, the
+   report cards, alerts, dictionary, about). The theme is scoped to body.fd-theme so the map and dictionary keep
+   their own look. Apple-style restraint: white, one blue, type does the work.
+   ========================================================================== */
+
+/* --- Color tokens: light by default, dark when <html> has .is-dark ------------------------
+   The inline script in base.html sets .is-dark from the saved choice (Auto, Light, Dark) and,
+   on Auto, from the system setting. New rules should use these tokens instead of raw colors. */
+
+:root {
+  --ink: #1d1d1f;
+  --ink-2: #6e6e73;
+  --ink-3: #707075; /* Apple's #86868b is 3.6:1 on white. This is the lightest gray that passes 4.5:1 on #f5f5f7. */
+  --ink-soft: #424245;
+  --line: #d2d2d7;
+  --hair: #e8e8ed;
+  --bg: #fff;
+  --fill: #f5f5f7;
+  --fill-2: #e8e8ed;
+  --card: #fff;
+  --field: #fff;
+  --thumb: #fff;
+  --blue: #0071e3;
+  --blue-hover: #0077ed;
+  --link: #0066cc;
+  --blue-wash: rgb(0 113 227 / 10%);
+  --blue-wash-2: rgb(0 113 227 / 16%);
+  --focus: rgb(0 113 227 / 40%);
+  --good: #1f7a35; /* #248a3d is 4.4:1 on white, just under the bar */
+  --weak: #b64400;
+  --glass: rgb(255 255 255 / 82%);
+  --glass-strong: rgb(255 255 255 / 92%);
+  --glass-line: rgb(0 0 0 / 8%);
+  --edge: transparent;
+  --shadow-sm: 0 1px 4px rgb(0 0 0 / 12%);
+  --shadow-lg: 0 30px 80px rgb(0 0 0 / 10%), 0 2px 6px rgb(0 0 0 / 4%);
+  --shadow-pop: 0 24px 60px rgb(0 0 0 / 18%), 0 0 0 1px rgb(0 0 0 / 6%);
+  --skel-a: #f2f2f5;
+  --skel-b: #e7e7ec;
+  --skel-fill-a: #e9e9ee;
+  --skel-fill-b: #dedee4;
+  --logo-hue: #0071e3;
+  --logo-ink: #1c2433;
+}
+
+html.is-dark {
+  color-scheme: dark;
+  --ink: #f5f5f7;
+  --ink-2: #a1a1a6;
+  --ink-3: #86868b;
+  --ink-soft: #c7c7cc;
+  --line: #48484a;
+  --hair: #2c2c2e;
+  --bg: #000;
+  --fill: #161617;
+  --fill-2: #2c2c2e;
+  --card: #1d1d1f;
+  --field: #1c1c1e;
+  --thumb: #636366;
+  --blue: #0071e3;
+  --blue-hover: #0a84ff;
+  --link: #2997ff;
+  --blue-wash: rgb(41 151 255 / 16%);
+  --blue-wash-2: rgb(41 151 255 / 24%);
+  --focus: rgb(41 151 255 / 55%);
+  --good: #30d158;
+  --weak: #ff9f0a;
+  --glass: rgb(22 22 23 / 80%);
+  --glass-strong: rgb(36 36 38 / 94%);
+  --glass-line: rgb(255 255 255 / 10%);
+  --edge: rgb(255 255 255 / 8%);
+  --shadow-sm: 0 1px 4px rgb(0 0 0 / 50%);
+  --shadow-lg: 0 30px 80px rgb(0 0 0 / 60%), 0 0 0 1px rgb(255 255 255 / 8%);
+  --shadow-pop: 0 24px 60px rgb(0 0 0 / 60%), 0 0 0 1px rgb(255 255 255 / 10%);
+  --skel-a: #1c1c1e;
+  --skel-b: #2c2c2e;
+  --skel-fill-a: #232325;
+  --skel-fill-b: #313134;
+  --logo-hue: #2997ff;
+  --logo-ink: #f5f5f7;
+}
+
+/* Older scripts (about.js, metric_details.js, metric_icons.js) still draw markup that reads the
+   original theme's variables and .eyebrow labels. On new-design pages, point those variables at
+   the new tokens so nothing warm, teal or orange leaks in, in either theme. */
+body.fd-theme {
+  --background: var(--bg);
+  --surface: var(--card);
+  --surface-muted: var(--fill);
+  --surface-strong: var(--ink);
+  --text: var(--ink);
+  --muted-text: var(--ink-2);
+  --border: var(--hair);
+  --brand-accent: var(--blue);
+  --brand-accent-dark: var(--link);
+  --brand-wash: var(--blue-wash);
+  --action: var(--link);
+  --action-hover: var(--blue-hover);
+  --selected-ward: var(--blue);
+}
+.fd-theme .eyebrow { color: var(--ink-2); font-size: 13px; font-weight: 600; letter-spacing: -0.01em; text-transform: none; }
+
+/* Header light/dark button and the footer's Auto, Light, Dark choice */
+.gn-theme { align-items: center; background: none; border: 0; border-radius: 50%; color: var(--ink); cursor: pointer; display: inline-flex; flex: none; height: 30px; justify-content: center; opacity: 0.8; padding: 0; transition: background 0.2s ease, opacity 0.2s ease, transform 0.15s ease; width: 30px; }
+.gn-theme:hover { background: var(--fill); opacity: 1; }
+.gn-theme:active { transform: scale(0.92); }
+.gn-theme:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.gn-theme svg { fill: none; height: 17px; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.6; width: 17px; }
+.gn-theme .gn-theme-sun, html.is-dark .gn-theme .gn-theme-moon { display: none; }
+html.is-dark .gn-theme .gn-theme-sun { display: block; animation: gn-spin 0.5s var(--ease-out, ease) both; }
+html:not(.is-dark) .gn-theme .gn-theme-moon { animation: gn-spin 0.5s var(--ease-out, ease) both; }
+@keyframes gn-spin { from { opacity: 0; transform: rotate(-60deg) scale(0.7); } }
+/* The header's flex gap is 2rem. Pull the button and Join in so the three sit as one group. */
+.gn-ward + .gn-theme { margin-left: calc(4px - var(--gn-gap)); }
+.gn-theme + .gn-cta { margin-left: calc(6px - var(--gn-gap)); }
+.fd-appearance { align-items: center; border-bottom: 1px solid var(--line); display: flex; gap: 12px; justify-content: space-between; padding: 14px 0; }
+.fd-appearance-seg { background: var(--fill-2); border-radius: 980px; display: inline-flex; padding: 2px; }
+.fd-appearance-seg button { background: transparent; border: 0; border-radius: 980px; color: var(--ink-soft); cursor: pointer; font: inherit; padding: 5px 12px; transition: background 0.2s ease, color 0.2s ease; }
+.fd-appearance-seg button[aria-pressed="true"] { background: var(--thumb); box-shadow: var(--shadow-sm); color: var(--ink); font-weight: 600; }
+.fd-appearance-seg button:focus-visible { outline: 3px solid var(--focus); outline-offset: 1px; }
+@media (prefers-reduced-motion: reduce) { .gn-theme svg { animation: none !important; } }
+
+/* Switching themes fades colors instead of snapping. The class is only on for a moment. */
+html.is-theming, html.is-theming * { transition: background-color 0.35s ease, color 0.35s ease, border-color 0.35s ease, fill 0.35s ease, stroke 0.35s ease !important; }
+
+.gn {
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+  background: var(--glass);
+  border-bottom: 1px solid var(--glass-line);
+  position: sticky;
+  top: 0;
+  z-index: 1100;
+}
+
+.gn-inner {
+  align-items: center;
+  box-sizing: border-box;
+  display: flex;
+  --gn-gap: 2rem;
+  gap: var(--gn-gap);
+  height: 52px;
+  margin: 0 auto;
+  max-width: 1080px;
+  padding: 0 22px;
+}
+
+.gn .gn-brand {
+  align-items: center;
+  display: inline-flex;
+  gap: 8px;
+  color: var(--ink);
+  font: 600 17px/1 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  letter-spacing: -0.02em;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.gn-brand span { color: var(--ink-3); font-weight: 400; margin-left: 0.3em; }
+
+.gn-links {
+  display: flex;
+  flex: 1;
+  gap: 1.75rem;
+  justify-content: center;
+}
+
+.gn .gn-links a {
+  color: var(--ink);
+  font: 400 13px/1 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  letter-spacing: -0.01em;
+  opacity: 0.8;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.gn .gn-links a:hover { opacity: 1; text-decoration: none; }
+.gn-links a.is-active { font-weight: 600; opacity: 1; }
+
+.gn .gn-cta {
+  background: var(--blue);
+  border-radius: 980px;
+  color: white;
+  font: 400 12px/1 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  padding: 7px 14px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.gn .gn-cta:hover { background: var(--blue-hover); text-decoration: none; }
+
+/* The map is a full-height app, so its layout subtracts this bar's 52px. */
+@media (min-width: 961px) {
+  .explorer-layout { height: calc(100vh - 52px); }
+}
+@media (min-width: 961px) and (max-width: 1040px) {
+  .explorer-layout { height: calc(100vh - 78px); }
+}
+
+/* Eight links plus the ward pill, theme button and Join stop fitting on one row below about
+   1100px, so first tighten, then move the links to their own scrolling row. */
+@media (max-width: 1180px) {
+  .gn-inner { --gn-gap: 1.25rem; }
+  .gn-links { gap: 1.25rem; }
+}
+
+@media (max-width: 1040px) {
+  .gn-inner { --gn-gap: 1rem; flex-wrap: wrap; height: auto; padding: 10px 16px 0; row-gap: 0; }
+  .gn-brand { flex: 1; }
+  .gn-links {
+    flex-basis: 100%;
+    gap: 1.25rem;
+    justify-content: flex-start;
+    order: 3;
+    overflow-x: auto;
+    padding: 12px 0;
+    scrollbar-width: none;
+  }
+  .gn-links::-webkit-scrollbar { display: none; }
+  /* Fade the last link so the row reads as one you can swipe. */
+  .gn-links { -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent); mask-image: linear-gradient(90deg, #000 88%, transparent); padding-right: 24px; }
+}
+
+/* --- Theme ---------------------------------------------------------------- */
+
+body.fd-theme {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 17px;
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: -0.022em;
+  line-height: 1.47;
+}
+
+.fd-theme a { color: var(--link); text-decoration: none; }
+.fd-theme a:hover { text-decoration: underline; }
+.fd-theme h1, .fd-theme h2, .fd-theme h3 {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  margin: 0;
+  text-wrap: balance;
+}
+.fd-theme p { margin: 0; }
+.fd-theme .tnum, .fd-theme [data-tnum] { font-variant-numeric: tabular-nums; }
+
+.fd-wrap { box-sizing: border-box; margin: 0 auto; max-width: 1080px; padding: 0 22px; }
+.fd-narrow { max-width: 760px; }
+
+.fd-section { padding: 96px 0; }
+.fd-section-tight { padding: 56px 0; }
+.fd-fill { background: var(--fill); }
+
+.fd-eyebrow { color: var(--ink-2); font-size: 17px; font-weight: 600; letter-spacing: -0.01em; margin-bottom: 8px; }
+.fd-display { font-size: clamp(44px, 7vw, 80px); font-weight: 700; letter-spacing: -0.035em; line-height: 1.04; }
+.fd-h1 { font-size: clamp(36px, 5vw, 56px); font-weight: 700; letter-spacing: -0.03em; line-height: 1.07; }
+.fd-h2 { font-size: clamp(28px, 3.6vw, 40px); font-weight: 700; letter-spacing: -0.025em; line-height: 1.1; }
+.fd-h3 { font-size: 21px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.2; }
+.fd-sub { color: var(--ink-2); font-size: clamp(19px, 2vw, 24px); letter-spacing: -0.02em; line-height: 1.35; max-width: 40ch; }
+.fd-body { color: var(--ink-2); max-width: 62ch; }
+.fd-small { color: var(--ink-2); font-size: 14px; letter-spacing: -0.01em; line-height: 1.45; }
+.fd-center { text-align: center; }
+.fd-center .fd-sub, .fd-center .fd-body { margin-left: auto; margin-right: auto; }
+.fd-stack { align-content: start; display: grid; gap: 16px; }
+.fd-stack-lg { align-content: start; display: grid; gap: 40px; }
+
+.fd-sr { clip: rect(0 0 0 0); height: 1px; overflow: hidden; position: absolute; width: 1px; }
+
+/* Buttons and links */
+.fd-actions { align-items: center; display: flex; flex-wrap: wrap; gap: 14px 28px; }
+.fd-center .fd-actions { justify-content: center; }
+.fd-btn {
+  background: var(--blue);
+  border: 0;
+  border-radius: 980px;
+  color: #fff !important;
+  cursor: pointer;
+  display: inline-block;
+  font: inherit;
+  font-size: 17px;
+  line-height: 1;
+  padding: 12px 22px;
+  text-decoration: none !important;
+  white-space: nowrap;
+}
+.fd-btn:hover { background: var(--blue-hover); }
+.fd-btn:disabled { cursor: progress; opacity: 0.5; }
+.fd-btn-ghost { background: transparent; box-shadow: inset 0 0 0 1px var(--link); color: var(--link) !important; }
+.fd-btn-ghost:hover { background: var(--blue); color: #fff !important; }
+.fd-more { font-size: 17px; white-space: nowrap; }
+.fd-more::after { content: " \203A"; }
+
+/* Form controls */
+.fd-theme select,
+.fd-theme input[type="text"],
+.fd-theme input[type="email"],
+.fd-theme input[type="url"],
+.fd-theme textarea {
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--field);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-sizing: border-box;
+  color: var(--ink);
+  font: inherit;
+  font-size: 17px;
+  min-height: 48px;
+  padding: 12px 16px;
+  width: 100%;
+}
+.fd-theme select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none' stroke='%236e6e73' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m1 1.5 5 5 5-5'/%3E%3C/svg%3E");
+  background-position: right 16px center;
+  background-repeat: no-repeat;
+  padding-right: 40px;
+}
+.fd-theme textarea { resize: vertical; }
+.fd-theme select:focus, .fd-theme input:focus, .fd-theme textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-wash-2); outline: none; }
+.fd-field { border: 0; display: grid; gap: 8px; margin: 0; min-width: 0; padding: 0; }
+.fd-field-error { color: var(--weak); font-size: 13px; margin: 2px 0 0; }
+.fd-choice:has(> .fd-field-error) { flex-wrap: wrap; }
+.fd-choice > .fd-field-error { flex-basis: 100%; margin-left: 30px; }
+.fd-theme [aria-invalid="true"] { border-color: var(--weak); }
+.fd-field > label, .fd-field > legend { color: var(--ink); font-size: 14px; font-weight: 600; padding: 0; }
+.fd-row-form { align-items: end; display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+.fd-choice { align-items: center; cursor: pointer; display: flex; gap: 12px; min-height: 40px; }
+.fd-choice input { accent-color: var(--blue); flex: 0 0 auto; height: 18px; margin: 0; width: 18px; }
+.fd-choice span { line-height: 1.35; }
+.fd-picker { align-items: center; display: inline-flex; gap: 12px; }
+.fd-picker select { min-width: 200px; width: auto; }
+
+/* Surfaces */
+.fd-panel { background: var(--fill); border-radius: 28px; padding: clamp(24px, 4vw, 48px); }
+.fd-card { background: var(--card); border-radius: 18px; box-shadow: 0 0 0 1px var(--edge); padding: 28px; }
+.fd-fill .fd-card { background: var(--card); }
+.fd-grid-3 { display: grid; gap: 20px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.fd-grid-4 { display: grid; gap: 20px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.fd-grid-2 { display: grid; gap: 20px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+.fd-proposal { border-bottom: 1px solid var(--hair); color: var(--ink-2); font-size: 12px; padding: 10px 0; text-align: center; }
+
+/* --- Home ----------------------------------------------------------------- */
+
+.fd-hero { padding: 88px 0 40px; }
+.fd-hero .fd-actions { margin-top: 28px; }
+
+.fd-figures { border-top: 1px solid var(--line); display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 8px; }
+.fd-figure { border-right: 1px solid var(--line); padding: 28px 24px 0 0; }
+.fd-figure + .fd-figure { padding-left: 24px; }
+.fd-figure:last-child { border-right: 0; }
+.fd-figure strong { display: block; font-size: clamp(36px, 5vw, 56px); font-variant-numeric: tabular-nums; font-weight: 700; letter-spacing: -0.035em; line-height: 1; }
+.fd-figure span { color: var(--ink-2); display: block; font-size: 15px; margin-top: 8px; }
+
+.fd-lane { display: grid; gap: 12px; grid-template-rows: auto auto auto 1fr auto; }
+.fd-lane .fd-price { color: var(--ink); font-size: 15px; font-weight: 600; }
+.fd-tag { color: var(--ink-2); font-size: 14px; font-weight: 600; letter-spacing: -0.01em; }
+
+.fd-loop { counter-reset: loop; display: grid; gap: 0; grid-template-columns: repeat(4, minmax(0, 1fr)); list-style: none; margin: 0; padding: 0; }
+.fd-loop li { border-top: 2px solid var(--ink); counter-increment: loop; display: grid; gap: 8px; align-content: start; padding: 20px 24px 0 0; position: relative; }
+.fd-loop li::before { color: var(--ink-3); content: counter(loop, decimal-leading-zero); font-size: 14px; font-variant-numeric: tabular-nums; font-weight: 600; }
+.fd-loop li p { color: var(--ink-2); font-size: 15px; }
+.fd-loop-note { color: var(--ink-2); font-size: 15px; margin-top: 24px; }
+
+.fd-principles { display: grid; gap: 0 48px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.fd-principle { border-top: 1px solid var(--line); display: grid; gap: 6px; padding: 24px 0; }
+.fd-principle p { color: var(--ink-2); font-size: 15px; }
+
+.fd-sources { display: flex; flex-wrap: wrap; gap: 10px; }
+.fd-sources span { background: #fff; border-radius: 980px; color: var(--ink); font-size: 14px; padding: 8px 16px; }
+
+/* --- Data rows (report card, snapshot, home preview) ------------------------ */
+
+.fd-report-head { align-items: end; display: flex; flex-wrap: wrap; gap: 20px 40px; justify-content: space-between; margin-bottom: 28px; }
+.fd-report-head .fd-small { margin-top: 6px; }
+.fd-summary { display: flex; gap: 32px; }
+.fd-summary div { display: grid; gap: 2px; }
+.fd-summary strong { font-size: 32px; font-variant-numeric: tabular-nums; font-weight: 700; letter-spacing: -0.03em; line-height: 1; }
+.fd-summary span { color: var(--ink-2); font-size: 13px; }
+
+.fd-table-head, .fd-row {
+  align-items: center;
+  display: grid;
+  gap: 24px;
+  grid-template-columns: minmax(0, 2.2fr) minmax(0, 1.1fr) minmax(0, 1.2fr) minmax(0, 1.6fr);
+}
+.fd-table-head { border-bottom: 1px solid var(--line); color: var(--ink-2); font-size: 13px; font-weight: 600; letter-spacing: -0.01em; padding: 0 0 10px; }
+.fd-rows { display: grid; }
+.fd-row { border-bottom: 1px solid var(--hair); padding: 18px 0; }
+.fd-row-name { display: grid; gap: 2px; min-width: 0; }
+.fd-row-name a { color: var(--ink) !important; font-weight: 600; }
+.fd-row-name small { color: var(--ink-3); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fd-row-value { white-space: nowrap; font-size: 20px; font-variant-numeric: tabular-nums; font-weight: 600; letter-spacing: -0.02em; }
+.fd-row-rank { display: grid; gap: 2px; font-size: 15px; font-variant-numeric: tabular-nums; }
+.fd-row-rank small { color: var(--ink-3); font-size: 13px; }
+.fd-band-good { color: var(--good); font-weight: 600; }
+.fd-band-weak { color: var(--weak); font-weight: 600; }
+.fd-band-mid { color: var(--ink-2); font-weight: 600; }
+
+.fd-track { background: var(--hair); border-radius: 980px; height: 6px; position: relative; }
+.fd-track::after { background: var(--ink-3); content: ""; height: 14px; left: 50%; position: absolute; top: -4px; width: 1px; }
+.fd-dot { background: var(--ink); border: 2px solid #fff; border-radius: 50%; box-shadow: 0 0 0 1px var(--ink); height: 10px; position: absolute; top: 50%; transform: translate(-50%, -50%); width: 10px; z-index: 1; }
+.fd-dot-good { background: var(--good); box-shadow: 0 0 0 1px var(--good); }
+.fd-dot-weak { background: var(--weak); box-shadow: 0 0 0 1px var(--weak); }
+.fd-track-ends { color: var(--ink-3); display: flex; font-size: 11px; justify-content: space-between; margin-top: 6px; }
+.fd-loading { color: var(--ink-3); padding: 40px 0; }
+.fd-fail { align-content: start; background: var(--fill); border-radius: 18px; display: grid; gap: 6px; justify-items: start; padding: 24px 28px; }
+.fd-fail-title { color: var(--ink); font-size: 17px; font-weight: 600; }
+.fd-fail .fd-link-btn { margin-top: 6px; padding: 0; }
+.fd-fill .fd-fail { background: var(--card); }
+
+.fd-preview { background: #fff; border-radius: 28px; box-shadow: 0 30px 80px rgb(0 0 0 / 10%), 0 2px 6px rgb(0 0 0 / 4%); padding: clamp(24px, 4vw, 44px); }
+.fd-preview .fd-table-head, .fd-preview .fd-row { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1.1fr) minmax(0, 1.4fr); }
+
+/* --- Planning --------------------------------------------------------------- */
+
+.fd-list { counter-reset: none; display: grid; list-style: none; margin: 0; padding: 0; }
+.fd-list li { border-bottom: 1px solid var(--hair); display: flex; font-variant-numeric: tabular-nums; justify-content: space-between; padding: 14px 0; }
+.fd-list li:last-child { border-bottom: 0; }
+.fd-list li span { color: var(--ink-3); margin-right: 12px; }
+.fd-list li strong { font-weight: 600; }
+
+/* --- Membership ------------------------------------------------------------- */
+
+.fd-tier { background: #fff; border-radius: 18px; display: grid; gap: 14px; grid-template-rows: auto auto auto 1fr; padding: 28px 24px; }
+.fd-tier-featured { box-shadow: inset 0 0 0 2px var(--blue); }
+.fd-tier .fd-tag { min-height: 2.6em; }
+.fd-amount { font-size: 40px; font-variant-numeric: tabular-nums; font-weight: 700; letter-spacing: -0.035em; line-height: 1; }
+.fd-amount small { color: var(--ink-2); font-size: 15px; font-weight: 400; letter-spacing: -0.01em; }
+.fd-ticks { align-content: start; display: grid; gap: 10px; list-style: none; margin: 0; padding: 0; }
+.fd-ticks li { border-top: 1px solid var(--hair); color: var(--ink); font-size: 15px; line-height: 1.35; padding-top: 10px; }
+
+.fd-calc { display: grid; gap: 48px; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); align-items: start; }
+.fd-calc-inputs { display: grid; gap: 24px; }
+.fd-calc-result { background: #fff; border-radius: 18px; display: grid; gap: 12px; padding: 32px; }
+.fd-calc-result .fd-amount { font-size: 48px; }
+.fd-note { color: var(--ink-2); font-size: 14px; }
+
+.fd-split-bar { border-radius: 8px; display: flex; gap: 3px; height: 44px; overflow: hidden; }
+.fd-split-bar span { align-items: center; color: #fff; display: flex; font-size: 13px; font-variant-numeric: tabular-nums; font-weight: 600; padding-left: 12px; }
+.fd-s1 { background: #1d1d1f; }
+.fd-s2 { background: #0071e3; }
+.fd-s3 { background: #6e6e73; }
+.fd-s4 { background: #b8b8bd; color: #1d1d1f !important; } /* light segment in both themes, so dark text in both */
+.fd-key { border-radius: 3px; display: inline-block; height: 10px; margin-right: 10px; width: 10px; }
+
+.fd-table-wrap { overflow-x: auto; }
+.fd-table { border-collapse: collapse; font-size: 15px; font-variant-numeric: tabular-nums; min-width: 560px; width: 100%; }
+.fd-table th { border-bottom: 1px solid var(--line); color: var(--ink-2); font-size: 13px; font-weight: 600; letter-spacing: -0.01em; padding: 0 16px 10px 0; text-align: left; }
+.fd-table td { border-bottom: 1px solid var(--hair); padding: 16px 16px 16px 0; vertical-align: top; }
+.fd-table td:first-child { font-weight: 600; white-space: nowrap; }
+.fd-table td.fd-dim { color: var(--ink-2); }
+
+.fd-rules { counter-reset: rule; display: grid; gap: 0 48px; grid-template-columns: repeat(2, minmax(0, 1fr)); list-style: none; margin: 0; padding: 0; }
+.fd-rules li { border-top: 1px solid var(--line); counter-increment: rule; display: grid; gap: 6px; padding: 24px 0 24px 44px; position: relative; }
+.fd-rules li::before { color: var(--ink-3); content: counter(rule, decimal-leading-zero); font-size: 14px; font-variant-numeric: tabular-nums; font-weight: 600; left: 0; position: absolute; top: 27px; }
+.fd-rules p { color: var(--ink-2); font-size: 15px; }
+
+.fd-seats { display: grid; gap: 10px; grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.fd-seat { background: #fff; border-radius: 14px; display: grid; gap: 4px; padding: 18px 14px; }
+.fd-seat strong { font-size: 15px; }
+.fd-seat span { color: var(--ink-2); font-size: 13px; }
+
+.fd-founders { display: grid; gap: 10px; grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.fd-founder { border: 1px dashed var(--line); border-radius: 14px; color: var(--ink-3) !important; display: grid; font-size: 14px; gap: 4px; padding: 18px; text-decoration: none !important; }
+.fd-founder strong { color: var(--ink); font-size: 21px; font-variant-numeric: tabular-nums; }
+.fd-founder:hover { border-color: var(--blue); color: var(--link) !important; }
+
+.fd-faq { border-top: 1px solid var(--line); }
+.fd-faq details { border-bottom: 1px solid var(--line); }
+.fd-faq summary { cursor: pointer; font-size: 19px; font-weight: 600; letter-spacing: -0.02em; list-style: none; padding: 22px 40px 22px 0; position: relative; }
+.fd-faq summary::-webkit-details-marker { display: none; }
+.fd-faq summary::after { color: var(--link); content: "+"; font-size: 24px; font-weight: 300; position: absolute; right: 4px; top: 16px; }
+.fd-faq details[open] summary::after { content: "\2212"; }
+.fd-faq details p { color: var(--ink-2); max-width: 64ch; padding: 0 0 24px; }
+
+/* --- Join ------------------------------------------------------------------ */
+
+.fd-steps { display: grid; gap: 8px; grid-template-columns: repeat(4, minmax(0, 1fr)); list-style: none; margin: 0 0 32px; padding: 0; }
+.fd-steps li { border-top: 3px solid var(--hair); color: var(--ink-3); font-size: 13px; font-weight: 600; padding-top: 10px; }
+.fd-steps li.is-done { border-color: var(--ink); color: var(--ink); }
+.fd-steps li.is-current { border-color: var(--blue); color: var(--link); }
+.fd-steps[hidden] { display: none; }
+.fd-step { border: 0; display: grid; gap: 22px; margin: 0; min-width: 0; padding: 0; }
+.fd-step[hidden] { display: none; }
+.fd-step > legend { font-size: 28px; font-weight: 700; letter-spacing: -0.025em; margin-bottom: 4px; padding: 0; }
+.fd-tierline { background: var(--fill); border-radius: 12px; font-size: 15px; padding: 14px 16px; }
+.fd-review { display: grid; margin: 0; }
+.fd-review div { border-bottom: 1px solid var(--hair); display: grid; gap: 16px; grid-template-columns: 140px minmax(0, 1fr); padding: 12px 0; }
+.fd-review dt { color: var(--ink-2); font-size: 15px; }
+.fd-review dd { margin: 0; overflow-wrap: anywhere; }
+#fd-join[hidden], .fd-done[hidden] { display: none; }
+.fd-done { outline: none; }
+.fd-signup-note { color: var(--good); flex-basis: 100%; font-size: 15px; min-height: 1.4em; }
+.fd-signup { align-items: start; display: flex; flex-wrap: wrap; gap: 12px; }
+.fd-signup input[type="email"] { flex: 1 1 240px; width: auto; }
+.fd-signup select { flex: 0 0 150px; width: auto; }
+
+/* --- Footer ------------------------------------------------------------------ */
+
+.fd-footer { background: var(--fill); color: var(--ink-2); font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 12px; letter-spacing: -0.01em; line-height: 1.4; }
+.fd-footer-inner { box-sizing: border-box; margin: 0 auto; max-width: 1080px; padding: 36px 22px 28px; }
+.fd-footer-cols { border-bottom: 1px solid var(--line); display: grid; gap: 24px; grid-template-columns: repeat(3, minmax(0, 1fr)); padding-bottom: 24px; }
+.fd-footer h2 { color: var(--ink); font-size: 12px; font-weight: 600; margin: 0 0 10px; }
+.fd-footer ul { display: grid; gap: 8px; list-style: none; margin: 0; padding: 0; }
+.fd-footer a { color: var(--ink-soft); text-decoration: none; }
+.fd-footer a:hover { text-decoration: underline; }
+.fd-footer-legal { padding-top: 16px; }
+
+/* --- Responsive ---------------------------------------------------------------- */
+
+@media (max-width: 900px) {
+  .fd-grid-3, .fd-grid-4, .fd-calc, .fd-principles, .fd-rules { grid-template-columns: minmax(0, 1fr); }
+  .fd-loop { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 32px; }
+  .fd-figures { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .fd-figure:nth-child(2) { border-right: 0; }
+  .fd-figure:nth-child(3) { padding-left: 0; }
+  .fd-seats, .fd-founders { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .fd-calc-result { position: static; }
+  .fd-grid-4.fd-tiers { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 640px) {
+  .fd-section { padding: 64px 0; }
+  .fd-hero { padding-top: 56px; }
+  .fd-grid-2, .fd-grid-4.fd-tiers, .fd-loop { grid-template-columns: minmax(0, 1fr); }
+  .fd-table-head { display: none; }
+  .fd-row, .fd-preview .fd-row { gap: 8px; grid-template-columns: minmax(0, 1fr); }
+  .fd-row-value { white-space: normal; }
+  .fd-row-rank { display: flex; flex-wrap: wrap; gap: 2px 8px; align-items: baseline; }
+  .fd-seats, .fd-founders { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .fd-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .fd-review div { gap: 2px; grid-template-columns: minmax(0, 1fr); }
+  .fd-footer-cols { grid-template-columns: minmax(0, 1fr); }
+  .fd-picker { display: grid; width: 100%; }
+  .fd-picker select { width: 100%; }
+}
+
+@media print {
+  .gn, .fd-footer, .fd-proposal, .fd-no-print { display: none !important; }
+  .fd-section { padding: 24px 0; }
+  .fd-row { break-inside: avoid; }
+}
+
+.fd-fill-cards .fd-card { background: var(--fill); }
+
+.gn .gn-brand:hover { text-decoration: none; }
+.fd-footer .fd-footer-inner a { color: var(--ink-soft); }
+
+.gn-logo { display: block; flex: 0 0 auto; height: 30px; width: 30px; }
+.gn .gn-brand span { margin-left: 0; }
+
+/* --- Civic: feeds, contact card, links, alerts ---------------------------------- */
+
+.fd-activity .fd-card { align-content: start; }
+.fd-feed { display: grid; list-style: none; margin: 0; padding: 0; }
+.fd-feed li { border-top: 1px solid var(--hair); display: grid; gap: 14px; grid-template-columns: 92px minmax(0, 1fr); padding: 14px 0; }
+.fd-feed time { color: var(--ink-3); font-size: 13px; font-variant-numeric: tabular-nums; line-height: 1.4; padding-top: 1px; }
+.fd-feed-title { font-size: 15px; font-weight: 600; line-height: 1.35; }
+.fd-feed-title a { color: var(--ink) !important; }
+.fd-feed-title a:hover { color: var(--link) !important; }
+.fd-feed-meta { color: var(--ink-2); font-size: 13px; line-height: 1.4; margin-top: 2px !important; }
+
+.fd-bars { display: grid; gap: 14px; list-style: none; margin: 0; padding: 0; }
+.fd-bars li { display: grid; font-size: 15px; gap: 6px 12px; grid-template-columns: minmax(0, 1fr) auto; }
+.fd-bars strong { font-variant-numeric: tabular-nums; font-weight: 600; }
+.fd-bars i { background: var(--blue); border-radius: 980px; grid-column: 1 / -1; height: 6px; }
+
+.fd-contact-head { align-items: center; display: flex; gap: 16px; }
+.fd-contact-head img { background: var(--fill); border-radius: 50%; flex: 0 0 auto; height: 64px; object-fit: cover; width: 64px; }
+.fd-contact-head .fd-tag { margin-bottom: 2px; }
+.fd-contact-list { display: grid; margin: 0; }
+.fd-contact-list div { border-top: 1px solid var(--hair); display: grid; gap: 12px; grid-template-columns: 96px minmax(0, 1fr); padding: 12px 0; }
+.fd-contact-list dt { color: var(--ink-2); font-size: 14px; }
+.fd-contact-list dd { font-size: 14px; margin: 0; overflow-wrap: anywhere; }
+.fd-contact-head + .fd-actions .fd-btn { font-size: 15px; padding: 10px 18px; }
+
+.fd-links { border-top: 1px solid var(--line); display: grid; list-style: none; margin: 0; padding: 0; }
+.fd-links li { border-bottom: 1px solid var(--line); }
+.fd-links a { display: grid; gap: 2px; padding: 16px 28px 16px 0; position: relative; text-decoration: none !important; }
+.fd-links a::after { color: var(--link); content: "\2197"; position: absolute; right: 4px; top: 18px; }
+.fd-links strong { color: var(--ink); font-weight: 600; }
+.fd-links span { color: var(--ink-2); font-size: 14px; }
+.fd-links a:hover strong { color: var(--link); }
+
+.fd-alert-form { display: grid; gap: 32px; }
+.fd-choices { display: grid; gap: 12px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.fd-choices .fd-choice { align-items: flex-start; background: #fff; border-radius: 14px; min-height: 0; padding: 16px; }
+.fd-choices .fd-choice input { margin-top: 2px; }
+.fd-choices .fd-choice span { display: grid; gap: 4px; }
+.fd-choices .fd-choice strong { font-size: 15px; font-weight: 600; }
+.fd-choices .fd-choice small { color: var(--ink-2); font-size: 13px; line-height: 1.35; }
+.fd-alert-form .fd-signup-note { flex-basis: auto; }
+
+.fd-dates { display: grid; gap: 20px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.fd-dates div { border-top: 2px solid var(--ink); display: grid; gap: 6px; padding-top: 16px; }
+.fd-dates time { font-size: 28px; font-variant-numeric: tabular-nums; font-weight: 700; letter-spacing: -0.03em; }
+.fd-dates p { color: var(--ink-2); }
+
+/* --- About ------------------------------------------------------------------------ */
+
+.fd-about-logo { display: block; height: 112px; margin: 0 auto; width: 112px; }
+.fd-about-wordmark { color: var(--ink); font-size: 28px; font-weight: 700; letter-spacing: -0.03em; margin: -8px 0 12px !important; }
+.fd-about-split { align-items: center; gap: 64px; }
+.fd-card-line { box-shadow: inset 0 0 0 1px var(--hair); }
+
+.fd-about .about-progress-count { color: var(--ink); font-size: 56px; font-weight: 700; letter-spacing: -0.035em; }
+.fd-about .about-progress-of { color: var(--ink-2); font-size: 17px; }
+.fd-about .about-progress-bar { background: var(--hair); height: 6px; }
+.fd-about .about-progress-bar > span { background: var(--blue); }
+.fd-about .about-progress-note { color: var(--ink-2); font-size: 15px; }
+.fd-about .about-progress { gap: 14px; margin-bottom: 20px; }
+.fd-about .ward-grid { gap: 6px; }
+.fd-about .ward-cell { background: var(--fill); border: 0; border-radius: 8px; color: var(--ink-3); font-size: 12px; }
+.fd-about .ward-cell.is-nominated { background: var(--blue); color: #fff; }
+.fd-about .about-growth-head { margin-bottom: 16px; }
+.fd-about .about-sparkline { color: var(--blue); height: 180px; }
+/* The chart stretches to fit its box, which turns its dots into ovals. The line reads fine alone,
+   and hover still works through the full-height bands. */
+.fd-about .about-sparkline circle, .fd-about .about-sparkline .spark-dot { display: none; }
+.fd-about .about-growth-axis { color: var(--ink-3); font-size: 13px; }
+.fd-about .spark-tip { background: #fff; border: 0; border-radius: 12px; box-shadow: 0 12px 32px rgb(0 0 0 / 14%); }
+.fd-about .signifier-examples { gap: 20px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.fd-about .signifier-example img { border-radius: 18px; }
+.fd-about .signifier-example figcaption { font-size: 14px; gap: 2px; margin-top: 6px; }
+.fd-about .signifier-example figcaption span { color: var(--ink-2); }
+.fd-about .about-error { color: var(--ink-2); }
+
+@media (max-width: 900px) {
+  .fd-choices { grid-template-columns: minmax(0, 1fr); }
+  .fd-about .signifier-examples { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 640px) {
+  .fd-dates { grid-template-columns: minmax(0, 1fr); }
+  .fd-feed li { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .fd-about .ward-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+}
+
+.fd-section:not(.fd-fill) .fd-activity .fd-card { box-shadow: inset 0 0 0 1px var(--hair); }
+
+/* --- Civic map (civic_map.js) ----------------------------------------------------- */
+
+.cm { position: relative; }
+.cm-svg { display: block; height: auto; overflow: visible; width: 100%; }
+.cm-area {
+  cursor: pointer;
+  fill: #e8e8ed;
+  outline: none;
+  stroke: #fff;
+  stroke-linejoin: round;
+  stroke-width: 1.2;
+  transition: fill 350ms ease, opacity 150ms ease;
+  vector-effect: non-scaling-stroke;
+}
+.cm-area.is-empty { fill: #f2f2f4 !important; }
+.cm-area.is-hover { stroke: #1d1d1f; stroke-width: 1.6; }
+.cm-area:focus-visible { stroke: #0071e3; stroke-width: 2.5; }
+.cm-area.is-selected { stroke: #1d1d1f; stroke-width: 2.6; }
+
+.cm-tip {
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+  background: rgb(255 255 255 / 88%);
+  border-radius: 12px;
+  box-shadow: 0 8px 28px rgb(0 0 0 / 14%), 0 0 0 1px rgb(0 0 0 / 5%);
+  display: grid;
+  font-size: 13px;
+  gap: 2px;
+  line-height: 1.3;
+  min-width: 120px;
+  padding: 10px 12px;
+  pointer-events: none;
+  position: absolute;
+  transform: translate(14px, -50%);
+  white-space: nowrap;
+  z-index: 5;
+}
+.cm-tip.is-left { transform: translate(calc(-100% - 14px), -50%); }
+.cm-tip[hidden] { display: none; }
+.cm-tip strong { color: #1d1d1f; font-size: 14px; font-weight: 600; }
+.cm-tip span { color: #1d1d1f; font-variant-numeric: tabular-nums; }
+.cm-tip em { color: #6e6e73; font-style: normal; }
+
+/* --- Home explorer ------------------------------------------------------------------ */
+
+.fd-explore {
+  background: #fff;
+  border-radius: 28px;
+  box-shadow: 0 30px 80px rgb(0 0 0 / 10%), 0 2px 6px rgb(0 0 0 / 4%);
+  display: grid;
+  gap: 24px;
+  padding: clamp(20px, 3vw, 36px);
+}
+.fd-explore-bar { align-items: center; display: flex; flex-wrap: wrap; gap: 12px 20px; }
+.fd-seg { background: var(--fill); border-radius: 980px; display: inline-flex; padding: 3px; }
+.fd-seg button {
+  background: transparent;
+  border: 0;
+  border-radius: 980px;
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  padding: 7px 16px;
+}
+.fd-seg button[aria-pressed="true"] { background: var(--thumb); box-shadow: var(--shadow-sm); font-weight: 600; }
+.fd-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.fd-chips button {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 980px;
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  padding: 7px 14px;
+  transition: background 150ms ease, color 150ms ease, border-color 150ms ease;
+}
+.fd-chips button:hover { border-color: var(--ink-3); }
+.fd-chips button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
+.fd-seg button:focus-visible, .fd-chips button:focus-visible, .fd-pick button:focus-visible, .fd-back:focus-visible { outline: 3px solid rgb(0 113 227 / 40%); outline-offset: 2px; }
+
+.fd-explore-body { align-items: start; display: grid; gap: 40px; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); }
+.fd-explore-map { display: grid; gap: 14px; }
+.fd-map-canvas { margin: 0 auto; max-width: 520px; width: 100%; }
+.fd-explore.is-loading .fd-map-canvas { opacity: 0.4; }
+.fd-legend { align-items: center; color: var(--ink-3); display: flex; font-size: 12px; gap: 4px; justify-content: center; }
+.fd-legend i { border-radius: 3px; display: block; height: 10px; width: 28px; }
+.fd-legend span { margin: 0 6px; }
+
+.fd-explore-panel { align-content: start; display: grid; gap: 14px; min-height: 520px; }
+.fd-explore-median { color: var(--ink-2); font-size: 15px; }
+.fd-explore-median strong { color: var(--ink); font-variant-numeric: tabular-nums; }
+.fd-explore-lists { display: grid; gap: 20px; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 6px; }
+.fd-pick { display: grid; list-style: none; margin: 6px 0 0; padding: 0; }
+.fd-pick button {
+  align-items: baseline;
+  background: none;
+  border: 0;
+  border-top: 1px solid var(--hair);
+  color: var(--ink);
+  cursor: pointer;
+  display: flex;
+  font: inherit;
+  font-size: 15px;
+  gap: 10px;
+  justify-content: space-between;
+  padding: 10px 0;
+  text-align: left;
+  width: 100%;
+}
+.fd-pick button:hover span { color: var(--link); }
+.fd-pick strong { font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
+.fd-explore-hint { border-top: 1px solid var(--hair); padding-top: 14px !important; }
+.fd-back { background: none; border: 0; color: var(--link); cursor: pointer; font: inherit; font-size: 15px; justify-self: start; padding: 0; }
+.fd-back::before { content: "\2039  "; }
+.fd-explore-stat { border-top: 1px solid var(--hair); display: grid; gap: 8px; padding-top: 16px; }
+.fd-explore-value { font-size: 44px; font-variant-numeric: tabular-nums; font-weight: 700; letter-spacing: -0.035em; line-height: 1.05; }
+
+/* --- Report pages with a mini map ---------------------------------------------------- */
+
+.fd-report-layout { align-items: start; display: grid; gap: 48px; grid-template-columns: 240px minmax(0, 1fr); }
+.fd-minimap { position: sticky; top: 76px; }
+.fd-minimap .cm-area.is-selected { fill: var(--blue) !important; stroke: #fff; stroke-width: 1.2; }
+.fd-minimap .cm-area.is-hover:not(.is-selected) { fill: #cfd9e6 !important; stroke: #fff; }
+
+@media (max-width: 900px) {
+  .fd-explore-body { grid-template-columns: minmax(0, 1fr); }
+  .fd-explore-panel { min-height: 0; }
+  .fd-report-layout { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  .fd-minimap { margin: 0 auto; max-width: 220px; position: static; width: 100%; }
+}
+
+@media (max-width: 640px) {
+  .fd-chips { flex-wrap: nowrap; margin: 0 -4px; overflow-x: auto; padding: 0 4px 4px; scrollbar-width: none; }
+  .fd-chips::-webkit-scrollbar { display: none; }
+  .fd-chips button { flex: 0 0 auto; }
+  .fd-explore-lists { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (hover: none) {
+  .cm-tip { display: none; }
+}
+
+/* Beside a mini map the table is narrower, so values may wrap. */
+.fd-report-main .fd-table-head, .fd-report-main .fd-row { gap: 20px; grid-template-columns: minmax(0, 1.8fr) minmax(0, 1.1fr) minmax(0, 1.2fr) minmax(0, 1.3fr); }
+.fd-report-main .fd-row-value { font-size: 19px; white-space: normal; }
+@media (max-width: 640px) {
+  .fd-report-main .fd-row { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+}
+.fd-explore { grid-template-columns: minmax(0, 1fr); }
+.fd-explore-bar > * { max-width: 100%; min-width: 0; }
+
+
+/* ==========================================================================
+   Motion and loading. Everything here switches off under prefers-reduced-motion.
+   ========================================================================== */
+
+:root { --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1); --ease-spring: cubic-bezier(0.34, 1.36, 0.64, 1); }
+
+/* Skeletons: a soft shimmer that holds the exact space the content will take. */
+@keyframes fd-shimmer { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
+.fd-skel {
+  animation: fd-shimmer 1.6s linear infinite;
+  background: linear-gradient(90deg, var(--skel-a) 0%, var(--skel-a) 30%, var(--skel-b) 50%, var(--skel-a) 70%, var(--skel-a) 100%);
+  background-size: 200% 100%;
+  border-radius: 8px;
+  display: block;
+}
+.fd-fill .fd-skel, .fd-panel .fd-skel { background: linear-gradient(90deg, var(--skel-fill-a) 0%, var(--skel-fill-a) 30%, var(--skel-fill-b) 50%, var(--skel-fill-a) 70%, var(--skel-fill-a) 100%); background-size: 200% 100%; }
+.fd-card .fd-skel { background: linear-gradient(90deg, var(--skel-a) 0%, var(--skel-a) 30%, var(--skel-b) 50%, var(--skel-a) 70%, var(--skel-a) 100%); background-size: 200% 100%; }
+.fd-skel-line { height: 12px; }
+.fd-skel-line.is-lg { height: 22px; }
+.fd-skel-line.is-xl { height: 40px; border-radius: 10px; }
+.fd-skel-dot { border-radius: 50%; }
+.fd-skel-stack { display: grid; gap: 10px; }
+.fd-row.is-skel { pointer-events: none; }
+.fd-feed li.is-skel { grid-template-columns: 92px minmax(0, 1fr); }
+.fd-map-skel { aspect-ratio: 600 / 733; border-radius: 24px; margin: 0 auto; max-width: 520px; width: 100%; }
+
+/* Content arriving: a short rise and fade. */
+@keyframes fd-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.fd-in { animation: fd-in 0.5s var(--ease-out) both; }
+.fd-swap > * { animation: fd-in 0.45s var(--ease-out) both; }
+.fd-swap > *:nth-child(2) { animation-delay: 40ms; }
+.fd-swap > *:nth-child(3) { animation-delay: 80ms; }
+.fd-swap > *:nth-child(4) { animation-delay: 120ms; }
+.fd-swap > *:nth-child(5) { animation-delay: 160ms; }
+.fd-swap > *:nth-child(n+6) { animation-delay: 200ms; }
+.fd-rows > .fd-row:not(.is-skel), .fd-feed > li:not(.is-skel), .fd-bars > li, .fd-list > li { animation: fd-in 0.5s var(--ease-out) both; }
+.fd-rows > .fd-row:nth-child(2), .fd-feed > li:nth-child(2), .fd-bars > li:nth-child(2), .fd-list > li:nth-child(2) { animation-delay: 45ms; }
+.fd-rows > .fd-row:nth-child(3), .fd-feed > li:nth-child(3), .fd-bars > li:nth-child(3), .fd-list > li:nth-child(3) { animation-delay: 90ms; }
+.fd-rows > .fd-row:nth-child(4), .fd-feed > li:nth-child(4), .fd-bars > li:nth-child(4), .fd-list > li:nth-child(4) { animation-delay: 135ms; }
+.fd-rows > .fd-row:nth-child(5), .fd-feed > li:nth-child(5), .fd-bars > li:nth-child(5), .fd-list > li:nth-child(5) { animation-delay: 180ms; }
+.fd-rows > .fd-row:nth-child(n+6) { animation-delay: 225ms; }
+
+/* Position dots and bars glide to their place once they're on screen. */
+.fd-dot { transition: left 0.9s var(--ease-spring); }
+.fd-bars i { transform-origin: left center; animation: fd-grow 0.8s var(--ease-out) both; }
+@keyframes fd-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.fd-split-bar span { transform-origin: left center; }
+.fd-split-bar.is-visible span { animation: fd-grow 0.9s var(--ease-out) both; }
+.fd-split-bar.is-visible span:nth-child(2) { animation-delay: 80ms; }
+.fd-split-bar.is-visible span:nth-child(3) { animation-delay: 160ms; }
+.fd-split-bar.is-visible span:nth-child(4) { animation-delay: 240ms; }
+
+/* Sections rise into view as you scroll. Only when JS is running, so nothing stays hidden. */
+.fd-js .fd-reveal { opacity: 0; transform: translateY(28px); transition: opacity 0.9s var(--ease-out), transform 0.9s var(--ease-out); transition-delay: var(--reveal-delay, 0ms); }
+.fd-js .fd-reveal.is-visible { opacity: 1; transform: none; }
+
+/* The hero settles in on load. */
+.fd-hero .fd-wrap > * { animation: fd-in 0.7s var(--ease-out) both; }
+.fd-hero .fd-wrap > *:nth-child(2) { animation-delay: 70ms; }
+.fd-hero .fd-wrap > *:nth-child(3) { animation-delay: 140ms; }
+.fd-hero .fd-wrap > *:nth-child(4) { animation-delay: 210ms; }
+.fd-hero .fd-wrap > *:nth-child(n+5) { animation-delay: 280ms; }
+
+/* Press and hover feedback. */
+.fd-btn, .fd-chips button, .fd-seg button, .gn-cta, .fd-pick button, .fd-founder, .fd-choices .fd-choice { transition: transform 0.15s ease, background 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease; }
+.fd-btn:active, .fd-chips button:active, .gn .gn-cta:active, .fd-founder:active { transform: scale(0.96); }
+.fd-lane, .fd-tier, .fd-offer, .fd-card-line { transition: transform 0.35s var(--ease-out), box-shadow 0.35s var(--ease-out); }
+.fd-lane:hover, .fd-card-line:hover, .fd-grid-4 > .fd-card:hover { box-shadow: 0 18px 44px rgb(0 0 0 / 9%); transform: translateY(-4px); }
+.fd-grid-4 > .fd-card { transition: transform 0.35s var(--ease-out), box-shadow 0.35s var(--ease-out); }
+.fd-choices .fd-choice:hover { box-shadow: 0 6px 18px rgb(0 0 0 / 7%); }
+.fd-more::after { content: "\203A"; display: inline-block; margin-left: 0.3em; transition: transform 0.2s ease; }
+.fd-more:hover::after { transform: translateX(3px); }
+
+/* Segmented control with a sliding thumb, like iOS. */
+.fd-seg { position: relative; }
+.fd-seg::before {
+  background: var(--thumb);
+  border-radius: 980px;
+  box-shadow: var(--shadow-sm);
+  content: "";
+  height: calc(100% - 6px);
+  left: 0;
+  position: absolute;
+  top: 3px;
+  transform: translateX(var(--seg-x, 3px));
+  transition: transform 0.35s var(--ease-spring), width 0.35s var(--ease-spring);
+  width: var(--seg-w, 0);
+}
+.fd-seg button { position: relative; z-index: 1; }
+.fd-seg.has-thumb button[aria-pressed="true"] { background: transparent; box-shadow: none; }
+
+/* Map: shapes draw in north to south, then recolor in a wave when the measure changes. */
+@keyframes cm-in { from { opacity: 0; } to { opacity: 1; } }
+.cm-area { transition: fill 0.5s ease var(--cm-delay, 0ms), stroke 0.12s ease, stroke-width 0.12s ease; }
+.cm.is-entering .cm-area { animation: cm-in 0.6s var(--ease-out) both; animation-delay: var(--cm-delay, 0ms); }
+@keyframes cm-pop { from { opacity: 0; transform: translate(14px, -50%) scale(0.96); } }
+.cm-tip:not([hidden]) { animation: cm-pop 0.16s ease-out; }
+.cm-tip.is-left:not([hidden]) { animation-name: cm-pop-left; }
+@keyframes cm-pop-left { from { opacity: 0; transform: translate(calc(-100% - 14px), -50%) scale(0.96); } }
+.fd-explore-value { transition: color 0.2s ease; }
+
+@media (prefers-reduced-motion: reduce) {
+  .fd-theme *, .fd-theme *::before, .fd-theme *::after, .cm * { animation: none !important; transition: none !important; }
+  .fd-js .fd-reveal { opacity: 1; transform: none; }
+  .fd-skel { animation: none; }
+}
+
+.fd-minimap .cm-area { transition: fill 0.25s ease, stroke 0.12s ease !important; }
+
+/* ==========================================================================
+   Your ward (my_ward.js). Literal colors: this sits on every page, themed or not.
+   ========================================================================== */
+
+.gn-ward { margin-left: auto; position: relative; }
+.gn-ward + .gn-cta { margin-left: 10px; }
+.mw-button {
+  align-items: center;
+  background: var(--fill);
+  border: 0;
+  border-radius: 980px;
+  color: var(--ink);
+  cursor: pointer;
+  display: inline-flex;
+  font: 500 12px/1 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  gap: 6px;
+  padding: 7px 10px 7px 9px;
+  transition: background 0.2s ease, transform 0.15s ease;
+  white-space: nowrap;
+}
+.mw-button:hover { background: var(--fill-2); }
+.mw-button:active { transform: scale(0.96); }
+.mw-button:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.mw-button svg { fill: none; height: 14px; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.6; width: 14px; }
+.mw-button .mw-chev { height: 8px; opacity: 0.6; transition: transform 0.25s ease; width: 10px; }
+.mw-button[aria-expanded="true"] .mw-chev { transform: rotate(180deg); }
+.mw-button.is-set { background: var(--blue-wash); color: var(--link); }
+.mw-button.is-set:hover { background: var(--blue-wash-2); }
+
+.mw-menu {
+  -webkit-backdrop-filter: saturate(180%) blur(24px);
+  backdrop-filter: saturate(180%) blur(24px);
+  background: var(--glass-strong);
+  border-radius: 18px;
+  box-shadow: var(--shadow-pop);
+  color: var(--ink);
+  display: grid;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  gap: 10px;
+  padding: 18px;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  transform-origin: top right;
+  width: 320px;
+  z-index: 1200;
+}
+.mw-menu[hidden] { display: none; }
+@keyframes mw-open { from { opacity: 0; transform: translateY(-6px) scale(0.97); } to { opacity: 1; transform: none; } }
+.mw-menu:not([hidden]) { animation: mw-open 0.22s cubic-bezier(0.2, 0.7, 0.2, 1); }
+.mw-title { font-size: 17px; font-weight: 600; letter-spacing: -0.02em; margin: 0; }
+.mw-sub { color: var(--ink-2); font-size: 12px; margin: -6px 0 2px; }
+.mw-label { color: var(--ink-2); font-size: 12px; font-weight: 600; margin: 4px 0 0; }
+.mw-status { color: var(--ink-2); font-size: 12px; margin: -4px 0 0; min-height: 0; }
+.mw-status:empty { display: none; }
+.mw-locate {
+  align-items: center;
+  background: var(--blue);
+  border: 0;
+  border-radius: 12px;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  font: 500 14px/1 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  gap: 8px;
+  justify-content: center;
+  padding: 11px 14px;
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+.mw-locate:hover { background: var(--blue-hover); }
+.mw-locate:active { transform: scale(0.98); }
+.mw-locate svg { fill: none; height: 16px; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.6; width: 16px; }
+.mw-grid { display: grid; gap: 4px; grid-template-columns: repeat(10, minmax(0, 1fr)); }
+.mw-grid button {
+  aspect-ratio: 1;
+  background: var(--fill);
+  border: 0;
+  border-radius: 8px;
+  color: var(--ink);
+  cursor: pointer;
+  font: 500 12px/1 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-variant-numeric: tabular-nums;
+  padding: 0;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.12s ease;
+}
+.mw-grid button:hover { background: var(--blue-wash); color: var(--link); }
+.mw-grid button:active { transform: scale(0.92); }
+.mw-grid button[aria-pressed="true"] { background: var(--blue); color: #fff; }
+.mw-grid button:focus-visible, .mw-locate:focus-visible, .mw-clear:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.mw-help { color: var(--link); font-size: 12px; text-decoration: none; }
+.mw-help:hover { text-decoration: underline; }
+.mw-clear { background: none; border: 0; color: var(--ink-2); cursor: pointer; font: 400 12px/1 -apple-system, BlinkMacSystemFont, sans-serif; justify-self: start; padding: 2px 0; }
+.mw-clear:hover { color: var(--ink); }
+
+/* The same picker, inline on a page with nothing to show yet. */
+.mw-inline { display: grid; gap: 12px; max-width: 520px; }
+.mw-inline .mw-locate { justify-self: start; padding: 12px 20px; }
+.mw-inline .mw-grid { gap: 6px; }
+.mw-inline .mw-grid button { font-size: 14px; border-radius: 10px; }
+.fd-fill .mw-inline .mw-grid button { background: var(--card); }
+
+.fd-empty { display: grid; gap: 14px; padding: 8px 0 24px; }
+.fd-empty[hidden], [data-fd-body][hidden], [data-fd-civic-body][hidden] { display: none; }
+.fd-viewing { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px !important; }
+.fd-viewing[hidden] { display: none; }
+.fd-chip-btn {
+  background: rgb(0 113 227 / 10%);
+  border: 0;
+  border-radius: 980px;
+  color: #0066cc;
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  padding: 8px 14px;
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+.fd-chip-btn:hover { background: rgb(0 113 227 / 16%); }
+.fd-chip-btn:active { transform: scale(0.96); }
+.fd-chip-btn.is-quiet { background: var(--fill); color: var(--ink); }
+.fd-your-ward { align-items: center; background: rgb(36 138 61 / 10%); border-radius: 980px; color: var(--good); display: inline-flex; font-size: 14px; font-weight: 600; padding: 8px 14px; }
+.fd-link-btn { background: none; border: 0; color: var(--link); cursor: pointer; font: inherit; padding: 0 0 0 6px; }
+.fd-link-btn:hover { text-decoration: underline; }
+.fd-alert-ward { font-size: 17px; }
+
+@media (max-width: 1040px) {
+  .gn-ward { order: 2; }
+  .gn-theme { order: 2; }
+  .gn .gn-cta { order: 2; }
+  .mw-menu { position: fixed; left: 12px; right: 12px; top: 96px; width: auto; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mw-menu:not([hidden]) { animation: none; }
+  .mw-button .mw-chev { transition: none; }
+}
+
+@media (max-width: 480px) {
+  .gn-inner { gap: 0 8px; }
+  .gn .gn-brand span { display: none; }
+  .gn-ward + .gn-cta { margin-left: 0; }
+}
+
+/* --- Alert builder: topics on the left, the live email on the right --------------------- */
+
+.fd-ab-hero { padding: 72px 0 40px; }
+.fd-ab { padding: 0 0 96px; }
+.fd-ab-grid { align-items: start; display: grid; gap: 56px; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); }
+.fd-ab-controls { display: grid; gap: 32px; }
+.fd-ab-block { border: 0; display: grid; gap: 12px; margin: 0; min-width: 0; padding: 0; }
+.fd-ab-label { color: var(--ink-2); font-size: 13px; font-weight: 600; letter-spacing: 0; padding: 0; }
+.fd-ab-ward { align-items: baseline; display: flex; flex-wrap: wrap; gap: 4px 12px; min-height: 40px; }
+.fd-ab-ward strong { font-size: 28px; font-weight: 700; letter-spacing: -0.025em; }
+.fd-ab-ward span { color: var(--ink-2); font-size: 15px; }
+.fd-ab-ward .fd-link-btn { padding: 0; }
+
+.fd-ab-topics { background: var(--fill); border-radius: 18px; list-style: none; margin: 0; overflow: hidden; padding: 0; }
+.fd-ab-topics li { position: relative; }
+.fd-ab-topics li + li::before { background: #e3e3e8; content: ""; height: 1px; left: 58px; position: absolute; right: 0; top: 0; }
+.fd-ab-topic { align-items: center; cursor: pointer; display: grid; gap: 12px; grid-template-columns: 30px minmax(0, 1fr) auto auto; padding: 12px 14px 12px 16px; transition: background 0.15s ease; }
+.fd-ab-topic:hover { background: #ededf0; }
+.fd-ab-icon { background: #fff; border-radius: 8px; color: var(--blue); display: grid; height: 30px; place-items: center; width: 30px; }
+.fd-ab-icon svg { fill: none; height: 18px; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.6; width: 18px; }
+.fd-ab-text { display: grid; gap: 1px; min-width: 0; }
+.fd-ab-text strong { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+.fd-ab-text small { color: var(--ink-2); font-size: 13px; letter-spacing: -0.005em; line-height: 1.35; }
+.fd-ab-count { color: var(--link); font-size: 13px; font-variant-numeric: tabular-nums; font-weight: 600; min-width: 20px; text-align: right; white-space: nowrap; }
+.fd-ab-count.is-zero, .fd-ab-count.is-wait { color: var(--ink-3); font-weight: 400; }
+.fd-ab-count.is-pop { animation: fd-pop 0.4s var(--ease-spring) both; }
+@keyframes fd-pop { from { opacity: 0; transform: scale(0.6); } }
+
+/* iOS-style switch */
+.fd-switch {
+  -webkit-appearance: none;
+  appearance: none;
+  background: #d9d9de;
+  border-radius: 14px;
+  cursor: pointer;
+  flex: none;
+  height: 28px;
+  margin: 0;
+  position: relative;
+  transition: background 0.25s ease;
+  width: 46px;
+}
+.fd-switch::before {
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 2px 5px rgb(0 0 0 / 20%);
+  content: "";
+  height: 24px;
+  left: 2px;
+  position: absolute;
+  top: 2px;
+  transition: transform 0.32s var(--ease-spring);
+  width: 24px;
+}
+.fd-switch:checked { background: var(--blue); }
+.fd-switch:checked::before { transform: translateX(18px); }
+.fd-switch:focus-visible { outline: 3px solid rgb(0 113 227 / 40%); outline-offset: 2px; }
+
+.fd-ab-urgent { align-items: center; background: var(--fill); border-radius: 14px; cursor: pointer; display: flex; gap: 16px; justify-content: space-between; margin-top: 4px; padding: 14px 16px; }
+.fd-ab-urgent span { display: grid; gap: 2px; }
+.fd-ab-urgent strong { font-size: 15px; font-weight: 600; }
+.fd-ab-urgent small { color: var(--ink-2); font-size: 13px; line-height: 1.35; }
+.fd-ab-send-row { display: flex; gap: 10px; }
+.fd-ab-send-row input { flex: 1; min-width: 0; }
+.fd-ab-send-row .fd-btn { flex: none; }
+.fd-ab-send .fd-small:empty { display: none; }
+
+.fd-ab-preview { display: grid; gap: 14px; min-width: 0; }
+.fd-mail { background: #fff; border: 1px solid var(--hair); border-radius: 22px; box-shadow: 0 30px 80px rgb(0 0 0 / 10%), 0 2px 6px rgb(0 0 0 / 4%); overflow: hidden; }
+.fd-mail-bar { display: flex; gap: 7px; padding: 14px 16px 0; }
+.fd-mail-bar i { background: #e3e3e8; border-radius: 50%; display: block; height: 11px; width: 11px; }
+.fd-mail-head { border-bottom: 1px solid var(--hair); display: grid; font-size: 14px; gap: 4px; margin: 0; padding: 12px 24px 14px; }
+.fd-mail-head div { display: grid; gap: 8px; grid-template-columns: 64px minmax(0, 1fr); }
+.fd-mail-head dt { color: var(--ink-3); }
+.fd-mail-head dd { color: var(--ink); margin: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fd-mail-head .fd-mail-subject dd { font-weight: 600; white-space: normal; }
+.fd-mail-body { background: #f5f5f7; min-height: 120px; }
+.fd-mail-body.is-empty { display: none; }
+.fd-ab-noward { display: grid; gap: 16px; padding: 28px 24px; }
+.fd-ab-under { align-items: baseline; display: flex; gap: 16px; justify-content: space-between; padding: 0 8px; }
+.fd-ab-under .fd-link-btn { flex: none; padding: 0; }
+.fd-swap-text { animation: fd-in 0.4s var(--ease-out) both; }
+
+@media (max-width: 960px) {
+  .fd-ab-grid { gap: 40px; grid-template-columns: minmax(0, 1fr); }
+  .fd-ab-hero { padding: 48px 0 28px; }
+}
+@media (max-width: 480px) {
+  .fd-ab-topic { padding: 12px; }
+  .fd-ab-send-row { flex-direction: column; }
+  .fd-mail-head { padding: 12px 16px 14px; }
+  .fd-ab-under { flex-direction: column; gap: 6px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fd-switch, .fd-switch::before { transition: none; }
+  .fd-ab-count.is-pop, .fd-swap-text { animation: none; }
+}
+
+/* --- Metric dictionary ------------------------------------------------------------------
+   metric_details.js draws the entries with the old class names. These rules give them the
+   front door look on this page only; the map page's tooltips keep the old styles. */
+
+.fd-dict-hero { padding: 72px 0 32px; }
+.fd-dict-search { align-items: center; background: var(--fill); border-radius: 14px; display: flex; gap: 10px; margin-top: 12px; max-width: 560px; padding: 0 16px; }
+.fd-dict-search svg { fill: none; flex: none; height: 18px; stroke: var(--ink-3); stroke-linecap: round; stroke-width: 1.8; width: 18px; }
+.fd-theme .fd-dict-search input { background: transparent; border: 0; box-shadow: none; flex: 1; min-height: 48px; min-width: 0; padding: 0; }
+.fd-theme .fd-dict-search input:focus { box-shadow: none; }
+.fd-dict-search:focus-within { box-shadow: 0 0 0 3px rgb(0 113 227 / 20%); }
+.fd-dict-search input::-webkit-search-cancel-button { cursor: pointer; }
+.fd-dict-count { color: var(--ink-3); flex: none; font-size: 14px; font-variant-numeric: tabular-nums; }
+.fd-dict-body { padding: 8px 0 96px; }
+.fd-dict-none { background: var(--fill); border-radius: 18px; color: var(--ink-2); padding: 24px 28px; }
+.fd-dict-none[hidden] { display: none; }
+/* metric_details.js writes a bare paragraph when the catalog can't load. Give it a real message box. */
+.fd-dict .metric-transparency-content > p:only-child { background: var(--fill); border-radius: 18px; color: var(--ink-2); padding: 24px 28px; }
+
+.fd-dict-skel { display: grid; gap: 56px; grid-template-columns: 220px minmax(0, 1fr); }
+.fd-dict-skel .fd-skel-stack { align-content: start; gap: 18px; }
+.fd-dict-skel-row { border-top: 1px solid var(--hair); display: grid; gap: 10px; padding-top: 18px; }
+
+.fd-dict .metric-transparency-content { color: var(--ink); display: block; padding: 0; }
+.fd-dict .metric-transparency-content.is-drawn { animation: fd-in 0.45s var(--ease-out) both; }
+
+/* Method note */
+.fd-dict .calculation-note { background: var(--fill); border: 0; border-radius: 18px; color: var(--ink-2); display: grid; font-size: 15px; gap: 8px; line-height: 1.5; margin-bottom: 48px; max-width: 760px; padding: 20px 24px; }
+.fd-dict .calculation-note p { margin: 0; }
+.fd-dict .transparency-meta { color: var(--ink-3); font-size: 14px; }
+
+/* Layout: domain list on the left, entries on the right */
+.fd-dict .metric-domain-layout { display: grid; gap: 56px; grid-template-columns: 220px minmax(0, 1fr); }
+.fd-dict .metric-domain-toc { align-self: start; background: none; border: 0; border-radius: 0; gap: 2px; max-height: calc(100vh - 100px); overflow-y: auto; padding: 0; position: sticky; top: 84px; }
+.fd-dict .metric-domain-toc .eyebrow { color: var(--ink-3); font-size: 13px; font-weight: 600; letter-spacing: 0; margin: 0 0 8px 10px; text-transform: none; }
+.fd-dict .metric-domain-toc-link { border-radius: 10px; color: var(--ink); font-size: 15px; font-weight: 400; padding: 7px 10px; text-decoration: none; transition: background 0.15s ease, color 0.15s ease; }
+.fd-dict .metric-domain-toc-link:hover, .fd-dict .metric-domain-toc-link:focus-visible { background: var(--fill); color: var(--ink); text-decoration: none; }
+.fd-dict .metric-domain-toc-link[aria-current] { background: var(--fill); font-weight: 600; }
+.fd-dict .metric-domain-toc-link strong { background: none; color: var(--ink-3); font-size: 13px; font-variant-numeric: tabular-nums; font-weight: 400; padding: 0; }
+.fd-dict .metric-domain-toc-link.is-empty { opacity: 0.35; }
+
+.fd-dict .metric-domain-panels { display: grid; gap: 72px; }
+.fd-dict .metric-domain-panel { background: none; border: 0; border-radius: 0; display: grid; gap: 20px; padding: 0; scroll-margin-top: 84px; }
+.fd-dict .metric-domain-panel[hidden] { display: none; }
+.fd-dict .metric-domain-heading { gap: 6px; }
+.fd-dict .metric-domain-heading .eyebrow { color: var(--ink-2); font-size: 15px; font-weight: 600; letter-spacing: -0.01em; margin: 0; text-transform: none; }
+.fd-dict .metric-domain-heading h4 { font-size: clamp(28px, 3.4vw, 36px); font-weight: 700; letter-spacing: -0.025em; line-height: 1.1; }
+.fd-dict .metric-domain-heading p:not(.eyebrow):not(.transparency-meta) { color: var(--ink-2); font-size: 17px; }
+
+/* Entries: ruled rows that open in place */
+.fd-dict .metric-definition-list { border-bottom: 1px solid var(--hair); display: block; }
+.fd-dict .metric-definition-card { background: none; border: 0; border-radius: 0; border-top: 1px solid var(--hair); overflow: visible; padding: 0; }
+.fd-dict .metric-definition-card[hidden] { display: none; }
+.fd-dict .metric-definition-card[open] { border-color: var(--hair); }
+.fd-dict .metric-definition-summary { border-radius: 12px; display: grid; gap: 4px; margin: 0 -12px; padding: 18px 44px 18px 12px; position: relative; transition: background 0.15s ease; }
+.fd-dict .metric-definition-summary:hover { background: #fafafc; }
+.fd-dict .metric-definition-summary:focus-visible { outline: 3px solid rgb(0 113 227 / 40%); outline-offset: -3px; }
+.fd-dict .metric-definition-summary::after {
+  border-bottom: 1.8px solid var(--ink-3);
+  border-right: 1.8px solid var(--ink-3);
+  content: "";
+  height: 8px;
+  position: absolute;
+  right: 18px;
+  top: 26px;
+  transform: rotate(45deg);
+  transition: transform 0.3s var(--ease-out);
+  width: 8px;
+}
+.fd-dict .metric-definition-card[open] > .metric-definition-summary::after { transform: translateY(3px) rotate(225deg); }
+.fd-dict .metric-definition-heading { justify-content: flex-start; }
+.fd-dict .metric-definition-title { color: var(--ink); font-size: 17px; font-weight: 600; letter-spacing: -0.015em; }
+.fd-dict .metric-definition-summary > span:last-child { color: var(--ink-2); font-size: 15px; line-height: 1.45; max-width: 68ch; }
+
+/* Every live measure used to say "Available". Only the exceptions get a label now. */
+.fd-dict .metric-status-badge { background: var(--fill); border: 0; color: var(--ink-2); font-size: 12px; font-weight: 600; letter-spacing: 0; padding: 4px 9px; text-transform: none; }
+.fd-dict .metric-status-badge.is-populated { display: none; }
+
+.fd-dict .metric-definition-body { animation: fd-in 0.35s var(--ease-out) both; border: 0; color: var(--ink-2); font-size: 15px; gap: 14px; line-height: 1.55; max-width: 760px; padding: 0 0 24px; }
+.fd-dict .metric-definition-body strong { color: var(--ink); font-weight: 600; }
+.fd-dict .metric-definition-meta { background: var(--fill); border-radius: 14px; gap: 16px 24px; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 18px 20px; }
+.fd-dict .metric-definition-meta div { align-content: start; gap: 3px; }
+.fd-dict .metric-definition-meta dt { color: var(--ink-3); font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; }
+.fd-dict .metric-definition-meta dd { color: var(--ink); font-size: 14px; line-height: 1.4; margin: 0; }
+.fd-dict .metric-definition-meta a { color: var(--link); font-weight: 400; text-decoration: none; }
+.fd-dict .metric-definition-meta a:hover { text-decoration: underline; }
+.fd-dict .metric-nominator-attribution { background: none; border: 1px solid var(--hair); border-radius: 14px; padding: 14px 18px; }
+.fd-dict .metric-nominator-attribution .eyebrow { color: var(--ink-3); font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; }
+.fd-dict .metric-nominator-attribution h5 { font-size: 15px; font-weight: 600; }
+.fd-dict .metric-definition-card.is-highlighted > .metric-definition-summary { background: rgb(0 113 227 / 8%); }
+
+@media (max-width: 960px) {
+  .fd-dict .metric-domain-layout, .fd-dict-skel { gap: 32px; grid-template-columns: minmax(0, 1fr); }
+  .fd-dict-skel > .fd-skel-stack:first-child { display: none; }
+  .fd-dict .metric-domain-toc { display: flex; gap: 6px; margin: 0 -22px; max-height: none; overflow-x: auto; padding: 4px 22px 8px; position: static; scrollbar-width: none; }
+  .fd-dict .metric-domain-toc::-webkit-scrollbar { display: none; }
+  .fd-dict .metric-domain-toc .eyebrow { display: none; }
+  .fd-dict .metric-domain-toc-link { background: var(--fill); border-radius: 980px; flex: none; gap: 8px; font-size: 14px; padding: 7px 14px; white-space: nowrap; }
+  .fd-dict .metric-definition-meta { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .fd-dict-hero { padding: 48px 0 24px; }
+}
+@media (max-width: 480px) {
+  .fd-dict .metric-definition-meta { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fd-dict .metric-definition-body, .fd-dict .metric-transparency-content.is-drawn { animation: none; }
+  .fd-dict .metric-definition-summary::after { transition: none; }
+}
+
+/* ==========================================================================
+   Dark mode, page by page. Tokens above do most of the work; these rules cover what raw
+   colors, images and older markup need. Dark-only rules start with html.is-dark. The map
+   page section also restyles /map in light mode (scoped to body:not(.fd-theme)).
+   ========================================================================== */
+
+/* --- Home page and the SVG maps ------------------------------------------------------------ */
+
+/* Map ramp and empty-fill colors, used by civic_map.js and the map-painting code in
+   frontdoor.js (RAMP, the map.paint placeholder) plus the legend swatches below. Light values
+   equal the exact hex already in frontdoor.js and the home.html legend, so light mode is
+   unchanged. Raw hex, not the shared tokens, because these are chart-style ramp colors, not UI
+   surface colors. */
+:root {
+  --map-empty: #e8e8ed;
+  --ramp-0: #e3eefc;
+  --ramp-1: #b7d3f7;
+  --ramp-2: #7fb1ee;
+  --ramp-3: #3f86e0;
+  --ramp-4: #0a5cc2;
+}
+html.is-dark {
+  --map-empty: #3a3a3c;
+  --ramp-0: #33404e;
+  --ramp-1: #2c5478;
+  --ramp-2: #2f74ad;
+  --ramp-3: #2f97e0;
+  --ramp-4: #0a84ff;
+}
+
+/* Civic map (civic_map.js): shape fill, boundary strokes and the hover tooltip. The light strokes
+   read as seams against a white card or page. On black they need to be tokens instead. */
+html.is-dark .cm-area { fill: var(--map-empty); stroke: var(--bg); }
+html.is-dark .cm-area.is-empty { fill: #48484a !important; } /* raw: a hair lighter than --map-empty so "no data" still reads as its own shade */
+html.is-dark .cm-area.is-hover { stroke: var(--ink); }
+html.is-dark .cm-area.is-selected { stroke: var(--ink); }
+
+html.is-dark .cm-tip { background: var(--glass-strong); box-shadow: var(--shadow-pop); }
+html.is-dark .cm-tip strong { color: var(--ink); }
+html.is-dark .cm-tip span { color: var(--ink); }
+html.is-dark .cm-tip em { color: var(--ink-2); }
+
+/* Home explorer: the card was still a hardcoded white box with a light shadow, and the chips sat
+   on that same white with no dark background of their own, which is what made them unreadable. */
+html.is-dark .fd-explore { background: var(--card); box-shadow: var(--shadow-lg); }
+html.is-dark .fd-chips button { background: var(--card); }
+html.is-dark .fd-chips button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+
+/* Legend swatches are inline-styled in home.html, so !important is needed to switch them; order
+   matches the RAMP array in frontdoor.js, worst to best. */
+html.is-dark .fd-legend i:nth-of-type(1) { background: var(--ramp-0) !important; }
+html.is-dark .fd-legend i:nth-of-type(2) { background: var(--ramp-1) !important; }
+html.is-dark .fd-legend i:nth-of-type(3) { background: var(--ramp-2) !important; }
+html.is-dark .fd-legend i:nth-of-type(4) { background: var(--ramp-3) !important; }
+html.is-dark .fd-legend i:nth-of-type(5) { background: var(--ramp-4) !important; }
+
+/* Source chips ("How it stays free" section) are a hardcoded white pill inside a fill section,
+   matching the fd-fill card pattern used elsewhere in dark mode. */
+html.is-dark .fd-sources span { background: var(--card); }
+
+/* Mini maps on /for/residents and /for/business: the hover fill was a light blue that glowed on
+   black, and the hover and selected strokes were hardcoded white to match a white page. */
+html.is-dark .fd-minimap .cm-area.is-selected { stroke: var(--bg); }
+html.is-dark .fd-minimap .cm-area.is-hover:not(.is-selected) { fill: var(--ramp-2) !important; stroke: var(--bg); }
+
+/* --- Report card and neighborhood snapshot ------------------------------------------------- */
+
+/* Rank dot: the white ring is a light-page cutout, so it has to switch with the page. */
+html.is-dark .fd-dot { border-color: var(--bg); }
+
+/* Plan comparison cards on /for/business (free vs $120 a year). */
+html.is-dark .fd-tier { background: var(--card); }
+
+/* Mini map beside the report: swap the selection ring and hover tint for a dark page. */
+html.is-dark .fd-minimap .cm-area.is-selected { stroke: var(--bg); }
+html.is-dark .fd-minimap .cm-area.is-hover:not(.is-selected) { fill: var(--blue-wash-2) !important; stroke: var(--bg); }
+
+/* Viewing bar chips, shown for a shared ward link like #ward=42. */
+html.is-dark .fd-chip-btn { background: var(--blue-wash); color: var(--link); }
+html.is-dark .fd-chip-btn:hover { background: var(--blue-wash-2); }
+
+/* Green "your ward" pill: no wash token for --good, so hand-match its dark value at low opacity. */
+html.is-dark .fd-your-ward { background: rgb(48 209 88 / 16%); }
+
+/* Print stays light even in dark mode. The snapshot's print button on /for/business is the only
+   print feature on the site, and a dark page wastes ink. Resetting the tokens back to their light
+   values for print covers every element that reads them, not just this lane's own rules. */
+@media print {
+  html.is-dark {
+    --bg: #fff;
+    --blue: #0071e3;
+    --blue-hover: #0077ed;
+    --blue-wash: rgb(0 113 227 / 10%);
+    --blue-wash-2: rgb(0 113 227 / 16%);
+    --card: #fff;
+    --edge: transparent;
+    --field: #fff;
+    --fill: #f5f5f7;
+    --fill-2: #e8e8ed;
+    --focus: rgb(0 113 227 / 40%);
+    --glass: rgb(255 255 255 / 82%);
+    --glass-line: rgb(0 0 0 / 8%);
+    --glass-strong: rgb(255 255 255 / 92%);
+    --good: #1f7a35;
+    --hair: #e8e8ed;
+    --ink: #1d1d1f;
+    --ink-2: #6e6e73;
+    --ink-3: #707075;
+    --ink-soft: #424245;
+    --line: #d2d2d7;
+    --link: #0066cc;
+    --shadow-lg: 0 30px 80px rgb(0 0 0 / 10%), 0 2px 6px rgb(0 0 0 / 4%);
+    --shadow-pop: 0 24px 60px rgb(0 0 0 / 18%), 0 0 0 1px rgb(0 0 0 / 6%);
+    --shadow-sm: 0 1px 4px rgb(0 0 0 / 12%);
+    --skel-a: #f2f2f5;
+    --skel-b: #e7e7ec;
+    --skel-fill-a: #e9e9ee;
+    --skel-fill-b: #dedee4;
+    --thumb: #fff;
+    --weak: #b64400;
+  }
+  /* The green pill's wash isn't a token (see above), so match it back by hand too. */
+  html.is-dark .fd-your-ward { background: rgb(36 138 61 / 10%); }
+  /* The mini map's own fill isn't a token either (it's the home lane's ramp color, not ours), and
+     it printed solid black during testing. Put back the light values here too so the map prints
+     the way it does today, since this snapshot page is the only print feature on the site. */
+  html.is-dark .fd-minimap .cm-area { fill: #e8e8ed !important; stroke: #fff !important; }
+  html.is-dark .fd-minimap .cm-area.is-empty { fill: #f2f2f4 !important; }
+  html.is-dark .fd-minimap .cm-area.is-selected { fill: #0071e3 !important; stroke: #fff !important; }
+  html.is-dark .fd-minimap .cm-area.is-hover:not(.is-selected) { fill: #cfd9e6 !important; stroke: #fff !important; }
+}
+
+/* --- Planners, membership and join --------------------------------------------------------- */
+
+/* Pages: /for/planning, /guild, /guild/join. */
+
+/* --- Planning ------------------------------------------------------------ */
+/* fd-list (the housing "Most"/"Fewest" lists) already runs on tokens (--hair, --ink-3, --ink),
+   so nothing in this section needs a color fix. */
+
+/* --- Membership: tiers, calc, split bar, table, rules, seats, founders, faq -------- */
+
+/* guild.html always sets an inline background on .fd-tier, so this only matters if that
+   inline style is ever dropped, or on another page that renders .fd-tier without it. */
+html.is-dark .fd-tier { background: var(--card); }
+html.is-dark .fd-calc-result { background: var(--card); }
+html.is-dark .fd-seat { background: var(--card); }
+
+/* Split bar segments and their legend dots: raw colors, because these four blocks sit right
+   on the page background (#000) and need to stay visually distinct there, not just on white. */
+html.is-dark .fd-s1 { background: #48484a; }
+html.is-dark .fd-s2 { background: var(--blue); }
+html.is-dark .fd-s3 { background: #8e8e93; }
+html.is-dark .fd-s4 { background: #d1d1d6; }
+
+/* s3 and s4 are light enough that the white label text from styles.css fails contrast, so
+   those two segments switch to dark text. s1 and s2 stay dark and keep the white text. */
+html.is-dark .fd-s3, html.is-dark .fd-s4 { color: #1d1d1f; }
+
+/* --- Join ------------------------------------------------------------------ */
+/* fd-steps, fd-step, fd-tierline, fd-review and the done panel already run on tokens
+   (--hair, --ink, --blue, --fill, --good), so nothing in this section needs a color fix. */
+
+/* --- Alert builder ------------------------------------------------------------------------- */
+
+/* Topic list: icon tile and divider were plain white or light gray, give them a dark surface */
+html.is-dark .fd-ab-icon { background: var(--fill-2); }
+html.is-dark .fd-ab-topic:hover { background: var(--fill-2); }
+html.is-dark .fd-ab-topics li + li::before { background: var(--hair); }
+
+/* Count badge blue read under 4.5:1 on the dark fill, the site's brighter link blue clears it */
+html.is-dark .fd-ab-count { color: var(--link); }
+
+/* iOS switch: off track was near invisible on dark, the raised-surface token gives it contrast */
+html.is-dark .fd-switch { background: var(--thumb); }
+html.is-dark .fd-switch:checked { background: var(--blue); }
+html.is-dark .fd-switch:focus-visible { outline-color: var(--focus); }
+
+/* Mail window chrome goes dark. The email card inside stays light on purpose, it is what gets
+   mailed and its own padding is set inline so a mail client's theme renders it, not ours. */
+html.is-dark .fd-mail { background: var(--card); }
+html.is-dark .fd-mail-bar i { background: var(--thumb); }
+html.is-dark .fd-mail-body { background: var(--fill-2); }
+
+/* --- About and the metric dictionary ------------------------------------------------------- */
+
+/* --- About: metric growth tooltip (about.js old classes) ------------------ */
+
+html.is-dark .fd-about .spark-tip { background: var(--card); box-shadow: var(--shadow-pop), 0 0 0 1px var(--edge); }
+html.is-dark .fd-about .spark-tip-date { color: var(--ink-2); }
+html.is-dark .fd-about .spark-tip-empty { color: var(--ink-2); }
+html.is-dark .fd-about .spark-tip-list li { color: var(--ink); }
+html.is-dark .fd-about .spark-tip-list li.spark-tip-more { color: var(--ink-2); }
+html.is-dark .fd-about .about-metric-now { color: var(--ink); }
+
+/* --- Metric dictionary: entry rows, focus states, nominator (metric_details.js old classes) --- */
+
+html.is-dark .fd-dict .metric-definition-summary:hover { background: var(--fill); }
+html.is-dark .fd-dict .metric-definition-summary:focus-visible { outline-color: var(--focus); }
+html.is-dark .fd-dict .metric-definition-card.is-highlighted > .metric-definition-summary { background: var(--blue-wash); }
+html.is-dark .fd-dict .metric-nominator-attribution h5 { color: var(--ink); }
+html.is-dark .fd-dict-search:focus-within { box-shadow: 0 0 0 3px var(--blue-wash-2); }
+
+/* --- The map page (/map): new-design look in both themes, plus dark ------------------------ */
+
+/* Dark mode + light restyle: map-app lane (/map, templates/explorer.html + static/explorer.js).
+   Scope change from the swarm coordinator: /map is being restyled to the new look in BOTH themes,
+   not just darkened. Dark-only rules start with html.is-dark. Rules that also change light mode
+   are scoped to body:not(.fd-theme) instead: /map is the one template with no fd-theme body
+   class, so that selector reaches this page only and can never leak into another lane's page. */
+
+/* Old map-app tokens, remapped onto the new site tokens so one change covers both themes (the new
+   tokens already switch with html.is-dark). Set on <html>, not body: explorer.js reads several of
+   these via getComputedStyle(document.documentElement) for the Leaflet choropleth, and a property
+   set on body is invisible to that read even though it would inherit fine into body's own
+   descendants. html:has(body:not(.fd-theme)) keeps this to /map for both consumers. */
+html:has(body:not(.fd-theme)) {
+  --action: var(--blue);
+  --action-hover: var(--blue-hover);
+  --background: var(--bg);
+  --border: var(--line);
+  --brand-accent: var(--blue);
+  --brand-accent-dark: var(--blue-hover);
+  --brand-wash: var(--blue-wash);
+  --map-fill: #86868b; /* matches --ink-3, which is the same hex in both themes */
+  --muted-text: var(--ink-2);
+  --score-high: #0a5cc2; /* home page's blue ramp, darkest step: highest score */
+  --score-low: #e3eefc; /* home page's blue ramp, lightest step: lowest score */
+  --score-mid: #7fb1ee; /* home page's blue ramp, middle step */
+  --selected-ward: #0071e3; /* site blue; a plain hex, not var(--blue), for the JS read above */
+  --shadow: var(--shadow-lg);
+  --surface: var(--card);
+  --surface-muted: var(--fill);
+  --surface-strong: #3a3a3c; /* fixed dark chip for the "high priority" toggle state, kept apart
+    from the blue "selected" state so the two stay visually distinct in both themes */
+  --text: var(--ink);
+  --ward-outline: #86868b; /* unselected ward border on the map; see explorer.js wardStyle() */
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+/* Score ramp only: the light steps above would nearly disappear on a darkened basemap at the
+   choropleth's low fill-opacity (0.44/0.72), so dark mode runs a brighter band of the same blue
+   instead of reusing the light ramp's near-black high end. Everything else in the block above
+   already switches on its own (it points at tokens like var(--card) that flip with html.is-dark),
+   so only the three literal ramp steps need a second definition here. */
+html.is-dark:has(body:not(.fd-theme)) {
+  /* A wider band plus a stronger fill. At the light theme's 0.44 opacity over the dark basemap the
+     whole ramp collapsed into one slate blue and wards couldn't be told apart. */
+  --score-high: #5eb0ff;
+  --score-low: #1f3148;
+  --score-mid: #2f74ad;
+  --ward-fill-opacity: 0.85;
+}
+
+/* The page background itself, not just the --background token: the original rule layers two
+   hardcoded warm/cool radial gradients on top of the variable, so remapping the token alone still
+   left faint orange and teal glows bleeding through in both themes. */
+body:not(.fd-theme) { background: var(--bg); }
+
+/* --- Header bar, tabs above the map ----------------------------------------------------- */
+
+body:not(.fd-theme) .visualizer-header { background: var(--card); border-color: var(--line); box-shadow: var(--shadow-sm); }
+body:not(.fd-theme) .visualizer-header::after { background: none; } /* was a warm diagonal accent stripe */
+body:not(.fd-theme) .visualizer-tabs { background: var(--fill); border-color: var(--line); box-shadow: var(--shadow-sm); }
+body:not(.fd-theme) .visualizer-tabs button { font-weight: 600; }
+body:not(.fd-theme) .visualizer-tabs button.is-active { box-shadow: var(--shadow-sm); }
+
+body:not(.fd-theme) .eyebrow,
+body:not(.fd-theme) .metric-domain-label { font-weight: 600; letter-spacing: normal; text-transform: none; }
+
+/* --- Map card, floating map controls ----------------------------------------------------- */
+
+body:not(.fd-theme) .map-card,
+body:not(.fd-theme) .panel { border-color: var(--line); }
+body:not(.fd-theme) #map { background: var(--fill); }
+
+body:not(.fd-theme) .map-shade-loading,
+body:not(.fd-theme) .metric-loading-status { background: var(--card); border-color: var(--line); box-shadow: var(--shadow-sm); font-weight: 600; }
+
+body:not(.fd-theme) .map-detail-toggle { background: var(--card); border-color: var(--line); box-shadow: var(--shadow-sm); font-weight: 600; }
+body:not(.fd-theme) .map-detail-toggle:hover,
+body:not(.fd-theme) .map-detail-toggle:focus-within { background: var(--fill); border-color: var(--blue); }
+
+body:not(.fd-theme) .area-type-toggle { background: var(--card); border-color: var(--line); box-shadow: var(--shadow-sm); }
+body:not(.fd-theme) .area-type-toggle button { border-left-color: var(--line); }
+
+body:not(.fd-theme) .metric-toggle.is-high:hover { background: #4a4a4d; border-color: #4a4a4d; }
+
+/* --- Metric loading state ------------------------------------------------------------------ */
+
+body:not(.fd-theme) .metric-loading-tile {
+  background: linear-gradient(110deg, transparent 24%, color-mix(in srgb, var(--card) 78%, transparent) 38%, transparent 52%), var(--fill);
+  border-color: var(--line);
+}
+body:not(.fd-theme) .metric-loading-spinner { border-color: color-mix(in srgb, var(--blue) 16%, transparent); }
+body:not(.fd-theme) .metric-loading-error { background: var(--fill); }
+
+/* --- Wellbeing equation bar + methodology modal content ----------------------------------- */
+
+body:not(.fd-theme) .wellbeing-equation { background: var(--fill); border-color: var(--line); }
+body:not(.fd-theme) .methodology-equation { border-bottom-color: var(--hair); }
+body:not(.fd-theme) .methodology-caveat p,
+body:not(.fd-theme) .methodology-metrics,
+body:not(.fd-theme) .methodology-empty { color: var(--ink-2); }
+
+/* --- Metric panel: buttons, chips, tooltip, status badges --------------------------------- */
+
+body:not(.fd-theme) .metric-secondary-action { font-weight: 600; }
+body:not(.fd-theme) .metric-secondary-action:hover { background: var(--blue-wash); border-color: color-mix(in srgb, var(--blue) 38%, transparent); color: var(--blue-hover); }
+body:not(.fd-theme) .details-close { font-weight: 600; }
+body:not(.fd-theme) .metric-chip { font-weight: 600; }
+body:not(.fd-theme) .metric-component-row { background: var(--card); }
+body:not(.fd-theme) .metric-recommendation-link { color: var(--link); font-weight: 600; }
+body:not(.fd-theme) .surprise-button { font-weight: 600; }
+
+/* Floating tooltips read as small popover cards, matching the rest of the site, instead of a
+   permanently dark chat bubble. The old bubble used --surface-strong for its background and a
+   hardcoded white for its text; remapping --surface-strong for the "high priority" toggle above
+   would have made this bubble go light with still-white text in dark mode, so it gets its own
+   rule instead of inheriting that variable. */
+body:not(.fd-theme) .metric-button-tooltip,
+body:not(.fd-theme) .timeline-tooltip { background: var(--card); border: 1px solid var(--line); box-shadow: var(--shadow-lg); color: var(--ink); }
+body:not(.fd-theme) .metric-button-tooltip span,
+body:not(.fd-theme) .timeline-tooltip span { color: var(--ink-2); }
+body:not(.fd-theme) .metric-button-tooltip small,
+body:not(.fd-theme) .metric-tooltip-row small,
+body:not(.fd-theme) .timeline-tooltip small { color: var(--ink-3); }
+
+/* .metric-status-badge is shared with the dictionary page (rendered there by the same
+   metric_details.js helper), so every rule for it stays inside body:not(.fd-theme), which cannot
+   match dictionary.html (body class "fd-theme fd-dict"). */
+body:not(.fd-theme) .metric-status-badge { font-weight: 600; letter-spacing: normal; text-transform: none; }
+body:not(.fd-theme) .metric-status-badge.is-populated { background: var(--blue-wash); color: var(--link); }
+body:not(.fd-theme) .metric-status-badge.is-partially_populated,
+body:not(.fd-theme) .metric-status-badge.is-zero_records_observed { background: color-mix(in srgb, var(--weak) 16%, transparent); color: var(--weak); }
+body:not(.fd-theme) .metric-status-badge.is-source_pending,
+body:not(.fd-theme) .metric-status-badge.is-ingestion_not_implemented { background: var(--fill-2); color: var(--ink-2); }
+body:not(.fd-theme) .metric-status-badge.is-source_unavailable { background: rgb(215 0 21 / 12%); color: #d70015; } /* no red token on this site; Apple's system red */
+html.is-dark body:not(.fd-theme) .metric-status-badge.is-source_unavailable { background: rgb(255 69 58 / 16%); color: #ff453a; } /* dark-mode system red */
+
+/* --- Leaderboard (ranker) + ward details popover ------------------------------------------ */
+
+body:not(.fd-theme) .ward-details-popover { background: var(--card); border-color: var(--line); box-shadow: var(--shadow-lg); }
+body:not(.fd-theme) .comparison-header,
+body:not(.fd-theme) .comparison-row-title { font-weight: 600; }
+body:not(.fd-theme) .comparison-row { background: var(--card); }
+body:not(.fd-theme) .comparison-row.is-selected { box-shadow: 0 0 0 2px color-mix(in srgb, var(--blue) 24%, transparent); }
+body:not(.fd-theme) .comparison-row.is-hovered { box-shadow: var(--shadow-sm); }
+body:not(.fd-theme) .observation-list article { background: var(--card); }
+body:not(.fd-theme) .ward-label { box-shadow: var(--shadow-sm); font-weight: 600; }
+
+/* --- Settings / time / methodology modals -------------------------------------------------- */
+
+body:not(.fd-theme) .settings-field legend { font-weight: 600; }
+body:not(.fd-theme) input[type="radio"],
+body:not(.fd-theme) input[type="checkbox"] { accent-color: var(--blue); }
+
+/* Bug fix, not a theme change: this rule referenced --text-muted, a token that is never defined
+   anywhere in styles.css (the real one is --muted-text), so it always fell back to a hardcoded
+   slate gray regardless of theme. Pointing it at the real, now-remapped token fixes both modes. */
+body:not(.fd-theme) .time-modal-close,
+body:not(.fd-theme) .time-modal-hint { color: var(--ink-2); }
+
+/* --- Mobile bottom sheet ------------------------------------------------------------------- */
+
+@media (max-width: 640px) {
+  body:not(.fd-theme) .input-panel { box-shadow: var(--shadow-lg); }
+}
+
+/* --- Leaflet chrome ------------------------------------------------------------------------- */
+
+/* No zoom control renders (the map has dragging/zoom/scroll all disabled) and there is no
+   Leaflet popup (ward details use the custom #ward-details-popover panel instead), so the
+   attribution pill is the only stock Leaflet control on this page. */
+body:not(.fd-theme) .leaflet-control-attribution { background: var(--glass); border-radius: 6px; font-size: 10px; padding: 2px 6px; }
+body:not(.fd-theme) .leaflet-control-attribution,
+body:not(.fd-theme) .leaflet-control-attribution a { color: var(--ink-2); }
+
+/* Darkens the OpenStreetMap raster tiles only. The choropleth renders in Leaflet's SVG overlay
+   pane, a separate element from the tile pane, so it is never touched by this filter. Values
+   tuned so street lines and labels stay readable against the near-black page. */
+html.is-dark .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.9); }
+
+/* --- The map page, Apple layout ------------------------------------------------------------
+   Same app, same behavior. Panels float as borderless white cards on the gray page (dark: dark
+   cards on black), the leaderboard is a ruled list, and every control uses the site's own
+   segmented control, pills, switches and tiles. Scoped to body:not(.fd-theme), which only /map has. */
+
+body:not(.fd-theme) { background: var(--fill); }
+html.is-dark body:not(.fd-theme) { background: var(--bg); }
+body:not(.fd-theme) .explorer-layout { gap: 16px; padding: 16px; }
+
+/* Panels */
+body:not(.fd-theme) .map-card,
+body:not(.fd-theme) .panel { background: var(--card); border: 0; border-radius: 22px; box-shadow: 0 0 0 1px var(--edge), 0 1px 2px rgb(0 0 0 / 4%); }
+body:not(.fd-theme) #map { background: var(--card); }
+body:not(.fd-theme) .panel { gap: 16px; padding: 22px 24px; }
+body:not(.fd-theme) .input-card > .input-section { border-top: 0; padding-top: 0; }
+body:not(.fd-theme) .panel section + section { border-top-color: var(--hair); }
+
+/* Headings */
+body:not(.fd-theme) .panel h2,
+body:not(.fd-theme) .ranker-heading { color: var(--ink); font-size: 24px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; margin: 0; }
+body:not(.fd-theme) .input-panel-heading .eyebrow { color: var(--ink-2); font-size: 14px; font-weight: 600; letter-spacing: -0.01em; margin: 0 0 4px; }
+body:not(.fd-theme) .metric-weight-hint { color: var(--ink-2); font-size: 14px; letter-spacing: -0.01em; line-height: 1.45; text-wrap: pretty; }
+body:not(.fd-theme) .settings-button { border-radius: 50%; color: var(--ink-3); height: 30px; padding: 5px; width: 30px; }
+body:not(.fd-theme) .settings-button:hover { background: var(--fill); color: var(--ink); }
+
+/* Wards / Neighborhoods / χGRIDs: the site's segmented control */
+body:not(.fd-theme) .area-type-toggle { -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px); background: var(--glass); border: 0; border-radius: 980px; box-shadow: 0 0 0 1px var(--glass-line); gap: 2px; left: 16px; padding: 3px; top: 16px; }
+body:not(.fd-theme) .area-type-toggle button { border: 0; border-radius: 980px; color: var(--ink); font-size: 13px; font-weight: 500; letter-spacing: -0.01em; padding: 6px 14px; transition: background 0.2s ease, box-shadow 0.2s ease; }
+body:not(.fd-theme) .area-type-toggle button:hover { background: var(--fill); color: var(--ink); }
+body:not(.fd-theme) .area-type-toggle button.is-active { background: var(--thumb); box-shadow: var(--shadow-sm); color: var(--ink); font-weight: 600; }
+body:not(.fd-theme) .area-type-toggle button:focus-visible { outline: 3px solid var(--focus); outline-offset: 1px; }
+
+/* Map details: a pill holding the site's switch */
+body:not(.fd-theme) .map-detail-toggle { -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px); background: var(--glass); border: 0; box-shadow: 0 0 0 1px var(--glass-line); color: var(--ink); font-size: 13px; font-weight: 500; gap: 10px; padding: 5px 5px 5px 14px; }
+body:not(.fd-theme) .map-detail-toggle:hover,
+body:not(.fd-theme) .map-detail-toggle:focus-within { background: var(--glass-strong); border: 0; color: var(--ink); }
+body:not(.fd-theme) .map-detail-toggle .fd-switch { height: 22px; width: 36px; }
+body:not(.fd-theme) .map-detail-toggle .fd-switch::before { height: 18px; width: 18px; }
+body:not(.fd-theme) .map-detail-toggle .fd-switch:checked::before { transform: translateX(14px); }
+body:not(.fd-theme) .leaflet-control-attribution { background: transparent; }
+
+/* Top wards: a ruled list with rank numbers */
+body:not(.fd-theme) .comparison-table { gap: 0; }
+body:not(.fd-theme) .comparison-header { border-bottom: 1px solid var(--hair); color: var(--ink-2); font-size: 13px; font-weight: 600; margin: 12px 0 0; padding: 0 8px 8px 38px; }
+body:not(.fd-theme) .comparison-row { background: transparent; border: 0; border-bottom: 1px solid var(--hair); border-radius: 0; box-shadow: none; color: var(--ink); gap: 12px; grid-template-columns: 22px minmax(0, 1fr) auto; padding: 10px 8px; transform: none; transition: background 0.15s ease; }
+body:not(.fd-theme) .comparison-row:last-child { border-bottom: 0; }
+body:not(.fd-theme) .comparison-row:hover,
+body:not(.fd-theme) .comparison-row.is-hovered { background: var(--fill); border-radius: 12px; box-shadow: none; transform: none; }
+body:not(.fd-theme) .comparison-row.is-selected { background: var(--blue-wash); border-radius: 12px; box-shadow: none; }
+body:not(.fd-theme) .comparison-row:focus-visible { border-radius: 12px; outline: 3px solid var(--focus); outline-offset: -3px; }
+body:not(.fd-theme) .comparison-row-rank { color: var(--ink-3); font-size: 15px; font-variant-numeric: tabular-nums; font-weight: 600; text-align: right; }
+body:not(.fd-theme) .comparison-row-title { font-size: 16px; font-weight: 600; letter-spacing: -0.01em; }
+body:not(.fd-theme) .comparison-row-community-areas { color: var(--ink-2); font-size: 13px; }
+body:not(.fd-theme) .comparison-row > strong { color: var(--ink); font-size: 17px; font-variant-numeric: tabular-nums; font-weight: 600; letter-spacing: -0.01em; }
+body:not(.fd-theme) .comparison-row-main img { border-radius: 10px; }
+
+/* Measure picker: one blue button, soft gray pills, borderless tiles */
+body:not(.fd-theme) .metric-selection-actions { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; }
+body:not(.fd-theme) .metric-bulk-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+body:not(.fd-theme) .surprise-button { background: var(--blue); border: 0; color: #fff; flex: 0 0 auto; font-size: 14px; font-weight: 500; padding: 8px 16px; width: auto; }
+body:not(.fd-theme) .surprise-button:hover { background: var(--blue-hover); border: 0; color: #fff; }
+body:not(.fd-theme) .metric-secondary-action { background: var(--fill); border: 0; color: var(--ink); font-size: 14px; font-weight: 500; padding: 8px 14px; }
+body:not(.fd-theme) .metric-secondary-action:hover { background: var(--fill-2); border: 0; color: var(--ink); }
+body:not(.fd-theme) .metric-secondary-action.is-active { background: var(--blue-wash); color: var(--link); }
+body:not(.fd-theme) .surprise-button:focus-visible,
+body:not(.fd-theme) .metric-secondary-action:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+body:not(.fd-theme) .metric-domain-label { color: var(--ink-2); font-size: 13px; font-weight: 600; letter-spacing: -0.01em; }
+body:not(.fd-theme) .metric-domain-expand { color: var(--ink-3); font-size: 13px; font-weight: 500; }
+body:not(.fd-theme) .metric-domain-tiles { gap: 6px; }
+body:not(.fd-theme) .metric-toggle { background: var(--fill); border: 0; border-radius: 12px; color: var(--ink-2); transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, transform 0.12s ease; }
+body:not(.fd-theme) .metric-toggle:hover { background: var(--fill-2); border: 0; color: var(--ink); }
+body:not(.fd-theme) .metric-toggle:active { transform: scale(0.94); }
+body:not(.fd-theme) .metric-toggle.is-on,
+body:not(.fd-theme) .metric-toggle.is-on:hover { background: var(--blue); border: 0; color: #fff; }
+/* Top priority: the same blue with a ring, so there is still only one accent color. */
+body:not(.fd-theme) .metric-toggle.is-high,
+body:not(.fd-theme) .metric-toggle.is-high:hover { background: var(--blue); border: 0; box-shadow: inset 0 0 0 2px var(--card), 0 0 0 2px var(--blue); color: #fff; }
+body:not(.fd-theme) .metric-toggle:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+body:not(.fd-theme) .metric-recommendation-panel p { color: var(--ink-2); font-size: 14px; }
+
+/* Your score bar: readable measure names in soft chips */
+body:not(.fd-theme) .wellbeing-equation { align-items: center; background: var(--card); border: 0; border-radius: 16px; box-shadow: 0 0 0 1px var(--edge), 0 1px 2px rgb(0 0 0 / 4%); padding: 10px 12px 10px 16px; }
+body:not(.fd-theme) .wellbeing-equation p:not(.eyebrow) { color: var(--ink); font-size: 14px; }
+body:not(.fd-theme) .wellbeing-equation strong { font-weight: 600; margin-right: 6px; }
+body:not(.fd-theme) .eq-term { background: var(--fill); border-radius: 980px; display: inline-block; padding: 2px 10px; }
+body:not(.fd-theme) .eq-term b { color: var(--link); font-weight: 600; }
+body:not(.fd-theme) .eq-op { color: var(--ink-3); font-weight: 600; }
+body:not(.fd-theme) .delta-info { background: var(--fill); border: 0; color: var(--ink-2); font-style: normal; font-weight: 600; height: 24px; width: 24px; }
+body:not(.fd-theme) .delta-info:hover { background: var(--fill-2); color: var(--ink); }
+
+/* Pop-up windows */
+body:not(.fd-theme) .time-modal-box { background: var(--card); border: 0; border-radius: 22px; box-shadow: var(--shadow-pop); }
+body:not(.fd-theme) .time-modal-head h3 { font-size: 21px; font-weight: 700; letter-spacing: -0.02em; }
+body:not(.fd-theme) .time-modal-close { border-radius: 50%; font-size: 22px; }
+body:not(.fd-theme) .time-modal-close:hover { background: var(--fill); color: var(--ink); }
+body:not(.fd-theme) .time-control-toggle { align-items: center; display: flex; justify-content: space-between; }
+body:not(.fd-theme) .time-control-toggle .fd-switch { height: 28px; width: 46px; }
+body:not(.fd-theme) .settings-option span { display: grid; gap: 2px; }
+body:not(.fd-theme) .settings-option strong { color: var(--ink); font-weight: 600; }
+body:not(.fd-theme) .time-select { background-color: var(--field); border: 1px solid var(--line); border-radius: 10px; color: var(--ink); }
+
+/* Phone: the tab switch and the bottom sheet in the same language */
+@media (max-width: 640px) {
+  body:not(.fd-theme) .mobile-view-toggle { background: var(--card); border: 0; box-shadow: 0 0 0 1px var(--edge); padding: 3px; }
+  body:not(.fd-theme) .mobile-view-toggle button { border-radius: 980px; color: var(--ink); font-weight: 500; }
+  body:not(.fd-theme) .mobile-view-toggle button.is-active { background: var(--fill-2); color: var(--ink); font-weight: 600; }
+  body:not(.fd-theme) .input-panel { background: var(--card); border-top: 0; border-radius: 22px 22px 0 0; box-shadow: 0 -8px 30px rgb(0 0 0 / 12%), 0 0 0 1px var(--edge); }
+  body:not(.fd-theme) .mobile-strip-pill { background: var(--fill); border: 0; color: var(--ink); font-weight: 500; }
+  body:not(.fd-theme) .input-panel-expander { background: var(--fill); border: 0; color: var(--ink); }
+}
+
+/* Ward details: a frosted card with a ruled list, like the rest of the page */
+body:not(.fd-theme) .ward-details-popover { -webkit-backdrop-filter: saturate(180%) blur(24px); backdrop-filter: saturate(180%) blur(24px); background: var(--glass-strong); border: 0; border-radius: 22px; box-shadow: var(--shadow-pop); padding: 20px; }
+body:not(.fd-theme) .ward-details-popover h2 { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; margin: 0 0 14px; }
+body:not(.fd-theme) .ward-details-popover .eyebrow { color: var(--ink-2); font-size: 13px; font-weight: 600; margin: 0 0 2px; }
+body:not(.fd-theme) .ward-details-popover section + section { border-top: 0; padding-top: 6px; }
+body:not(.fd-theme) .details-close { background: var(--fill); border: 0; color: var(--ink); font-size: 13px; font-weight: 500; padding: 5px 12px; }
+body:not(.fd-theme) .details-close:hover { background: var(--fill-2); color: var(--ink); }
+body:not(.fd-theme) .score-card { background: var(--fill); border: 0; border-radius: 14px; padding: 14px 16px; }
+body:not(.fd-theme) .metric-score-card { border-left: 0; }
+body:not(.fd-theme) .ward-details-popover .score-card strong { font-size: 34px; font-variant-numeric: tabular-nums; font-weight: 700; letter-spacing: -0.02em; margin: 2px 0; }
+body:not(.fd-theme) .score-card span { color: var(--ink-2); font-size: 14px; }
+body:not(.fd-theme) .metric-component-list { gap: 0; }
+body:not(.fd-theme) .metric-component-row { background: transparent; border: 0; border-bottom: 1px solid var(--hair); border-radius: 0; padding: 10px 0; }
+body:not(.fd-theme) .metric-component-row:last-child { border-bottom: 0; }
+body:not(.fd-theme) .metric-component-row strong { color: var(--ink); font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+body:not(.fd-theme) .metric-component-row div:last-child strong { font-variant-numeric: tabular-nums; }
+body:not(.fd-theme) .metric-component-row span { color: var(--ink-2); font-size: 13px; }
+body:not(.fd-theme) .wellbeing-equation { flex-wrap: nowrap; }
+body:not(.fd-theme) .comparison-row.is-selected .comparison-row-rank { color: var(--ink); }
+body:not(.fd-theme) .comparison-row.is-selected .comparison-row-community-areas { color: var(--ink-soft); }
+/* The card that follows the cursor on the map is look-only. If it could take the mouse, it would
+   steal the hover from the area under it and close itself, which is the flicker. */
+.ward-details-popover.is-preview { pointer-events: none; }
+
+/* --- Connect (MCP) — the /connect page, owned by the MCP-connector feature -------------------- */
+
+.fd-copybox { align-items: center; background: var(--card); border-radius: 16px; box-shadow: 0 0 0 1px var(--edge); box-sizing: border-box; display: flex; gap: 12px; min-width: 0; padding: 8px 8px 8px 20px; width: 100%; }
+.fd-copybox code { color: var(--ink); flex: 1 1 auto; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 15px; min-width: 0; overflow-x: auto; white-space: nowrap; }
+.fd-copybox button { flex: none; }
+.fd-copybox button.is-copied { box-shadow: inset 0 0 0 1px var(--good); color: var(--good) !important; }
+
+.fd-cli { background: var(--card); border-radius: 16px; box-shadow: 0 0 0 1px var(--edge); box-sizing: border-box; margin: 0; max-width: 100%; overflow-x: auto; padding: 18px 20px; }
+.fd-cli code { color: var(--ink); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 14px; white-space: pre; }
+
+@media (max-width: 640px) {
+  .fd-copybox { flex-wrap: wrap; padding: 14px 14px 14px 18px; }
+  .fd-copybox code { flex-basis: 100%; }
+  .fd-copybox button { margin-left: auto; }
+}
+
+
+/* ---- Home: Ward Wise in Claude ----
+   An integrations card with one tile per way to connect, so it reads as a feature you plug in
+   and not as another centered pitch like the alerts block above it. */
+.fd-mcp .fd-mcp-card {
+  background: var(--card);
+  border-radius: 28px;
+  box-shadow: 0 0 0 1px var(--edge), var(--shadow-sm);
+  padding: 44px 48px;
+  display: grid;
+  gap: 36px;
+}
+.fd-mcp .fd-mcp-top { align-items: flex-start; display: flex; gap: 20px; min-width: 0; }
+.fd-mcp .fd-mcp-icon {
+  align-items: center;
+  background: var(--fill);
+  border-radius: 16px;
+  box-shadow: inset 0 0 0 1px var(--hair);
+  display: flex;
+  flex: none;
+  height: 60px;
+  justify-content: center;
+  width: 60px;
+}
+.fd-mcp .fd-mcp-copy { display: grid; gap: 8px; min-width: 0; }
+.fd-mcp .fd-mcp-kicker { color: var(--ink-2); font-size: 14px; font-weight: 600; letter-spacing: -0.01em; margin: 0; }
+.fd-mcp .fd-mcp-title { color: var(--ink); font-size: clamp(24px, 2.6vw, 30px); font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; margin: 0; }
+.fd-mcp .fd-mcp-sub { color: var(--ink-2); font-size: 17px; line-height: 1.45; margin: 0; max-width: 48ch; }
+.fd-mcp .fd-mcp-tiles { display: grid; gap: 16px; grid-template-columns: repeat(3, minmax(0, 1fr)); min-width: 0; }
+.fd-mcp .fd-mcp-tile {
+  background: var(--fill);
+  border-radius: 16px;
+  box-shadow: inset 0 0 0 1px var(--hair);
+  color: inherit;
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  min-width: 0;
+  padding: 18px 20px;
+  text-decoration: none !important;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.fd-mcp a.fd-mcp-tile:hover { box-shadow: inset 0 0 0 1px var(--line); transform: translateY(-2px); }
+.fd-mcp .fd-mcp-tile-label { color: var(--ink); font-size: 15px; font-weight: 600; margin: 0; }
+.fd-mcp .fd-mcp-tile-meta { color: var(--ink-2); font-size: 13px; margin: 0; }
+.fd-mcp .fd-mcp-tile-url {
+  color: var(--ink-2);
+  display: block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  line-height: 1.4;
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+.fd-mcp .fd-mcp-tile-cta { color: var(--link); font-size: 13px; font-weight: 600; margin-top: 2px; }
+.fd-mcp .fd-mcp-tile-cta::after { content: " \203A"; }
+.fd-mcp .fd-mcp-tile-code { cursor: default; }
+.fd-mcp .fd-mcp-code-row {
+  align-items: center;
+  background: var(--card);
+  border-radius: 10px;
+  box-shadow: inset 0 0 0 1px var(--hair);
+  display: flex;
+  gap: 8px;
+  margin-top: 2px;
+  min-width: 0;
+  padding: 8px 10px;
+}
+.fd-mcp .fd-mcp-code-row code {
+  color: var(--ink);
+  display: block;
+  flex: 1 1 auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fd-mcp .fd-mcp-copy-btn {
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px var(--line);
+  color: var(--link);
+  cursor: pointer;
+  flex: none;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 10px;
+}
+.fd-mcp .fd-mcp-copy-btn:hover { background: var(--blue-wash); }
+.fd-mcp .fd-mcp-copy-btn.is-copied { box-shadow: inset 0 0 0 1px var(--good); color: var(--good); }
+@media (max-width: 900px) {
+  .fd-mcp .fd-mcp-tiles { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 640px) {
+  .fd-mcp .fd-mcp-card { border-radius: 22px; padding: 28px 22px; }
+  .fd-mcp .fd-mcp-top { flex-direction: column; }
+  .fd-mcp .fd-mcp-icon { height: 52px; width: 52px; }
+}
+      
+
+/* About: the team, four cards with photos (same people and roles as the live site). */
+.fd-team { display: grid; gap: 20px; grid-template-columns: repeat(4, minmax(0, 1fr)); list-style: none; margin: 0; padding: 0; }
+.fd-team-card { align-content: start; display: grid; gap: 4px; justify-items: start; }
+.fd-team-card img { aspect-ratio: 1; border-radius: 18px; height: auto; margin-bottom: 10px; object-fit: cover; width: 100%; }
+.fd-team-card strong { color: var(--ink); font-size: 17px; font-weight: 600; }
+.fd-team-card span { color: var(--ink-2); font-size: 14px; }
+.fd-team-card a { color: var(--link); font-size: 14px; text-decoration: none; }
+.fd-team-card a:hover { text-decoration: underline; }
+@media (max-width: 760px) { .fd-team { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* For organizations: underline tabs shared by the planner and business pages.
+   Tabs switch sections of one area. Pills (.fd-seg) stay for in-place filters. */
+.fd-tabs { border-bottom: 1px solid var(--hair); display: flex; gap: 28px; justify-self: start; margin-bottom: 8px; max-width: 100%; }
+.fd-tabs a { align-items: center; box-shadow: inset 0 -2px 0 transparent; color: var(--ink-2); display: inline-flex; font-size: 15px; min-height: 44px; text-decoration: none; }
+.fd-tabs a:hover { color: var(--ink); }
+.fd-tabs a[aria-current="page"] { box-shadow: inset 0 -2px 0 var(--blue); color: var(--ink); font-weight: 600; }
+.fd-tabs a:focus-visible { border-radius: 4px; outline: 3px solid var(--focus); outline-offset: 2px; }
+.fd-tab-short { display: none; }
+@media (max-width: 520px) { .fd-tab-long { display: none; } .fd-tab-short { display: inline; } }
+[data-fd-chain-geo] { justify-self: start; max-width: 100%; }
+
+
+/* --- Header additions after the port: the "More" menu for the registry views, and the account
+   avatar for signed-in readers. Styled with the gn- tokens so they sit in Connor's header. ------ */
+.gn-more { position: relative; display: flex; align-items: center; }
+.gn-more-toggle { font: inherit; background: none; border: 0; color: inherit; cursor: pointer; padding: 0; opacity: 0.8; }
+.gn-more-toggle:hover, .gn-more-toggle.is-active { opacity: 1; }
+.gn-more-toggle::after { content: " ▾"; font-size: 0.8em; }
+.gn-more-menu { position: absolute; top: calc(100% + 12px); right: 0; min-width: 240px; max-height: 70vh; overflow: auto; background: var(--card); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow-lg, 0 12px 32px rgba(0,0,0,0.14)); padding: 10px 0; z-index: 60; }
+.gn-more-menu a { display: block; padding: 7px 18px; color: var(--ink); text-decoration: none; font-size: 14px; }
+.gn-more-menu a:hover, .gn-more-menu a[aria-current="page"] { background: var(--fill); }
+.gn-more-heading { margin: 8px 18px 2px; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--soft, #6e6e73); }
+.gn-account { position: relative; display: flex; align-items: center; }
+.gn-account .nav-account-button { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--line); background: var(--fill); color: var(--ink); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; display: grid; place-items: center; }
+.gn-account .nav-account-menu { position: absolute; top: calc(100% + 12px); right: 0; min-width: 200px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow-lg, 0 12px 32px rgba(0,0,0,0.14)); padding: 10px 0; z-index: 60; }
+.gn-account .nav-account-menu a { display: block; padding: 7px 18px; color: var(--ink); text-decoration: none; font-size: 14px; }
+.gn-account .nav-account-email { margin: 4px 18px 8px; font-size: 12px; color: var(--soft, #6e6e73); }
+@media (max-width: 720px) { .gn-more-menu { position: fixed; left: 12px; right: 12px; top: 64px; } }

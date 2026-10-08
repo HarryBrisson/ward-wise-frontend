@@ -235,9 +235,72 @@
     wireSparkTip(node, points);
   }
 
+  // --- Visual signifiers: a small rotating sample -----------------------------
+  // Upstream picked these server-side, which meant rendering the Support page read the
+  // civic-data repo (S3, in prod) inline. The same photos are already on the area
+  // endpoints, so the page can choose its own — same daily rotation, so returning
+  // visitors still see different corners of the city.
+  //
+  // Wards + neighborhoods only: χGRID labels are grid coordinates, meaningless as a
+  // photo caption here.
+  const SIGNIFIER_COUNT = 4;
+
+  function signifierEntries(areas, label) {
+    return areas
+      .map((area) => ({ area: label(area), signifier: area.visual_signifier || {} }))
+      .filter((entry) => entry.signifier.image_url)
+      .map((entry) => ({
+        area: entry.area,
+        subject: entry.signifier.name || entry.area,
+        image: entry.signifier.image_url,
+        alt: entry.signifier.alt || entry.signifier.name || entry.area,
+      }));
+  }
+
+  async function renderSignifiers() {
+    const node = document.getElementById("signifier-examples");
+    if (!node) return;
+    let entries = [];
+    try {
+      const [wards, areas] = await Promise.all([
+        getJson("/api/explorer/wards"),
+        getJson("/api/community-areas"),
+      ]);
+      entries = [
+        ...signifierEntries(wards.wards || [], (w) => `Ward ${w.ward_number || w.ward_id}`),
+        ...signifierEntries(areas.community_areas || [], (a) => a.display_name || a.name),
+      ];
+    } catch (error) {
+      return;  // the section reads fine without photos; no error state needed
+    }
+    if (!entries.length) return;
+
+    const offset = Math.floor(Date.now() / 86400000);  // rotate once a day
+    const step = Math.max(1, Math.floor(entries.length / SIGNIFIER_COUNT));
+    const picks = [];
+    for (let i = 0; i < Math.min(SIGNIFIER_COUNT, entries.length); i += 1) {
+      picks.push(entries[(offset + i * step) % entries.length]);
+    }
+
+    node.innerHTML = picks
+      .map(
+        (pick) => `
+      <figure class="signifier-example">
+        <img src="${esc(pick.image)}" alt="${esc(pick.alt)}" loading="lazy" referrerpolicy="no-referrer">
+        <figcaption>
+          <strong>${esc(pick.area)}</strong>
+          <span>${esc(pick.subject)}</span>
+        </figcaption>
+      </figure>`
+      )
+      .join("");
+    node.hidden = false;
+  }
+
   function init() {
     renderNominations();
     renderGrowth();
+    renderSignifiers();
   }
 
   if (document.readyState === "loading") {
@@ -245,31 +308,4 @@
   } else {
     init();
   }
-})();
-
-
-// Signifier photo examples on the Support page. The page is static, so the daily-rotating sample
-// the server used to render is fetched instead; same markup as before.
-(function () {
-  var root = document.getElementById("signifier-examples");
-  if (!root || !window.fetch) return;
-  var esc = (window.WardWiseExplorer && window.WardWiseExplorer.escapeHtml) || function (value) {
-    return String(value).replace(/[&<>"']/g, function (ch) {
-      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch];
-    });
-  };
-  fetch("/api/signifiers/examples?count=4", { headers: { Accept: "application/json" } })
-    .then(function (response) { return response.ok ? response.json() : { examples: [] }; })
-    .then(function (payload) {
-      var examples = (payload && payload.examples) || [];
-      if (!examples.length) return;
-      root.innerHTML = examples.map(function (example) {
-        return '<figure class="signifier-example">' +
-          '<img src="' + esc(example.image) + '" alt="' + esc(example.subject) + '" loading="lazy" referrerpolicy="no-referrer">' +
-          '<figcaption><strong>' + esc(example.area) + '</strong><span>' + esc(example.subject) + '</span></figcaption>' +
-          '</figure>';
-      }).join("");
-      root.hidden = false;
-    })
-    .catch(function () { /* the Support page reads fine without the photos */ });
 })();

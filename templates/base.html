@@ -3,8 +3,57 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{% block title %}Ward Wise Penlight{% endblock %}</title>
-    {# Which build of github.com/HarryBrisson/ward-wise-frontend rendered this page. The deploy's
+    {# Lets CSS hide scroll-reveal content only when a script is there to reveal it. #}
+    <script>document.documentElement.classList.add("fd-js");</script>
+    {# Light or dark, decided before anything paints so a dark page never flashes white.
+       Saved choice wins (wardwise:theme = light | dark | auto). With nothing saved the site starts light. #}
+    <script>
+      (function () {
+        var KEY = "wardwise:theme";
+        var root = document.documentElement;
+        var media = window.matchMedia("(prefers-color-scheme: dark)");
+        function pref() {
+          try { var v = localStorage.getItem(KEY); return v === "dark" || v === "auto" ? v : "light"; } catch (e) { return "light"; }
+        }
+        function apply(animate) {
+          var p = pref();
+          var dark = p === "dark" || (p === "auto" && media.matches);
+          if (animate) {
+            root.classList.add("is-theming");
+            setTimeout(function () { root.classList.remove("is-theming"); }, 450);
+          }
+          root.classList.toggle("is-dark", dark);
+          // the older pages' rules key off :root[data-theme="dark"]; keep both halves in step
+          root.setAttribute("data-theme", dark ? "dark" : "classic");
+          root.setAttribute("data-theme-pref", p);
+          root.style.colorScheme = dark ? "dark" : "light";
+          document.dispatchEvent(new CustomEvent("fd:theme", { detail: { dark: dark, pref: p } }));
+        }
+        apply(false);
+        var onSystem = function () { if (pref() === "auto") apply(true); };
+        if (media.addEventListener) media.addEventListener("change", onSystem); else media.addListener(onSystem);
+        window.addEventListener("storage", function (e) { if (e.key === KEY) apply(true); });
+        // Two vocabularies meet here: the redesign says light / dark / auto; the older map script
+        // (explorer.js) says classic / dark / system. Both work; the saved value is the new one.
+        var toNew = { classic: "light", system: "auto", light: "light", dark: "dark", auto: "auto" };
+        var toOld = { light: "classic", auto: "system", dark: "dark" };
+        window.WardWiseTheme = {
+          pref: pref,
+          preference: function () { return toOld[pref()]; },
+          current: function () { return root.classList.contains("is-dark") ? "dark" : "classic"; },
+          isDark: function () { return root.classList.contains("is-dark"); },
+          set: function (p) {
+            p = toNew[p] || "light";
+            try { if (p === "light") localStorage.removeItem(KEY); else localStorage.setItem(KEY, p); } catch (e) {}
+            apply(true);
+          },
+          toggle: function () { window.WardWiseTheme.set(root.classList.contains("is-dark") ? "light" : "dark"); }
+        };
+      })();
+    </script>
+    <meta name="color-scheme" content="light dark">
+    <title>{% block title %}Ward Wise{% endblock %}</title>
+    {# Which build of github.com/HarryBrisson/ward-wise-frontend rendered this page; the deploy's
        smoke check requires it on every public page, so a Flask shell leaking through is caught. #}
     <meta name="penlight-build" content="{{ build_sha }}">
     {% if ga_id %}
@@ -14,83 +63,78 @@
         window.dataLayer = window.dataLayer || [];
         function gtag(){dataLayer.push(arguments);}
         gtag("js", new Date());
-
         gtag("config", {{ ga_id|tojson }});
       </script>
     {% endif %}
-    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='logo.svg') }}">
-    <meta name="theme-color" content="#ffffff">
-    <script>
-      // Theme bootstrap: apply the stored preference (or the device's) before the stylesheet paints,
-      // so a dark-theme reader never sees a flash of the classic palette. theme.js owns the rest.
-      (function () {
-        var pref = null;
-        try { pref = window.localStorage.getItem("wardWiseTheme"); } catch (e) {}
-        var dark = pref === "dark" || (pref !== "classic" && window.matchMedia &&
-          window.matchMedia("(prefers-color-scheme: dark)").matches);
-        document.documentElement.dataset.theme = dark ? "dark" : "classic";
-        document.documentElement.style.colorScheme = dark ? "dark" : "light";
-      })();
-    </script>
+    {# Safari ignores SVG tab icons, so the PNG and ICO copies carry it there. #}
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg', v=2) }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32.png', v=2) }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png', v=2) }}">
+    {# Link preview: the card iMessage, Slack and LinkedIn show when someone pastes a Ward Wise link.
+       Redraw static/og-image.png at 1200 x 630 if the headline changes. #}
+    {% set og_description = "271 measures of daily life for every Chicago ward and neighborhood, built from public records and free for everyone." %}
+    <meta name="description" content="{{ og_description }}">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Ward Wise">
+    <meta property="og:title" content="{{ self.title() }}">
+    <meta property="og:description" content="{{ og_description }}">
+    <meta property="og:url" content="{{ public_base }}{{ request.path }}">
+    <meta property="og:image" content="{{ public_base }}/static/og-image.png?v=2">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="Ward Wise. Chicago, measured. A map of Chicago's 50 wards in shades of blue.">
+    <meta name="twitter:card" content="summary_large_image">
     {% block head %}{% endblock %}
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css', v=asset_version) }}">
   </head>
-  <body data-page="{{ page_key }}">
-    <header class="site-header">
-      <a class="site-brand" href="{{ url_for('ui.index') }}" aria-label="Ward Wise Penlight home">
-        <span class="brand-mark" aria-hidden="true">
-          {# Connor's simplified mark: a beam of light carrying a rising data line. Inline so its two
-             colors follow the theme tokens; static/logo.svg is the same drawing for the favicon. #}
-          <svg class="brand-logo" viewBox="0 0 64 64" width="34" height="34" aria-hidden="true" focusable="false">
+  <body class="{% block body_class %}fd-theme{% endblock %}" data-page="{{ page_key }}">
+    {% set nav = [
+      ('ui.map_page', 'Map'),
+      ('ui.residents', 'Your ward'),
+      ('ui.alerts', 'Alerts'),
+      ('ui.dictionary_page', 'Data'),
+      ('ui.about_page', 'About'),
+    ] %}
+    <header class="gn">
+      <div class="gn-inner">
+        <a class="gn-brand" href="{{ url_for('ui.index') }}">
+          {# The live site's beam-and-line mark, drawn inline so it takes the header's colors. #}
+          <svg class="gn-logo" viewBox="0 0 64 64" width="30" height="30" aria-hidden="true" focusable="false">
             <defs>
-              <linearGradient id="brand-beam" x1="18" y1="46" x2="54" y2="16" gradientUnits="userSpaceOnUse">
+              <linearGradient id="gn-beam" x1="18" y1="46" x2="54" y2="16" gradientUnits="userSpaceOnUse">
                 <stop offset="0" style="stop-color: var(--logo-hue)" stop-opacity="0.22"/>
                 <stop offset="1" style="stop-color: var(--logo-hue)" stop-opacity="0.03"/>
               </linearGradient>
             </defs>
-            <path d="M18 46 L52 2 L58 34 Z" fill="url(#brand-beam)"/>
+            <path d="M18 46 L52 2 L58 34 Z" fill="url(#gn-beam)"/>
             <path d="M18 46 L30 33 L39 38 L52 18" fill="none" style="stroke: var(--logo-hue)" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>
             <circle cx="52" cy="18" r="4.2" style="fill: var(--logo-hue)"/>
             <circle cx="18" cy="46" r="4.6" style="fill: var(--logo-ink)"/>
           </svg>
-        </span>
-        <span class="brand-copy">
-          <span class="brand-kicker">Ward Wise</span>
-          <span class="brand-name">Penlight</span>
-        </span>
-      </a>
-      <nav class="site-nav" aria-label="Main navigation">
-        {# One dropdown for every way of reading the data — the map is just the first view.
-           The groups and entries come from views.json (a snapshot of the API's /api/views, which
-           the private app's services/view_registry.py publishes); add a view there. #}
-        {% set on_views = request.endpoint in view_endpoints %}
-        <div class="nav-menu">
-          <button type="button" class="nav-link nav-menu-button{% if on_views %} is-active{% endif %}"
-                  id="nav-views-toggle" aria-expanded="false" aria-haspopup="true" aria-controls="nav-views-menu">
-            Explore
-            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"
-                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6,8.5 10,12.5 14,8.5"/></svg>
-          </button>
-          <div class="nav-menu-panel" id="nav-views-menu" hidden>
-            {% for group, views in nav_groups %}
-              {% if not loop.first %}<p class="nav-menu-heading">{{ group }}</p>{% endif %}
-              {% for view in views %}
-                <a href="{{ url_for(view.endpoint) }}"{% if request.endpoint == view.endpoint %} aria-current="page"{% endif %}>{{ view.label }}</a>
+          Ward Wise
+        </a>
+        <nav class="gn-links" aria-label="Main navigation">
+          {% for endpoint, label in nav %}
+            <a href="{{ url_for(endpoint) }}"{% if request.endpoint == endpoint %} class="is-active" aria-current="page"{% endif %}>{{ label }}</a>
+          {% endfor %}
+          {# Every other view (reports, comparisons, data years…) from the registry (views.json),
+             grouped, behind one "More" menu so the bar keeps five words. #}
+          <div class="gn-more">
+            <button type="button" class="gn-more-toggle{% if request.endpoint in view_endpoints and request.endpoint not in ('ui.map_page', 'ui.residents', 'ui.alerts', 'ui.dictionary_page') %} is-active{% endif %}"
+                    id="gn-more-toggle" aria-expanded="false" aria-haspopup="true" aria-controls="gn-more-menu">More</button>
+            <div class="gn-more-menu" id="gn-more-menu" hidden>
+              {% for group, views in nav_groups %}
+                <p class="gn-more-heading">{{ group }}</p>
+                {% for view in views %}
+                  <a href="{{ view.path }}"{% if request.path == view.path %} aria-current="page"{% endif %}>{{ view.label }}</a>
+                {% endfor %}
               {% endfor %}
-            {% endfor %}
+            </div>
           </div>
-        </div>
-        <a class="nav-link{% if request.endpoint in ('ui.about_page', 'ui.signifiers_page') %} is-active{% endif %}" href="{{ url_for('ui.about_page') }}">Support</a>
-        <button type="button" class="nav-link nav-icon-button theme-toggle" id="theme-toggle" data-theme-toggle
-                aria-label="Switch theme" title="Switch theme">
-          <svg class="theme-icon theme-icon-sun" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="10" cy="10" r="3.4"/><path d="M10 2.2v2.1M10 15.7v2.1M2.2 10h2.1M15.7 10h2.1M4.5 4.5l1.5 1.5M14 14l1.5 1.5M15.5 4.5L14 6M6 14l-1.5 1.5"/></svg>
-          <svg class="theme-icon theme-icon-moon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16.5 12.4A7 7 0 0 1 7.6 3.5a7 7 0 1 0 8.9 8.9z"/></svg>
-        </button>
-        {# Identity and admin live behind one avatar button so the bar stays three destinations
-           wide whoever is looking. These pages are static, so the avatar is filled in by
-           account.js from /api/me (same origin; the session cookie rides along). Signed-out
-           readers see nothing here: the login page appears when a gated page needs it. #}
-        <div class="nav-account" id="nav-account" hidden
+        </nav>
+        <div class="gn-ward" data-mw-slot></div>
+        <div class="nav-account gn-account" id="nav-account" hidden
              data-account-url="{{ url_for('auth.account') }}"
              data-logout-url="{{ url_for('auth.logout') }}"
              data-submissions-url="{{ url_for('ui.metric_submissions_page') }}">
@@ -106,49 +150,116 @@
             <a data-logout-link href="{{ url_for('auth.logout') }}">Log out</a>
           </div>
         </div>
-      </nav>
+        <button type="button" class="gn-theme" data-theme-toggle aria-label="Switch to dark mode">
+          <svg class="gn-theme-moon" viewBox="0 0 20 20" aria-hidden="true"><path d="M16.5 12.2A6.8 6.8 0 0 1 7.8 3.5a6.8 6.8 0 1 0 8.7 8.7z"/></svg>
+          <svg class="gn-theme-sun" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="3.6"/><path d="M10 1.8v2M10 16.2v2M1.8 10h2M16.2 10h2M4.2 4.2l1.4 1.4M14.4 14.4l1.4 1.4M4.2 15.8l1.4-1.4M14.4 5.6l1.4-1.4"/></svg>
+        </button>
+      </div>
     </header>
 
     {% block content %}{% endblock %}
 
+    {# The map fills the viewport, so it opts out of the footer. #}
+    {% if request.endpoint != 'ui.map_page' %}
+    <footer class="fd-footer">
+      <div class="fd-footer-inner">
+        <div class="fd-footer-cols">
+          <div>
+            <h2>Explore</h2>
+            <ul>
+              <li><a href="{{ url_for('ui.map_page') }}">Map</a></li>
+              <li><a href="{{ url_for('ui.residents') }}">Ward report cards</a></li>
+              <li><a href="{{ url_for('ui.alerts') }}">Ward alerts</a></li>
+              <li><a href="{{ url_for('ui.dictionary_page') }}">Metric dictionary</a></li>
+            </ul>
+          </div>
+          <div>
+            <h2>Reports</h2>
+            <ul>
+              {% for group, views in nav_groups if group == 'Reports' %}{% for view in views %}
+              <li><a href="{{ view.path }}">{{ view.label }}</a></li>
+              {% endfor %}{% endfor %}
+            </ul>
+          </div>
+          <div>
+            <h2>For organizations</h2>
+            <ul>
+              <li><a href="{{ url_for('ui.planning') }}">Planners and community groups</a></li>
+              <li><a href="{{ url_for('ui.business') }}">Local businesses</a></li>
+            </ul>
+          </div>
+          <div>
+            <h2>About</h2>
+            <ul>
+              <li><a href="{{ url_for('ui.about_page') }}">Get involved</a></li>
+              <li><a href="/data-notes">Data notes</a></li>
+              <li><a href="/api-docs">API docs</a></li>
+              <li><a href="https://github.com/HarryBrisson/ward-wise-frontend" rel="noopener">Source on GitHub</a></li>
+              <li><a href="https://chihacknight.org/" rel="noopener">Chi Hack Night</a></li>
+            </ul>
+          </div>
+        </div>
+        <div class="fd-appearance">
+          <span id="fd-appearance-label">Appearance</span>
+          <div class="fd-appearance-seg" role="group" aria-labelledby="fd-appearance-label" data-theme-choice>
+            <button type="button" data-value="auto">Auto</button>
+            <button type="button" data-value="light">Light</button>
+            <button type="button" data-value="dark">Dark</button>
+          </div>
+        </div>
+        <p class="fd-footer-legal">
+          Ward Wise is built by volunteers at Chi Hack Night from public records published by the
+          City of Chicago, the U.S. Census Bureau and other public agencies. The public site is free
+          and always will be.
+        </p>
+      </div>
+    </footer>
+    {% endif %}
+
     <script>
-      // Every nav dropdown: one open at a time, closes on outside click or Escape.
       (function () {
-        var pairs = [["nav-views-toggle", "nav-views-menu"], ["nav-account-toggle", "nav-account-menu"]]
-          .map(function (ids) {
-            return { toggle: document.getElementById(ids[0]), menu: document.getElementById(ids[1]) };
-          })
+        var theme = window.WardWiseTheme;
+        var toggle = document.querySelector("[data-theme-toggle]");
+        var choice = document.querySelector("[data-theme-choice]");
+        function paint() {
+          var dark = theme.isDark();
+          if (toggle) toggle.setAttribute("aria-label", dark ? "Switch to light mode" : "Switch to dark mode");
+          if (choice) choice.querySelectorAll("button").forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.value === theme.pref())); });
+        }
+        if (toggle) toggle.addEventListener("click", function () { theme.set(theme.isDark() ? "light" : "dark"); });
+        if (choice) choice.addEventListener("click", function (e) { var b = e.target.closest("button[data-value]"); if (b) theme.set(b.dataset.value); });
+        document.addEventListener("fd:theme", paint);
+        paint();
+      })();
+    </script>
+    <script src="{{ url_for('static', filename='my_ward.js', v=asset_version) }}"></script>
+    <script>
+      // Header dropdowns (More, account): one open at a time, close on outside click or Escape.
+      (function () {
+        var pairs = [["gn-more-toggle", "gn-more-menu"], ["nav-account-toggle", "nav-account-menu"]]
+          .map(function (ids) { return { toggle: document.getElementById(ids[0]), menu: document.getElementById(ids[1]) }; })
           .filter(function (pair) { return pair.toggle && pair.menu; });
         function closeAll(except) {
           pairs.forEach(function (pair) {
             if (pair === except) return;
-            pair.menu.hidden = true;
-            pair.toggle.setAttribute("aria-expanded", "false");
+            pair.menu.hidden = true; pair.toggle.setAttribute("aria-expanded", "false");
           });
         }
         pairs.forEach(function (pair) {
           pair.toggle.addEventListener("click", function (event) {
             event.stopPropagation();
-            var open = pair.menu.hidden;
-            closeAll(pair);
-            pair.menu.hidden = !open;
-            pair.toggle.setAttribute("aria-expanded", String(open));
+            var open = pair.menu.hidden; closeAll(pair);
+            pair.menu.hidden = !open; pair.toggle.setAttribute("aria-expanded", String(open));
           });
         });
         document.addEventListener("click", function (event) {
           pairs.forEach(function (pair) {
-            if (!pair.menu.hidden && !pair.menu.contains(event.target)) {
-              pair.menu.hidden = true;
-              pair.toggle.setAttribute("aria-expanded", "false");
-            }
+            if (!pair.menu.hidden && !pair.menu.contains(event.target)) { pair.menu.hidden = true; pair.toggle.setAttribute("aria-expanded", "false"); }
           });
         });
-        document.addEventListener("keydown", function (event) {
-          if (event.key === "Escape") closeAll(null);
-        });
+        document.addEventListener("keydown", function (event) { if (event.key === "Escape") closeAll(null); });
       })();
     </script>
-    <script src="{{ url_for('static', filename='theme.js') }}"></script>
     <script src="{{ url_for('static', filename='account.js') }}"></script>
     {% block scripts %}{% endblock %}
   </body>

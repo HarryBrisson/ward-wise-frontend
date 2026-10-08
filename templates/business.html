@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}For businesses · Ward Wise{% endblock %}
+{% block body_class %}fd-theme{% endblock %}
+
+{% block content %}
+  <main>
+    <section class="fd-hero">
+      <div class="fd-wrap fd-stack">
+        {% include "_org_lens.html" %}
+        <h1 class="fd-h1">Know the neighborhood.</h1>
+        <p class="fd-sub">Income, rent, commuting and the local business mix for any of Chicago's 77 community areas, in one page.</p>
+      </div>
+    </section>
+
+    <section class="fd-section-tight">
+      <div id="fd-snapshot" class="fd-wrap" data-fd-report="snapshot" data-fd-hash="area">
+        <div class="fd-report-layout">
+          <div class="fd-minimap" data-fd-minimap></div>
+          <div class="fd-report-main">
+        <div class="fd-report-head">
+          <div>
+            <div class="fd-picker">
+              <label class="fd-sr" for="fd-snapshot-area">Neighborhood</label>
+              <select id="fd-snapshot-area" data-fd-picker></select>
+            </div>
+            <p class="fd-small" data-fd-meta></p>
+          </div>
+          <button type="button" class="fd-btn fd-btn-ghost fd-no-print" data-fd-print>Print snapshot</button>
+        </div>
+        <div class="fd-table-head"><span>Measure</span><span>Value</span><span>Standing</span><span>Among 77 neighborhoods</span></div>
+        <div class="fd-rows" data-fd-rows><p class="fd-loading">Loading live data…</p></div>
+          </div>
+        </div>
+        <p class="fd-small" style="margin-top: 20px">
+          Standing shows the share of neighborhoods with a lower value. Select any measure for its full
+          method in the metric dictionary.
+        </p>
+      </div>
+    </section>
+
+  </main>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='common.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='civic_map.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='frontdoor.js', v=asset_version) }}"></script>
+{% endblock %}

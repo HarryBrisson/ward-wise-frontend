@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}For planners · Ward Wise{% endblock %}
+{% block body_class %}fd-theme{% endblock %}
+
+{% block content %}
+  <main>
+    <section class="fd-hero">
+      <div class="fd-wrap fd-stack">
+        {% include "_org_lens.html" %}
+        <h1 class="fd-h1">The evidence behind the plan.</h1>
+        <p class="fd-sub">Every measure is free to download for all 50 wards and 77 community areas.</p>
+      </div>
+    </section>
+
+    <section class="fd-section-tight">
+      <div class="fd-wrap fd-stack-lg">
+        <div class="fd-stack">
+          <p class="fd-tag">Nominated by a Chicago planner</p>
+          <h2 class="fd-h2">Chain and independent restaurants.</h2>
+          <p class="fd-body">The share of restaurants that belong to a chain, from Google Maps listings. Four more versions use city business licenses and also count food stores.</p>
+        </div>
+        <div class="fd-seg" role="group" aria-label="Geography" data-fd-chain-geo>
+          <button type="button" data-value="ward" aria-pressed="true">Wards</button>
+          <button type="button" data-value="community_area" aria-pressed="false">Neighborhoods</button>
+        </div>
+        <div id="fd-chains" class="fd-grid-2 fd-fill-cards"><p class="fd-loading">Loading live data…</p></div>
+        <p class="fd-small" role="status" data-fd-chain-note></p>
+        <div class="fd-actions">
+          <a class="fd-more" href="{{ url_for('ui.dictionary_page') }}#metric=chain_restaurant_share_pct">How this is measured</a>
+          <a class="fd-more" href="{{ url_for('ui.dictionary_page') }}#metric=licensed_chain_restaurant_share_pct">The business license versions</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="fd-section-tight">
+      <div class="fd-wrap">
+        <div id="fd-download" class="fd-panel fd-stack-lg">
+          <div class="fd-stack">
+            <p class="fd-tag">Free for everyone</p>
+            <h2 class="fd-h2">Download a domain.</h2>
+            <p class="fd-body">One row per area and one column per measure. The first rows list each column's label, unit and source.</p>
+          </div>
+          <div class="fd-row-form">
+            <div class="fd-field">
+              <label for="fd-download-domain">Domain</label>
+              <select id="fd-download-domain"><option>Loading…</option></select>
+            </div>
+            <div class="fd-field">
+              <label for="fd-download-geo">Geography</label>
+              <select id="fd-download-geo">
+                <option value="ward">50 wards</option>
+                <option value="community_area">77 community areas</option>
+              </select>
+            </div>
+            <div class="fd-field">
+              <button type="button" id="fd-download-go" class="fd-btn">Download CSV</button>
+            </div>
+          </div>
+          <p id="fd-download-status" class="fd-small" role="status"></p>
+        </div>
+      </div>
+    </section>
+
+    <section class="fd-section">
+      <div class="fd-wrap fd-stack-lg">
+        <div class="fd-stack">
+          <p class="fd-tag">From the data</p>
+          <h2 class="fd-h2">Where Chicago is permitting new homes.</h2>
+          <p class="fd-body">Estimated new residential units by ward, from City of Chicago building permits.</p>
+        </div>
+        <div id="fd-housing" class="fd-grid-2 fd-fill-cards"><p class="fd-loading">Loading live data…</p></div>
+        <a class="fd-more" href="{{ url_for('ui.dictionary_page') }}#metric=new_residential_units_permitted_est">How this is measured</a>
+      </div>
+    </section>
+
+    <section class="fd-section fd-fill">
+      <div class="fd-wrap fd-stack">
+        <p class="fd-tag">What to measure next</p>
+        <h2 class="fd-h2">What data do you wish you had?</h2>
+        <p class="fd-body">Many measures on the site started as a nomination. Send us the one your work is missing, and where you think the data lives.</p>
+        <div class="fd-actions"><a class="fd-btn" href="/suggest-metric">Nominate a measure</a></div>
+      </div>
+    </section>
+  </main>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='common.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='frontdoor.js', v=asset_version) }}"></script>
+{% endblock %}

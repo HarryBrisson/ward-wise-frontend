@@ -1,15 +1,9 @@
 {% extends "base.html" %}
 
-{% block title %}Not found — Ward Wise Penlight{% endblock %}
+{% block title %}Page not found · Ward Wise{% endblock %}
+{% block body_class %}fd-theme{% endblock %}
 
 {% block content %}
-  <main class="metrics-layout">
-    <div class="metrics-header panel-heading">
-      <p class="eyebrow">Ward Wise Penlight</p>
-      <h1>That page isn't here</h1>
-      <p>Try the <a href="{{ url_for('ui.index') }}">map</a>, the <a href="{{ url_for('ui.reports_page') }}">reports</a>, or the <a href="{{ url_for('ui.dictionary_page') }}">metric dictionary</a>.</p>
-    </div>
-  </main>
   <script>
     // Without CloudFront in front (plain GitHub Pages), /report/<slug>/<id> lands here; the report
     // page reads its own URL, so bounce to it keeping the path in the query for it to pick up.
@@ -18,4 +12,17 @@
       if (m) location.replace("/report/?area=" + encodeURIComponent(m[1] + "/" + m[2]) + (location.search ? "&" + location.search.slice(1) : "") + location.hash);
     })();
   </script>
+  <main>
+    <section class="fd-hero fd-center fd-error">
+      <div class="fd-wrap fd-narrow fd-stack">
+        <p class="fd-eyebrow">404</p>
+        <h1 class="fd-h1">That page isn't here</h1>
+        <p class="fd-sub">The address may have changed. The map, the report cards and the dictionary are one tap away.</p>
+        <div class="fd-actions">
+          <a class="fd-btn" href="{{ url_for('ui.index') }}">Go to the home page</a>
+          <a class="fd-more" href="{{ url_for('ui.map_page') }}">Open the map</a>
+        </div>
+      </div>
+    </section>
+  </main>
 {% endblock %}
