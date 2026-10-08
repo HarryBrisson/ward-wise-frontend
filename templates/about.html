@@ -1,166 +1,160 @@
 {% extends "base.html" %}
 
-{% block title %}Support — Ward Wise Penlight{% endblock %}
+{% block title %}About · Ward Wise{% endblock %}
+{% block body_class %}fd-theme fd-about{% endblock %}
 
 {% block content %}
-  <main class="metrics-layout about-layout">
-    <div class="metrics-header panel-heading">
-      <p class="eyebrow">Ward Wise Penlight</p>
-      <h1>Support Penlight</h1>
-      <p>
-        Penlight is a civic-data project built at
-        <a href="https://chihacknight.org/" rel="noopener">Chi Hack Night</a> that turns open data
-        into neighborhood wellbeing metrics anyone can explore, weight, and compare. It grows
-        through residents — here's how to help.
-      </p>
-    </div>
-
-    <section class="panel about-panel about-team" id="team">
-      <div class="panel-heading support-cta-heading">
-        <div>
-          <p class="eyebrow">Who builds it</p>
-          <h2>The Penlight team</h2>
-          <p>
-            Volunteers who met at Chi Hack Night, each from a different ward. The site's code is
-            public and open to pull requests; the data pipeline and API are maintained privately.
-          </p>
-        </div>
-        <a class="support-link support-cta" href="https://github.com/HarryBrisson/ward-wise-frontend" rel="noopener">Contribute on GitHub &rarr;</a>
-      </div>
-      {# In ward order. Photos are the team's own, from the Chi Hack Night talk deck. #}
-      <ul class="team-grid">
-        <li class="team-card">
-          <img src="{{ url_for('static', filename='team/harry-brisson.jpg') }}" alt="Harry Brisson" loading="lazy" width="240" height="240">
-          <strong>Harry Brisson</strong>
-          <span>12th Ward &middot; Data coordinator</span>
-          <a href="https://github.com/HarryBrisson" rel="noopener">@HarryBrisson</a>
-        </li>
-        <li class="team-card">
-          <img src="{{ url_for('static', filename='team/angel-carbajal.jpg') }}" alt="Angel Carbajal" loading="lazy" width="240" height="240">
-          <strong>Angel Carbajal</strong>
-          <span>33rd Ward &middot; UX / design</span>
-          <a href="https://github.com/zyplos" rel="noopener">@zyplos</a>
-        </li>
-        <li class="team-card">
-          <img src="{{ url_for('static', filename='team/connor-florczyk.jpg') }}" alt="Connor Florczyk" loading="lazy" width="240" height="240">
-          <strong>Connor Florczyk</strong>
-          <span>42nd Ward &middot; UX / reporting</span>
-          <a href="https://github.com/cflorczyk9" rel="noopener">@cflorczyk9</a>
-        </li>
-        <li class="team-card">
-          <img src="{{ url_for('static', filename='team/jackie-schmitz.jpg') }}" alt="Jackie Schmitz" loading="lazy" width="240" height="240">
-          <strong>Jackie Schmitz</strong>
-          <span>43rd Ward &middot; Personalization</span>
-        </li>
-      </ul>
-    </section>
-
-    <section class="panel about-panel">
-      <div class="panel-heading support-cta-heading">
-        <div>
-          <p class="eyebrow">Our goal</p>
-          <h2>A metric nominated from every ward</h2>
-          <p>
-            The best measures come from residents: parking difficulty, water-fountain lead, the
-            lakefront, 311 responsiveness — all started as nominations. We're working toward a
-            resident nomination from all 50 Chicago wards; your ward gets the credit on the map.
-          </p>
-        </div>
-        <a class="support-link support-cta" href="{{ url_for('ui.suggest_metric') }}">Nominate a metric &rarr;</a>
-      </div>
-      <div id="about-nominations" class="about-nominations"><p>Loading nominations…</p></div>
-    </section>
-
-    <section class="panel about-panel">
-      <div class="panel-heading support-cta-heading">
-        <div>
-          <p class="eyebrow">Visual signifiers</p>
-          <h2>Put your area on the map</h2>
-          <p>
-            Every ward, neighborhood, and &chi;GRID shows a photo of a real place
-            <strong>inside it</strong> — with its source, license, and attribution. Know the spot
-            that captures yours? Submit it — reviewed submissions appear with credit to you.
-          </p>
-        </div>
-        <a class="support-link support-cta" href="{{ url_for('ui.suggest_photo') }}">Submit a photo &rarr;</a>
-      </div>
-      {# Four rotating signifier photos, from /api/signifiers/examples (the server rotates daily). #}
-      <div class="signifier-examples" id="signifier-examples" hidden></div>
-      <p class="signifier-see-all"><a href="{{ url_for('ui.signifiers_page') }}">See all visual signifiers and their provenance &rarr;</a></p>
-    </section>
-
-    <section class="panel about-panel">
-      <div class="panel-heading support-cta-heading">
-        <div>
-          <p class="eyebrow">Your block</p>
-          <h2>Host a participatory audit</h2>
-          <p>
-            Gather your neighbors and ask: what does wellbeing actually mean on our blocks? Which
-            measures matter here, and how much? Those answers become your neighborhood's own
-            wellbeing index — a shared equation you can hold up to your government, year after
-            year, to judge its performance against what your community actually values.
-          </p>
-        </div>
-        <a class="support-link support-cta" href="{{ url_for('ui.suggest_metric') }}">Send us what your neighbors chose &rarr;</a>
+  <main>
+    <section class="fd-hero fd-center">
+      <div class="fd-wrap fd-narrow fd-stack">
+        {# Same mark as the header, drawn inline so it takes the light and dark logo colors. #}
+        <svg class="fd-about-logo" viewBox="0 0 64 64" width="112" height="112" aria-hidden="true" focusable="false">
+          <defs>
+            <linearGradient id="about-beam" x1="18" y1="46" x2="54" y2="16" gradientUnits="userSpaceOnUse">
+              <stop offset="0" style="stop-color: var(--logo-hue)" stop-opacity="0.22"/>
+              <stop offset="1" style="stop-color: var(--logo-hue)" stop-opacity="0.03"/>
+            </linearGradient>
+          </defs>
+          <path d="M18 46 L52 2 L58 34 Z" fill="url(#about-beam)"/>
+          <path d="M18 46 L30 33 L39 38 L52 18" fill="none" style="stroke: var(--logo-hue)" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="52" cy="18" r="4.2" style="fill: var(--logo-hue)"/>
+          <circle cx="18" cy="46" r="4.6" style="fill: var(--logo-ink)"/>
+        </svg>
+        <p class="fd-about-wordmark">Ward Wise</p>
+        <h1 class="fd-h1">A clearer view of every ward.</h1>
+        <p class="fd-sub">
+          Ward Wise turns Chicago's open data into measures of neighborhood wellbeing that anyone can
+          explore, weight and compare. Volunteers build it at
+          <a href="https://chihacknight.org/" rel="noopener">Chi Hack Night</a>.
+        </p>
       </div>
     </section>
 
-    <section class="panel about-panel">
-      <div class="panel-heading support-cta-heading">
-        <div>
-          <p class="eyebrow">Beyond Chicago</p>
-          <h2>Bring Penlight to your city</h2>
-          <p>
-            Open data and open source travel well. We're actively exploring Columbus, Madison,
-            Cincinnati, New York, and Los Angeles — if you want neighborhood wellbeing metrics
-            where you live, raise your hand.
-          </p>
+    <section class="fd-section-tight">
+      <div class="fd-wrap">
+        <div class="fd-principles">
+          <div class="fd-principle"><h3 class="fd-h3">Built from public records</h3><p>Every measure comes from an agency or open dataset, and the metric dictionary names the source for each one.</p></div>
+          <div class="fd-principle"><h3 class="fd-h3">Shaped by residents</h3><p>Many measures started as resident nominations, from parking difficulty to lead in park water fountains.</p></div>
+          <div class="fd-principle"><h3 class="fd-h3">The same for every ward</h3><p>One method covers all 50 wards and 77 community areas, so any two places can be compared fairly.</p></div>
+          <div class="fd-principle"><h3 class="fd-h3">Open to everyone</h3><p>The site is free with no login, and the data is available through a public API.</p></div>
         </div>
-        <a class="support-link support-cta" href="{{ url_for('ui.your_city') }}">Tell us about your city &rarr;</a>
       </div>
     </section>
 
-    <section class="panel about-panel">
-      <div class="panel-heading support-cta-heading">
-        <div>
-          <p class="eyebrow">In person</p>
-          <h2>Come to Chi Hack Night</h2>
-          <p>
-            Tuesday evenings — Chicago's weekly gathering for people who use data and technology
-            in the public interest. Penlight is built there; come say hi. No technical background
-            needed.
+    <section class="fd-section fd-fill">
+      <div class="fd-wrap fd-grid-2 fd-about-split">
+        <div class="fd-stack">
+          <p class="fd-tag">Our goal</p>
+          <h2 class="fd-h1">A measure nominated from every ward.</h2>
+          <p class="fd-body">
+            The best measures come from the people who live with them. Nominate one, and your ward gets
+            the credit on the map.
           </p>
+          <div class="fd-actions"><a class="fd-btn" href="/suggest-metric">Nominate a measure</a></div>
         </div>
-        <a class="support-link support-cta" href="https://chihacknight.org/" rel="noopener">chihacknight.org &rarr;</a>
+        <div class="fd-card">
+          <div id="about-nominations" class="about-nominations"><p class="fd-loading">Loading nominations…</p></div>
+        </div>
       </div>
     </section>
 
-    <section class="panel about-panel">
-      <div class="panel-heading support-cta-heading">
-        <div>
-          <p class="eyebrow">Developers</p>
-          <h2>Build on the data</h2>
-          <p>
-            Every number here is available through a small read-only API — one ward's metrics in
-            context, and the dictionary that explains them. Keys are free; tell us what you're making.
-          </p>
+    <section class="fd-section">
+      <div class="fd-wrap fd-stack-lg">
+        <div class="fd-stack">
+          <p class="fd-tag">Since May 2026</p>
+          <h2 class="fd-h1">The catalog keeps growing.</h2>
+          <p class="fd-sub">The site launched with 20 measures for the Bean's 20th birthday and has added more every month since.</p>
         </div>
-        <a class="support-link support-cta" href="{{ url_for('ui.api_docs_page') }}">Read the API docs &rarr;</a>
+        <div id="about-metric-growth" class="about-metric-growth"><p class="fd-loading">Loading history…</p></div>
       </div>
     </section>
 
-    <section class="panel about-panel">
-      <div class="panel-heading">
-        <p class="eyebrow">Since 2026-05-15</p>
-        <h2>Metrics we track over time</h2>
-        <p>We launched with 20 metrics for the Bean's 20th birthday and have grown the catalog — and our representation across the city — since.</p>
+    <section class="fd-section fd-fill">
+      <div class="fd-wrap fd-stack-lg">
+        <div class="fd-stack">
+          <p class="fd-tag">Visual signifiers</p>
+          <h2 class="fd-h1">Put your area on the map.</h2>
+          <p class="fd-sub">Every ward, neighborhood and small area shows a photo of a real place inside it, with its source and credit.</p>
+        </div>
+        {# Filled by about.js, which rotates four photos a day from the area endpoints. #}
+        <div id="signifier-examples" class="signifier-examples" hidden></div>
+        <div class="fd-actions">
+          <a class="fd-btn" href="/suggest-photo">Submit a photo</a>
+          <a class="fd-more" href="/signifiers">See every photo and its credit</a>
+        </div>
       </div>
-      <div id="about-metric-growth" class="about-metric-growth"><p>Loading history…</p></div>
+    </section>
+
+    <section class="fd-section fd-fill">
+      <div class="fd-wrap fd-stack-lg">
+        <div class="fd-stack">
+          <p class="fd-tag">Who builds it</p>
+          <h2 class="fd-h1">The team.</h2>
+          <p class="fd-sub">Volunteers who met at Chi Hack Night, each from a different ward.</p>
+        </div>
+        <ul class="fd-team">
+          <li class="fd-team-card">
+            <img src="{{ url_for('static', filename='team/harry-brisson.jpg') }}" alt="Harry Brisson" loading="lazy" width="240" height="240">
+            <strong>Harry Brisson</strong>
+            <span>12th Ward · Data coordinator</span>
+            <a href="https://github.com/HarryBrisson" rel="noopener">@HarryBrisson</a>
+          </li>
+          <li class="fd-team-card">
+            <img src="{{ url_for('static', filename='team/angel-carbajal.jpg') }}" alt="Angel Carbajal" loading="lazy" width="240" height="240">
+            <strong>Angel Carbajal</strong>
+            <span>33rd Ward · UX and design</span>
+            <a href="https://github.com/zyplos" rel="noopener">@zyplos</a>
+          </li>
+          <li class="fd-team-card">
+            <img src="{{ url_for('static', filename='team/connor-florczyk.jpg') }}" alt="Connor Florczyk" loading="lazy" width="240" height="240">
+            <strong>Connor Florczyk</strong>
+            <span>42nd Ward · UX and reporting</span>
+            <a href="https://github.com/cflorczyk9" rel="noopener">@cflorczyk9</a>
+          </li>
+          <li class="fd-team-card">
+            <img src="{{ url_for('static', filename='team/jackie-schmitz.jpg') }}" alt="Jackie Schmitz" loading="lazy" width="240" height="240">
+            <strong>Jackie Schmitz</strong>
+            <span>43rd Ward · Personalization</span>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="fd-section" id="get-involved">
+      <div class="fd-wrap fd-stack-lg">
+        <h2 class="fd-h1">Get involved.</h2>
+        <div class="fd-grid-2">
+          <article class="fd-card fd-card-line fd-stack">
+            <p class="fd-tag">Your block</p>
+            <h3 class="fd-h3">Host a block audit</h3>
+            <p class="fd-body">Gather neighbors and decide which measures matter most on your blocks. The result is your own wellbeing index, one you can hold your government to year after year.</p>
+            <a class="fd-more" href="/suggest-metric">Send us what your neighbors chose</a>
+          </article>
+          <article class="fd-card fd-card-line fd-stack">
+            <p class="fd-tag">In person</p>
+            <h3 class="fd-h3">Come to Chi Hack Night</h3>
+            <p class="fd-body">Chicago's weekly meetup for people who use data and technology in the public interest meets on Tuesday evenings. Ward Wise is built there, and no technical background is needed.</p>
+            <a class="fd-more" href="https://chihacknight.org/" rel="noopener">chihacknight.org</a>
+          </article>
+          <article class="fd-card fd-card-line fd-stack">
+            <p class="fd-tag">Beyond Chicago</p>
+            <h3 class="fd-h3">Bring Ward Wise to your city</h3>
+            <p class="fd-body">Open data and open source travel well. The team is exploring Columbus, Madison, Cincinnati, New York and Los Angeles.</p>
+            <a class="fd-more" href="/your-city">Tell us about your city</a>
+          </article>
+          <article class="fd-card fd-card-line fd-stack">
+            <p class="fd-tag">Developers</p>
+            <h3 class="fd-h3">Build on the data</h3>
+            <p class="fd-body">Every number on the site is available through a small read-only API, along with the dictionary that explains it. Keys are free.</p>
+            <a class="fd-more" href="/api-docs">Read the API docs</a>
+          </article>
+        </div>
+      </div>
     </section>
   </main>
 {% endblock %}
 
 {% block scripts %}
-  <script src="{{ url_for('static', filename='common.js') }}"></script>
-  <script src="{{ url_for('static', filename='about.js') }}"></script>
+  <script src="{{ url_for('static', filename='common.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='about.js', v=asset_version) }}"></script>
 {% endblock %}

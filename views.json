@@ -1,6 +1,7 @@
 {
   "groups": [
     "Explore",
+    "For organizations",
     "Reports",
     "Reference"
   ],
@@ -11,7 +12,25 @@
       "label": "Map view",
       "group": "Explore",
       "blurb": "Every ward or neighborhood shaded by a list of measures, with a leaderboard.",
-      "path": "/",
+      "path": "/map",
+      "public": true
+    },
+    {
+      "key": "report_card",
+      "endpoint": "ui.residents",
+      "label": "Ward report card",
+      "group": "Explore",
+      "blurb": "Ten measures to hold an alderperson to, ranked against all 50 wards, plus what's in front of City Council.",
+      "path": "/for/residents",
+      "public": true
+    },
+    {
+      "key": "alerts",
+      "endpoint": "ui.alerts",
+      "label": "Ward alerts",
+      "group": "Explore",
+      "blurb": "Legislation, hearings and permits for one ward, as the email a subscriber would get.",
+      "path": "/alerts",
       "public": true
     },
     {
@@ -48,6 +67,24 @@
       "group": "Explore",
       "blurb": "Where each ward office spends its discretionary infrastructure budget.",
       "path": "/menu",
+      "public": true
+    },
+    {
+      "key": "planning",
+      "endpoint": "ui.planning",
+      "label": "Planners and community groups",
+      "group": "For organizations",
+      "blurb": "Every measure as a CSV for all 50 wards or 77 community areas.",
+      "path": "/for/planning",
+      "public": true
+    },
+    {
+      "key": "business",
+      "endpoint": "ui.business",
+      "label": "Local businesses",
+      "group": "For organizations",
+      "blurb": "Income, rent, commuting and the business mix for any community area, in one printable page.",
+      "path": "/for/business",
       "public": true
     },
     {

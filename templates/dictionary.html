@@ -1,25 +1,41 @@
 {% extends "base.html" %}
 
-{% block title %}Metric dictionary — Ward Wise Penlight{% endblock %}
-
-{% block head %}
-  <link rel="stylesheet" href="{{ url_for('static', filename='report_ui.css', v=asset_version) }}">
-{% endblock %}
+{% block title %}Metric dictionary · Ward Wise{% endblock %}
+{% block body_class %}fd-theme fd-dict{% endblock %}
 
 {% block content %}
-  <main class="metrics-layout">
-    <div class="metrics-header panel-heading">
-      <p class="eyebrow"><a href="{{ url_for('ui.reports_page') }}">Reports</a></p>
-      <h1>Metric dictionary</h1>
-      <p>Every measure Penlight tracks — what it means, where it comes from, and how it's computed.</p>
-    </div>
-    <section class="panel metrics-panel" id="dictionary-view">
-      <div
-        id="metrics-content"
-        class="metric-transparency-content"
-        data-is-admin="false"
-      >
-        <p>Loading metrics…</p>
+  <main>
+    <section class="fd-dict-hero">
+      <div class="fd-wrap fd-stack">
+        <p class="fd-eyebrow">Metric dictionary</p>
+        <h1 class="fd-h1">Every measure, explained.</h1>
+        <p class="fd-sub">What each measure counts, where the data comes from, which years it covers, and how it's scored.</p>
+        <div class="fd-dict-search">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="m13 13 4.5 4.5"/></svg>
+          <input type="search" id="fd-dict-search" placeholder="Search measures" aria-label="Search measures" autocomplete="off" disabled>
+          <span class="fd-dict-count" id="fd-dict-count" aria-live="polite"></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="fd-dict-body">
+      <div class="fd-wrap">
+        {# metric_details.js self-initializes on #metrics-content and fetches /api/metrics. #}
+        <div id="metrics-content" class="metric-transparency-content" data-is-admin="false">
+          <div class="fd-dict-skel" aria-hidden="true">
+            <div class="fd-skel-stack">
+              {% for w in [70, 58, 64, 52, 60, 48, 66, 55, 62, 50, 57] %}<span class="fd-skel fd-skel-line" style="width: {{ w }}%"></span>{% endfor %}
+            </div>
+            <div class="fd-skel-stack">
+              <span class="fd-skel fd-skel-line is-xl" style="width: 45%"></span>
+              <span class="fd-skel fd-skel-line" style="width: 70%"></span>
+              {% for w in [62, 74, 55, 68, 59, 71] %}
+                <div class="fd-dict-skel-row"><span class="fd-skel fd-skel-line is-lg" style="width: {{ w // 2 }}%"></span><span class="fd-skel fd-skel-line" style="width: {{ w }}%"></span></div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+        <p class="fd-dict-none" id="fd-dict-none" hidden>No measures match that search.</p>
       </div>
     </section>
   </main>
@@ -29,4 +45,5 @@
   <script src="{{ url_for('static', filename='common.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='metric_icons.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='metric_details.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='dictionary.js', v=asset_version) }}"></script>
 {% endblock %}
