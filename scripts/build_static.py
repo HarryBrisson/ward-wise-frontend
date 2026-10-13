@@ -42,13 +42,16 @@ def content_versions(static_dir: Path) -> dict[str, str]:
 
 
 def git_sha(default: str = "local") -> str:
-    env_sha = os.environ.get("GITHUB_SHA")
-    if env_sha:
-        return env_sha[:12]
+    """The commit this build was rendered FROM: the checkout's own HEAD.
+
+    Not GITHUB_SHA: the Pages workflow builds both channels (main → root, next → /next) on a push to
+    either branch, so GITHUB_SHA names whichever branch triggered the run, and the root once reported
+    next's commit while serving main's pages. GITHUB_SHA is only the fallback when there's no git."""
     try:
-        return subprocess.check_output(["git", "rev-parse", "--short=12", "HEAD"], text=True).strip()
+        return subprocess.check_output(["git", "rev-parse", "--short=12", "HEAD"], text=True,
+                                       cwd=Path(__file__).resolve().parents[1], stderr=subprocess.DEVNULL).strip()
     except Exception:  # noqa: BLE001
-        return default
+        return (os.environ.get("GITHUB_SHA") or default)[:12]
 
 
 def redirect_html(target: str) -> str:
