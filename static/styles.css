@@ -6982,8 +6982,14 @@ body:not(.fd-theme) .comparison-row.is-selected .comparison-row-community-areas 
 .fd-team-card img { aspect-ratio: 1; border-radius: 18px; height: auto; margin-bottom: 10px; object-fit: cover; width: 100%; }
 .fd-team-card strong { color: var(--ink); font-size: 17px; font-weight: 600; }
 .fd-team-card span { color: var(--ink-2); font-size: 14px; }
-.fd-team-card a { color: var(--link); font-size: 14px; text-decoration: none; }
-.fd-team-card a:hover { text-decoration: underline; }
+/* Profile links under each team member: the network's mark plus the handle, so it's clear the link
+   goes to GitHub (or LinkedIn) rather than some other profile. */
+.fd-team-links { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 4px; }
+.fd-team-card a.fd-team-link { align-items: center; color: var(--ink-2); display: inline-flex; font-size: 14px; gap: 6px; text-decoration: none; }
+.fd-team-card a.fd-team-link svg { fill: currentColor; flex: none; height: 16px; width: 16px; }
+.fd-team-card a.fd-team-link span { color: inherit; font-size: inherit; }
+.fd-team-card a.fd-team-link:hover { color: var(--link); }
+.fd-team-card a.fd-team-link:hover span { text-decoration: underline; }
 @media (max-width: 760px) { .fd-team { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 /* For organizations: underline tabs shared by the planner and business pages.
