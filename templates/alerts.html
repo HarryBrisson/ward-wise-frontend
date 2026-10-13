@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}Ward alerts · Ward Wise{% endblock %}
+{% block body_class %}fd-theme fd-alerts{% endblock %}
+
+{% block content %}
+  <main>
+    <p class="fd-proposal">Proposal preview. Signing up confirms in your browser and sends nothing. The email preview uses live city records.</p>
+
+    <section class="fd-ab-hero">
+      <div class="fd-wrap fd-stack">
+        <p class="fd-eyebrow">Ward alerts</p>
+        <h1 class="fd-h1">Know before it's decided.</h1>
+        <p class="fd-sub">Choose what you want to hear about. The email on the right updates as you go, with this week's real records from your ward.</p>
+      </div>
+    </section>
+
+    <section class="fd-ab" id="fd-alert-builder">
+      <div class="fd-wrap fd-ab-grid">
+        <form class="fd-ab-controls" id="fd-alert-form" novalidate>
+          <div class="fd-ab-block">
+            <p class="fd-ab-label">Your ward</p>
+            <div class="fd-ab-ward" data-fd-ab-ward></div>
+          </div>
+
+          <fieldset class="fd-ab-block">
+            <legend class="fd-ab-label">What to send</legend>
+            <ul class="fd-ab-topics" data-fd-ab-topics></ul>
+          </fieldset>
+
+          <div class="fd-ab-block">
+            <p class="fd-ab-label" id="fd-ab-freq-label">How often</p>
+            <div class="fd-seg" role="group" aria-labelledby="fd-ab-freq-label" data-fd-ab-freq>
+              <button type="button" data-value="weekly" aria-pressed="true">Every week</button>
+              <button type="button" data-value="monthly" aria-pressed="false">Every month</button>
+            </div>
+            <label class="fd-ab-urgent">
+              <span><strong>Same-day email for hearings</strong><small>When a zoning change in your ward gets a hearing date, hear about it that day.</small></span>
+              <input type="checkbox" role="switch" class="fd-switch" name="urgent" data-fd-ab-urgent>
+            </label>
+          </div>
+
+          <div class="fd-ab-block fd-ab-send">
+            <label class="fd-ab-label" for="fd-alert-email">Email</label>
+            <div class="fd-ab-send-row">
+              <input id="fd-alert-email" name="email" type="email" required placeholder="you@example.com" autocomplete="email">
+              <button type="submit" class="fd-btn">Sign up</button>
+            </div>
+            <p id="fd-alert-note" class="fd-small" role="status"></p>
+          </div>
+        </form>
+
+        <div class="fd-ab-preview">
+          <div class="fd-mail" aria-label="Preview of your alert email">
+            <div class="fd-mail-bar" aria-hidden="true"><i></i><i></i><i></i></div>
+            <dl class="fd-mail-head">
+              <div><dt>From</dt><dd>Ward Wise</dd></div>
+              <div><dt>To</dt><dd data-fd-mail-to>you@example.com</dd></div>
+              <div class="fd-mail-subject"><dt>Subject</dt><dd data-fd-mail-subject><span class="fd-skel fd-skel-line" style="width: 70%"></span></dd></div>
+            </dl>
+            <div class="fd-mail-body" data-fd-ab-email></div>
+          </div>
+          <div class="fd-ab-under">
+            <p class="fd-small">From the City Clerk, the city's data portal and the Census Bureau's address lookup. Refreshed every time you open this page.</p>
+            <button type="button" class="fd-link-btn" data-fd-ab-open>Open full size</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="fd-section fd-fill" data-fd-civic="mine">
+      <div class="fd-wrap fd-grid-2" style="gap: 48px">
+        <div class="fd-card fd-stack" data-fd-contact><p class="fd-small">Choose your ward at the top of the page to see who represents you.</p></div>
+        <div class="fd-stack">
+          <h2 class="fd-h2">Take part.</h2>
+          <ul class="fd-links">
+            <li><a href="https://311.chicago.gov" target="_blank" rel="noopener"><strong>Report a problem to 311</strong><span>Potholes, streetlights, rodents, abandoned cars</span></a></li>
+            <li><a href="https://chicityclerkelms.chicago.gov/Meetings/" target="_blank" rel="noopener"><strong>Comment at a hearing</strong><span>Every City Council committee meeting and its comment deadline</span></a></li>
+            <li><a href="https://chicityclerkelms.chicago.gov/" target="_blank" rel="noopener"><strong>Follow legislation</strong><span>Search ordinances and resolutions from the City Clerk</span></a></li>
+            <li><a href="https://gisapps.chicago.gov/ZoningMapWeb/" target="_blank" rel="noopener"><strong>Check a property's zoning</strong><span>The city's official zoning map</span></a></li>
+            <li><a href="https://ova.elections.il.gov/" target="_blank" rel="noopener"><strong>Register to vote</strong><span>Online registration from the Illinois State Board of Elections</span></a></li>
+            <li><a href="https://www.documenters.org/" target="_blank" rel="noopener"><strong>Become a Documenter</strong><span>Get paid to take notes at public meetings with City Bureau</span></a></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  </main>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='common.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='frontdoor.js', v=asset_version) }}"></script>
+{% endblock %}

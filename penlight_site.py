@@ -29,7 +29,8 @@ VIEWS_JSON = ROOT / "views.json"
 
 # The live site. Pages this repo does NOT carry (survey, account, admin, request-access…) stay in
 # the private app and are reached on the same host in production; locally they link out to it.
-SITE_BASE_DEFAULT = "https://penlight.wardwise.org"
+SITE_BASE_DEFAULT = "https://www.wardwise.org"
+PUBLIC_BASE = "https://www.wardwise.org"
 
 
 @dataclass(frozen=True)
@@ -43,7 +44,13 @@ class Page:
 
 # Pages built here. Order matters only for readability.
 PAGES: tuple[Page, ...] = (
-    Page("map", "/", "explorer.html", "ui.index"),
+    # The redesign (Connor Florczyk, 2026-10): the front door is a home page, the map lives at /map.
+    Page("home", "/", "home.html", "ui.index"),
+    Page("map", "/map", "explorer.html", "ui.map_page"),
+    Page("residents", "/for/residents", "residents.html", "ui.residents"),
+    Page("planning", "/for/planning", "planning.html", "ui.planning"),
+    Page("business", "/for/business", "business.html", "ui.business"),
+    Page("alerts", "/alerts", "alerts.html", "ui.alerts"),
     Page("k3", "/k3", "k3.html", "ui.k3"),
     Page("k3_dictionary", "/k3/dictionary", "k3_dictionary.html", "ui.k3_dictionary"),
     Page("reports", "/reports", "reports_hub.html", "ui.reports_page"),
@@ -146,6 +153,7 @@ def make_environment(version_for: Callable[[str], str], *, app_base: str = "", g
     views = load_views()
     env.globals.update({
         "url_for": make_url_for(version_for, app_base=app_base),
+        "public_base": PUBLIC_BASE,  # absolute URLs for link-preview cards (og:url, og:image)
         "nav_groups": nav_groups(views),
         "view_endpoints": frozenset(view["endpoint"] for view in views["views"]),
         "ga_id": ga_id,

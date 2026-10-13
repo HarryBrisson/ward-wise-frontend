@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}Ward report card · Ward Wise{% endblock %}
+{% block body_class %}fd-theme{% endblock %}
+
+{% block content %}
+  <main>
+    <section class="fd-hero">
+      <div class="fd-wrap fd-stack">
+        <p class="fd-eyebrow">For residents and voters</p>
+        <h1 class="fd-h1">Ward report card.</h1>
+        <p class="fd-sub">Ten measures you can hold an alderperson to, each ranked against all 50 wards. Free for everyone.</p>
+      </div>
+    </section>
+
+    <section class="fd-section-tight">
+      <div id="fd-report" class="fd-wrap" data-fd-report="residents" data-fd-hash="ward">
+        <div class="fd-empty" data-fd-empty hidden>
+          <h2 class="fd-h2">Choose your ward to see its report card.</h2>
+          <p class="fd-body">It's saved in this browser, and every page follows it. You can change it any time from the top of the page.</p>
+          <div data-fd-empty-picker></div>
+        </div>
+        <div class="fd-report-layout" data-fd-body>
+          <div class="fd-minimap" data-fd-minimap></div>
+          <div class="fd-report-main">
+        <div class="fd-report-head">
+          <div>
+            <p class="fd-tag" data-fd-eyebrow>Your ward</p>
+            <h2 class="fd-h1" data-fd-title>Your ward</h2>
+            <p class="fd-small" data-fd-meta></p>
+            <p class="fd-viewing" data-fd-viewing hidden></p>
+          </div>
+        <div class="fd-summary" data-fd-summary></div>
+        </div>
+        <div class="fd-table-head"><span>Measure</span><span>Value</span><span>Standing</span><span>Among 50 wards</span></div>
+        <div class="fd-rows" data-fd-rows><p class="fd-loading">Loading live data…</p></div>
+          </div>
+        </div>
+        <p class="fd-small" style="margin-top: 20px">
+          Rank 1 is best. For response times and crime, lower is better. Select any measure for its
+          full method in the metric dictionary.
+        </p>
+        <div class="fd-actions" style="margin-top: 24px">
+          <a class="fd-btn" href="{{ url_for('ui.map_page') }}">Open the map</a>
+          <a class="fd-more" data-fd-link="/report/ward/{id}" href="/report/ward/05">Full ward report</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="fd-section fd-fill" data-fd-civic>
+      <div class="fd-wrap fd-stack-lg">
+        <div class="fd-stack">
+          <h2 class="fd-h1">Act on it.</h2>
+          <p class="fd-sub">Reach the person responsible, and see what's in front of City Council this week.</p>
+        </div>
+        <div class="fd-grid-3 fd-activity">
+          <article class="fd-card fd-stack" data-fd-contact></article>
+          <article class="fd-card fd-stack">
+            <h3 class="fd-h3">New from <span data-fd-ward-name>this ward</span></h3>
+            <p class="fd-small">Legislation introduced by the alderperson, from the City Clerk.</p>
+            <div data-fd-legislation></div>
+          </article>
+          <article class="fd-card fd-stack">
+            <h3 class="fd-h3">Upcoming hearings</h3>
+            <p class="fd-small">City Council committees open to public comment.</p>
+            <div data-fd-meetings></div>
+          </article>
+        </div>
+        <div class="fd-actions">
+          <a class="fd-btn" href="{{ url_for('ui.alerts') }}">Get ward alerts</a>
+          <a class="fd-more" href="https://311.chicago.gov" target="_blank" rel="noopener">Report a problem to 311</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="fd-section">
+      <div class="fd-wrap fd-grid-2">
+        <div class="fd-stack">
+          <p class="fd-tag">Election day is February 23, 2027</p>
+          <h2 class="fd-h2">The same report for every ward.</h2>
+          <p class="fd-body">
+            Ward Wise does not endorse candidates. Candidates and voters see the same numbers, measured
+            the same way.
+          </p>
+        </div>
+        <div class="fd-stack">
+          <p class="fd-tag">Stay informed</p>
+          <h2 class="fd-h2">Your ward, in your inbox.</h2>
+          <p class="fd-body">Alerts for new legislation, hearings, permits and election dates in your ward.</p>
+          <a class="fd-more" href="{{ url_for('ui.alerts') }}">Choose your alerts</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="fd-section fd-fill">
+      <div class="fd-wrap fd-stack">
+        <h2 class="fd-h2">Nominate what your block cares about.</h2>
+        <p class="fd-body">
+          Parking difficulty, water-fountain lead and 311 response times all began as resident
+          nominations.
+        </p>
+        <div class="fd-actions"><a class="fd-more" href="/suggest-metric">Nominate a measure</a></div>
+      </div>
+    </section>
+  </main>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='common.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='civic_map.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='frontdoor.js', v=asset_version) }}"></script>
+{% endblock %}

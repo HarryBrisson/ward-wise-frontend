@@ -13,7 +13,10 @@ reached on the same host.
 
 | Page | Route | Template |
 |---|---|---|
-| Map view | `/` | `explorer.html` |
+| Home (the front door) | `/` | `home.html` |
+| Map view | `/map` | `explorer.html` |
+| Ward report card, planners, businesses | `/for/residents`, `/for/planning`, `/for/business` | `residents.html`, `planning.html`, `business.html` |
+| Ward alerts | `/alerts` | `alerts.html` |
 | K3 sequenced explorer | `/k3` (+ `/k3/dictionary`) | `k3.html` |
 | Reports hub, and one page per report | `/reports`, `/report`, `/compare`, `/reports/term`, `/reports/comparison`, `/reports/deep-dive`, `/reports/data-years` | `reports_hub.html`, `report*.html`, `compare.html` |
 | Index of fifty, Menu money, Metrics near you | `/index`, `/menu`, `/near`, `/near/change` | `index_page.html`, `menu.html`, `near*.html` |
@@ -91,6 +94,16 @@ There is no bundler. No npm, no framework.
 - **Vanilla JS** in IIFEs attaching to `window` (`WardWiseExplorer`, `WardWiseIcons`, `WardWiseMetricDetails`, …)
 - **`static/styles.css`** plus a few page sheets (`report_ui.css`, `editorial.css`, `k3*.css`)
 - **Leaflet 1.9.4** from CDN, OpenStreetMap tiles
+
+## The redesign
+
+The shell (header, footer, color tokens, light default with dark mode), the home page, the ward
+report card, the planner and business pages and ward alerts are Connor Florczyk's redesign, ported
+from [cflorczyk9/ward-wise-redesign](https://github.com/cflorczyk9/ward-wise-redesign) in October
+2026. The redesign's CSS is the last section of `static/styles.css`; its pages use the `fd-` classes
+and `static/frontdoor.js`. The map keeps its own markup and is restyled by the "map page" rules.
+Left behind on purpose: the Guild membership pages and the Claude connector (its server lives
+elsewhere).
 
 ## Provenance
 
