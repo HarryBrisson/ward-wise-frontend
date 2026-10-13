@@ -103,6 +103,10 @@
         <h3 class="deepdive-h">What is this metric?</h3>
         ${P.metricAbout(m)}
         <p class="deepdive-line"><a href="/dictionary?metric=${encodeURIComponent(id)}">Dictionary entry</a></p>
+        <div class="rel-links deepdive-why">
+          <a class="fd-more" href="${esc(P.causalUrl(id))}">What drives it: causal report</a>
+          <a class="fd-more" href="${esc(P.impactUrl(id))}">What it affects: impact report</a>
+        </div>
       </section>
       <section class="deepdive-section">
         <h3 class="deepdive-h">How does it vary?</h3>

@@ -1,5 +1,6 @@
-// Shared by the metric pages (comparison, deep dive): the catalog load, area markers, the
-// "what is this metric?" block, the correlation statistics and their plain-English reading.
+// Shared by the metric pages (relationship, deep dive, causal, impact): the catalog load, area
+// markers, the "what is this metric?" block, the correlation statistics and their plain-English
+// reading, and the pieces of the over-time evidence (grade chip, checklist).
 // Each page is its own template and script now; this is the part they had in common.
 window.WardWiseMetricPages = (function () {
   "use strict";
@@ -253,21 +254,147 @@ window.WardWiseMetricPages = (function () {
     return `${esc(yLabel)} shows ${linear} with ${esc(xLabel)}, but the stronger rank correlation (ρ) points to a non-linear one, across ${areas}.`;
   }
 
-  function comparisonUrl(xId, yId, areaType) {
-    const q = new URLSearchParams({ x: xId, y: yId });
-    if (areaType && areaType !== "ward") q.set("area", areaType);
-    return `/reports/comparison?${q}`;
+  // Links carry the geography only when the reader chose one; otherwise each page opens on the
+  // geography that suits its measures (the API's default_area_type).
+  function withArea(path, params, areaType) {
+    const q = new URLSearchParams(params);
+    if (areaType) q.set("area", areaType);
+    return `${path}?${q}`;
+  }
+  const relationshipUrl = (xId, yId, areaType) => withArea("/reports/relationship", { x: xId, y: yId }, areaType);
+  const comparisonUrl = relationshipUrl; // the comparison page became the relationship page
+  const deepDiveUrl = (metricId, areaType) => withArea("/reports/deep-dive", { metric: metricId }, areaType);
+  const causalUrl = (metricId, areaType) => withArea("/reports/causal", { metric: metricId }, areaType);
+  const impactUrl = (metricId, areaType) => withArea("/reports/impact", { metric: metricId }, areaType);
+
+  // --- grouped picker -------------------------------------------------------------------------
+  // One <optgroup> per wellbeing domain, so 270 measures read as eleven short lists.
+  function fillGroupedSelect(select, catalog, defaultId) {
+    if (!select) return;
+    const groups = new Map();
+    for (const m of catalog) {
+      const key = m.category || "other";
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(m);
+    }
+    select.innerHTML = [...groups.entries()]
+      .sort((a, b) => humanizeCategory(a[0]).localeCompare(humanizeCategory(b[0])))
+      .map(([key, list]) => `<optgroup label="${esc(humanizeCategory(key))}">${list
+        .map((m) => `<option value="${esc(m.metric_id)}">${esc(m.label || m.metric_id)}</option>`).join("")}</optgroup>`)
+      .join("");
+    if (defaultId) select.value = defaultId;
   }
 
-  function deepDiveUrl(metricId, areaType) {
-    const q = new URLSearchParams({ metric: metricId });
-    if (areaType && areaType !== "ward") q.set("area", areaType);
-    return `/reports/deep-dive?${q}`;
+  // The redesign's segmented pill (.fd-seg) with aria-pressed and the sliding thumb.
+  function setSeg(id, value) {
+    const seg = document.getElementById(id);
+    if (!seg) return;
+    let active = null;
+    seg.querySelectorAll("button[data-value]").forEach((b) => {
+      const on = b.dataset.value === value;
+      b.setAttribute("aria-pressed", String(on));
+      if (on) active = b;
+    });
+    if (active) {
+      seg.classList.add("has-thumb");
+      seg.style.setProperty("--seg-x", `${active.offsetLeft}px`);
+      seg.style.setProperty("--seg-w", `${active.offsetWidth}px`);
+    }
+  }
+
+  function wireSeg(id, onChange) {
+    const seg = document.getElementById(id);
+    seg?.addEventListener("click", (event) => {
+      const button = event.target.closest("button[data-value]");
+      if (!button || button.getAttribute("aria-pressed") === "true") return;
+      setSeg(id, button.dataset.value);
+      onChange(button.dataset.value);
+    });
+  }
+
+  // --- scatter points with each area's photo / number, and the reader's own ward -----------
+  const REPORT_SLUG = { ward: "ward", community_area: "neighborhood", chi: "chi" };
+
+  function scatterPoints(rows, xId, yId, areaType, markers) {
+    const pts = [];
+    for (const row of rows || []) {
+      const x = row.values?.[xId], y = row.values?.[yId];
+      if (x == null || y == null) continue;
+      const id = String(row.area_id);
+      const marker = markers?.[areaType]?.[id] || {};
+      const name = row.display_name || id;
+      pts.push({
+        id, name, x, y,
+        image: marker.image || null,
+        glyph: areaType === "community_area" ? String(name).trim().charAt(0).toUpperCase() : String(marker.number ?? id).replace(/^0/, ""),
+        href: `/report/${REPORT_SLUG[areaType]}/${encodeURIComponent(id)}`,
+      });
+    }
+    return pts;
+  }
+
+  // Wards are the only geography a reader picks in the header; highlight it on ward charts.
+  function myAreaId(areaType, ward) {
+    const w = ward ?? window.WardWiseMyWard?.get?.();
+    return areaType === "ward" && w ? String(w) : null;
+  }
+
+  // --- the answer, in words -----------------------------------------------------------------
+  // "Where X is higher, Y tends to be higher": the cross-section read as a sentence a resident
+  // can repeat, with the statistics after it rather than in front of it.
+  function answerSentence(r, rho, xLabel, yLabel, n, areaType) {
+    const areas = `${n} ${areaWord(areaType)}`;
+    if (r == null) return `Not enough ${areaWord(areaType)} have both measures to compare.`;
+    if (Math.abs(r) < NEGLIGIBLE_R && !(rho != null && Math.abs(rho) >= 0.3)) {
+      return `Across ${areas}, ${esc(yLabel)} doesn't track ${esc(xLabel)}: places high on one are no more likely to be high on the other.`;
+    }
+    const lead = Math.abs(r) >= NEGLIGIBLE_R ? r : rho;
+    const dir = lead >= 0 ? "higher" : "lower";
+    return `Where ${esc(xLabel)} is higher, ${esc(yLabel)} tends to be ${dir}: ${correlationWord(lead)} across ${areas}.`;
+  }
+
+  // --- over-time evidence: grade + checklist ----------------------------------------------
+  // Graded evidence, never a "causes" verdict (Harry, 2026-10-13). The API computes the grade;
+  // these only render it.
+  const GRADE_TEXT = {
+    none: ["We can't tell", "The two don't move together within places over time, so the data can't say whether one affects the other."],
+    weak: ["Weak evidence", "They move together within places, but nothing yet separates one driving the other from both following something else."],
+    suggestive: ["Suggestive evidence", "They move together, and the timing and other checks lean toward the first measure moving before the second."],
+    moderate: ["Moderate evidence", "They move together, the first tends to move first, the pattern survives the likeliest other explanation, and there are enough sharp changes to compare against."],
+  };
+
+  function gradeChip(grade) {
+    const [label] = GRADE_TEXT[grade] || GRADE_TEXT.none;
+    return `<span class="rel-grade rel-grade-${esc(grade || "none")}">${esc(label)}</span>`;
+  }
+
+  function gradeSentence(grade) {
+    return esc((GRADE_TEXT[grade] || GRADE_TEXT.none)[1]);
+  }
+
+  function checklist(items) {
+    if (!items?.length) return "";
+    return `<ul class="rel-checklist">${items.map((c) => `
+      <li class="${c.pass ? "is-pass" : "is-fail"}">
+        <span class="rel-check" aria-hidden="true">${c.pass ? "✓" : "–"}</span>
+        <span><strong>${esc(c.label)}</strong>${c.detail ? ` <span class="rel-check-detail">${esc(c.detail)}</span>` : ""}</span>
+      </li>`).join("")}</ul>`;
+  }
+
+  async function fetchJsonOrNull(url) {
+    try {
+      const response = await fetch(url, { headers: { Accept: "application/json" } });
+      return response.ok ? response.json() : null;
+    } catch (_e) {
+      return null;
+    }
   }
 
   return {
     esc, fmt, areaWord, areaParam, loadCatalog, loadMarkers, fillSelect, wireToggle, setToggle,
     writeQuery, copyShareLink, metricAbout, methodologyBlock,
     pearson, spearman, regression, NEGLIGIBLE_R, correlationSentence, comparisonUrl, deepDiveUrl,
+    relationshipUrl, causalUrl, impactUrl, fillGroupedSelect, setSeg, wireSeg, scatterPoints, myAreaId,
+    answerSentence, gradeChip, gradeSentence, checklist, fetchJsonOrNull, humanizeCategory, REPORT_SLUG,
   };
 })();

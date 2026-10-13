@@ -54,7 +54,9 @@ PAGES: tuple[Page, ...] = (
     Page("k3", "/k3", "k3.html", "ui.k3"),
     Page("k3_dictionary", "/k3/dictionary", "k3_dictionary.html", "ui.k3_dictionary"),
     Page("reports", "/reports", "reports_hub.html", "ui.reports_page"),
-    Page("comparison", "/reports/comparison", "report_comparison.html", "ui.report_comparison_page"),
+    Page("relationship", "/reports/relationship", "report_relationship.html", "ui.relationship_page"),
+    Page("causal", "/reports/causal", "report_causal.html", "ui.causal_page"),
+    Page("impact", "/reports/impact", "report_impact.html", "ui.impact_page"),
     Page("deepdive", "/reports/deep-dive", "report_deepdive.html", "ui.report_deepdive_page"),
     Page("term", "/reports/term", "report_term.html", "ui.report_term_page"),
     Page("years", "/reports/data-years", "report_years.html", "ui.report_years_page"),
@@ -78,7 +80,11 @@ PAGES_BY_KEY = {page.key: page for page in PAGES}
 
 # Paths that forward. /metrics is the old home of the dictionary + reports tabs; its fragment deep
 # links are forwarded by the reports hub's own script.
-REDIRECTS: dict[str, str] = {"/metrics": "/reports"}
+REDIRECTS: dict[str, str] = {
+    "/metrics": "/reports",
+    # the comparison page became the relationship page (2026-10); the query string rides along
+    "/reports/comparison": "/reports/relationship",
+}
 
 # Endpoints that live in the private app (Flask on Lambda). Same host in production — CloudFront
 # routes these prefixes there — so they render as plain paths; the dev server links out instead.

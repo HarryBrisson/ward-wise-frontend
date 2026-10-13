@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Metric relationship · Ward Wise{% endblock %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='report_ui.css', v=asset_version) }}">
+{% endblock %}
+
+{% block content %}
+  <main class="rel-page" id="relationship-view">
+    {# Order follows what a reader comes for: the question they're asking, the answer, the
+       picture, then the over-time evidence and the fine print. #}
+    <header class="rel-head">
+      <p class="fd-eyebrow"><a href="{{ url_for('ui.reports_page') }}">Reports</a></p>
+      <h1 class="rel-title">Metric relationship</h1>
+      <form class="rel-question" id="rel-question" onsubmit="return false">
+        <span>How does</span>
+        <label class="rel-picker"><span class="visually-hidden">Outcome (vertical axis)</span><select id="rel-y"></select></label>
+        <span>relate to</span>
+        <label class="rel-picker"><span class="visually-hidden">Measure (horizontal axis)</span><select id="rel-x"></select></label>
+        <button type="button" class="rel-swap" id="rel-swap" aria-label="Swap the two measures" title="Swap">⇄</button>
+        <span>across</span>
+        <div class="fd-seg rel-seg" id="rel-area" role="group" aria-label="Geography">
+          <button type="button" data-value="community_area" aria-pressed="false">Neighborhoods</button>
+          <button type="button" data-value="ward" aria-pressed="false">Wards</button>
+          <button type="button" data-value="chi" aria-pressed="false">χGRIDs</button>
+        </div>
+      </form>
+    </header>
+
+    <section class="rel-answer" id="rel-answer" aria-live="polite"><p class="fd-loading">Loading…</p></section>
+    <section class="rel-chart" id="rel-chart" aria-label="Each area plotted by the two measures"></section>
+    <p class="rel-chart-note" id="rel-chart-note"></p>
+    <section class="rel-evidence" id="rel-evidence" aria-live="polite"></section>
+    <section class="rel-more" id="rel-more"></section>
+  </main>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='common.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='metric_icons.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='scoring.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='report_charts.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='report_common.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='report_relationship.js', v=asset_version) }}"></script>
+{% endblock %}
