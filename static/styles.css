@@ -7064,6 +7064,7 @@ body:not(.fd-theme) .comparison-row.is-selected .comparison-row-community-areas 
   color: var(--ink); font-size: 15px; font-weight: 600; max-width: 22rem; min-height: 36px; padding: 6px 30px 6px 12px; width: auto;
 }
 .fd-theme .rel-picker select:focus-visible { outline: 3px solid rgb(0 113 227 / 40%); outline-offset: 2px; }
+.rel-picker { display: inline-flex; max-width: 100%; min-width: 0; }
 .rel-swap { background: none; border: 0; border-radius: 50%; color: var(--ink-2); cursor: pointer; font-size: 17px; height: 32px; width: 32px; }
 .rel-swap:hover { background: var(--fill); color: var(--ink); }
 .rel-seg button { font-size: 13px; padding: 6px 12px; }
@@ -7166,7 +7167,8 @@ html.is-dark .rel-grade-moderate { color: #4cd964; }
   .rel-title { font-size: 26px; }
   .rel-answer-text { font-size: 21px; }
   .rel-question { font-size: 15px; }
-  .fd-theme .rel-picker select { max-width: 100%; }
+  .rel-picker { flex: 1 1 100%; }
+  .fd-theme .rel-picker select { max-width: 100%; width: 100%; }
   .rel-chart { padding: 6px; }
   .rel-rank li a { grid-template-columns: 1fr auto; }
   .rel-rank .wwc-event { display: none; }

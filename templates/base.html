@@ -122,12 +122,13 @@
              grouped, behind one "More" menu so the bar keeps five words. #}
           {# Views already in the bar (Map, Your ward, Alerts, Data) are left out of More. #}
           {% set top_endpoints = nav | map(attribute=0) | list %}
+          {% set top_paths = [] %}{% for endpoint, label in nav %}{% set _ = top_paths.append(url_for(endpoint)) %}{% endfor %}
           <div class="gn-more">
             <button type="button" class="gn-more-toggle{% if request.endpoint in view_endpoints and request.endpoint not in top_endpoints %} is-active{% endif %}"
                     id="gn-more-toggle" aria-expanded="false" aria-haspopup="true" aria-controls="gn-more-menu">More<svg class="gn-more-chev" viewBox="0 0 12 8" aria-hidden="true"><path d="m1 1.5 5 5 5-5"/></svg></button>
             <div class="gn-more-menu" id="gn-more-menu" hidden>
               {% for group, views in nav_groups %}
-                {% set listed = views | rejectattr("endpoint", "in", top_endpoints) | list %}
+                {% set listed = views | rejectattr("path", "in", top_paths) | list %}
                 {% if listed %}
                   <div class="gn-more-group">
                     <p class="gn-more-heading">{{ group }}</p>
