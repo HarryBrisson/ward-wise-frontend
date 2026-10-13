@@ -1,4 +1,4 @@
-// Shared by the metric pages (relationship, deep dive, causal, impact): the catalog load, area
+// Shared by the metric pages (relationship, deep dive, driver and impact analysis): the catalog load, area
 // markers, the "what is this metric?" block, the correlation statistics and their plain-English
 // reading, and the pieces of the over-time evidence (grade chip, checklist).
 // Each page is its own template and script now; this is the part they had in common.
@@ -264,7 +264,8 @@ window.WardWiseMetricPages = (function () {
   const relationshipUrl = (xId, yId, areaType) => withArea("/reports/relationship", { x: xId, y: yId }, areaType);
   const comparisonUrl = relationshipUrl; // the comparison page became the relationship page
   const deepDiveUrl = (metricId, areaType) => withArea("/reports/deep-dive", { metric: metricId }, areaType);
-  const causalUrl = (metricId, areaType) => withArea("/reports/causal", { metric: metricId }, areaType);
+  const driversUrl = (metricId, areaType) => withArea("/reports/drivers", { metric: metricId }, areaType);
+  const causalUrl = driversUrl; // the causal report became the driver analysis
   const impactUrl = (metricId, areaType) => withArea("/reports/impact", { metric: metricId }, areaType);
 
   // --- grouped picker -------------------------------------------------------------------------
@@ -394,7 +395,7 @@ window.WardWiseMetricPages = (function () {
     esc, fmt, areaWord, areaParam, loadCatalog, loadMarkers, fillSelect, wireToggle, setToggle,
     writeQuery, copyShareLink, metricAbout, methodologyBlock,
     pearson, spearman, regression, NEGLIGIBLE_R, correlationSentence, comparisonUrl, deepDiveUrl,
-    relationshipUrl, causalUrl, impactUrl, fillGroupedSelect, setSeg, wireSeg, scatterPoints, myAreaId,
+    relationshipUrl, causalUrl, driversUrl, impactUrl, fillGroupedSelect, setSeg, wireSeg, scatterPoints, myAreaId,
     answerSentence, gradeChip, gradeSentence, checklist, fetchJsonOrNull, humanizeCategory, REPORT_SLUG,
   };
 })();

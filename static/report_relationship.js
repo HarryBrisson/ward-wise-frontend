@@ -149,7 +149,7 @@
 
     $("rel-more").innerHTML = `
       <div class="rel-links">
-        <a class="fd-more" href="${esc(P.causalUrl(yId, state.areaChosen ? state.area : ""))}">What tends to move before ${esc(label(yId))}</a>
+        <a class="fd-more" href="${esc(P.driversUrl(yId, state.areaChosen ? state.area : ""))}">What tends to move before ${esc(label(yId))}</a>
         <a class="fd-more" href="${esc(P.impactUrl(xId, state.areaChosen ? state.area : ""))}">What tends to move after ${esc(label(xId))}</a>
         <a class="fd-more" href="${esc(P.deepDiveUrl(yId, state.area))}">Deep dive: ${esc(label(yId))}</a>
         <button type="button" class="fd-btn fd-btn-ghost" id="rel-share">Copy share link</button>

@@ -13,6 +13,7 @@
     <header class="rel-head">
       <p class="fd-eyebrow"><a href="{{ url_for('ui.reports_page') }}">Reports</a></p>
       <h1 class="rel-title">Metric relationship</h1>
+      {% include "_how_to_read.html" %}
       <form class="rel-question" id="rel-question" onsubmit="return false">
         <span>How does</span>
         <label class="rel-picker"><span class="visually-hidden">Outcome (vertical axis)</span><select id="rel-y"></select></label>

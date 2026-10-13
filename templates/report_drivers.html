@@ -1,17 +1,18 @@
 {% extends "base.html" %}
 
-{% block title %}Causal report · Ward Wise{% endblock %}
+{% block title %}Driver analysis · Ward Wise{% endblock %}
 
 {% block head %}
   <link rel="stylesheet" href="{{ url_for('static', filename='report_ui.css', v=asset_version) }}">
 {% endblock %}
 
 {% block content %}
-  <main class="rel-page" id="ranked-view" data-mode="causal">
+  <main class="rel-page" id="ranked-view" data-mode="drivers">
     <header class="rel-head">
       <p class="fd-eyebrow"><a href="{{ url_for('ui.reports_page') }}">Reports</a></p>
-      <h1 class="rel-title">Causal report</h1>
-      <p class="rel-muted">What tends to move <em>before</em> a measure: candidate drivers, ranked by how well the record supports them. Graded evidence from how measures have moved within places over time; it never proves one causes another.</p>
+      <h1 class="rel-title">Driver analysis</h1>
+      <p class="rel-muted">What tends to move <em>before</em> a measure: candidate drivers, ranked by how well the record supports them. Part of the analysis toolkit for planners and administrators.</p>
+      {% include "_how_to_read.html" %}
       <form class="rel-question" onsubmit="return false">
         <label class="rel-picker"><span class="visually-hidden">Measure</span><select id="ranked-metric"></select></label>
         <span>across</span>

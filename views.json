@@ -3,6 +3,7 @@
     "Explore",
     "For organizations",
     "Reports",
+    "Analysis toolkit",
     "Reference"
   ],
   "views": [
@@ -118,25 +119,25 @@
       "key": "relationship",
       "endpoint": "ui.relationship_page",
       "label": "Metric relationship",
-      "group": "Reports",
+      "group": "Analysis toolkit",
       "blurb": "Any two measures side by side, and whether the record of how they move over time points to one driving the other.",
       "path": "/reports/relationship",
       "public": true
     },
     {
-      "key": "causal",
-      "endpoint": "ui.causal_page",
-      "label": "Causal report",
-      "group": "Reports",
+      "key": "drivers",
+      "endpoint": "ui.drivers_page",
+      "label": "Driver analysis",
+      "group": "Analysis toolkit",
       "blurb": "What tends to move before a measure: candidate drivers, graded by the evidence.",
-      "path": "/reports/causal",
+      "path": "/reports/drivers",
       "public": true
     },
     {
       "key": "impact",
       "endpoint": "ui.impact_page",
-      "label": "Impact report",
-      "group": "Reports",
+      "label": "Impact analysis",
+      "group": "Analysis toolkit",
       "blurb": "What tends to move after a measure changes: candidate effects, graded by the evidence.",
       "path": "/reports/impact",
       "public": true
@@ -145,7 +146,7 @@
       "key": "deepdive",
       "endpoint": "ui.report_deepdive_page",
       "label": "Metric deep dive",
-      "group": "Reports",
+      "group": "Analysis toolkit",
       "blurb": "One measure ranked across every area, and which other measures move with it.",
       "path": "/reports/deep-dive",
       "public": true

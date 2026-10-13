@@ -6773,6 +6773,19 @@ body:not(.fd-theme) .comparison-row-title { font-size: 16px; font-weight: 600; l
 body:not(.fd-theme) .comparison-row-community-areas { color: var(--ink-2); font-size: 13px; }
 body:not(.fd-theme) .comparison-row > strong { color: var(--ink); font-size: 17px; font-variant-numeric: tabular-nums; font-weight: 600; letter-spacing: -0.01em; }
 body:not(.fd-theme) .comparison-row-main img { border-radius: 10px; }
+/* The row markup nests rank + photo + title in .comparison-row-main; flatten it so each gets its own
+   column (rank · photo · name · score). Without this the three spilled out of the 22px rank column
+   and the name and score landed on top of the photo. */
+body:not(.fd-theme) .comparison-row { grid-template-columns: 22px 48px minmax(0, 1fr) auto; }
+body:not(.fd-theme) .comparison-row-main { display: contents; }
+body:not(.fd-theme) .comparison-row-main .ward-signifier-thumb,
+body:not(.fd-theme) .comparison-row-main .ward-signifier-fallback { height: 48px; width: 48px; }
+body:not(.fd-theme) .comparison-row-copy { min-width: 0; }
+body:not(.fd-theme) .comparison-row-title,
+body:not(.fd-theme) .comparison-row-community-areas { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+body:not(.fd-theme) .comparison-row > strong { justify-self: end; }
+body:not(.fd-theme) .comparison-row-bar,
+body:not(.fd-theme) .comparison-row-tags { grid-column: 2 / -1; }
 
 /* Measure picker: one blue button, soft gray pills, borderless tiles */
 body:not(.fd-theme) .metric-selection-actions { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; }
@@ -7154,7 +7167,7 @@ html.is-dark .rel-grade-moderate { color: #4cd964; }
 .rel-links .fd-more { font-size: 15px; }
 .rel-table table { font-size: 14px; }
 
-/* Ranked lists on the causal and impact reports. */
+/* Ranked lists on the driver and impact analyses. */
 .rel-rank { display: grid; gap: 10px; list-style: none; margin: 0; padding: 0; }
 .rel-rank li a {
   align-items: center; background: var(--fill); border-radius: 14px; color: var(--ink); display: grid; gap: 4px 14px;
@@ -7179,3 +7192,13 @@ html.is-dark .rel-grade-moderate { color: #4cd964; }
   .rel-rank li a { grid-template-columns: 1fr auto; }
   .rel-rank .wwc-event { display: none; }
 }
+
+
+/* "How to read this" on the analysis toolkit pages. */
+.rel-howto { background: var(--fill); border-radius: 14px; margin: 10px 0 18px; max-width: 46rem; padding: 10px 16px; }
+.rel-howto summary { color: var(--link, var(--blue)); cursor: pointer; font-size: 15px; font-weight: 600; }
+.rel-howto[open] summary { margin-bottom: 8px; }
+.rel-howto-body { color: var(--ink); display: grid; font-size: 14px; gap: 8px; line-height: 1.5; }
+.rel-howto-body p, .rel-howto-body ul { margin: 0; }
+.rel-howto-body ul { padding-left: 18px; }
+.rel-howto-example { color: var(--ink-2); }
