@@ -95,10 +95,10 @@
         {# The team, in ward order. Add `linkedin` (a full profile URL) to show that link too; a link
            only appears when its URL is set. #}
         {% set team = [
-          {"name": "Harry Brisson", "photo": "harry-brisson", "role": "12th Ward · Data coordinator", "github": "HarryBrisson", "linkedin": None},
-          {"name": "Angel Carbajal", "photo": "angel-carbajal", "role": "33rd Ward · UX and design", "github": "zyplos", "linkedin": None},
-          {"name": "Connor Florczyk", "photo": "connor-florczyk", "role": "42nd Ward · UX and reporting", "github": "cflorczyk9", "linkedin": None},
-          {"name": "Jackie Schmitz", "photo": "jackie-schmitz", "role": "43rd Ward · Personalization", "github": "jackieschmitz", "linkedin": None},
+          {"name": "Harry Brisson", "photo": "harry-brisson", "role": "12th Ward · Data coordinator", "github": "HarryBrisson", "linkedin": "https://www.linkedin.com/in/ejbrisson/"},
+          {"name": "Angel Carbajal", "photo": "angel-carbajal", "role": "33rd Ward · UX and design", "github": "zyplos", "linkedin": "https://www.linkedin.com/in/angel-carbajal/"},
+          {"name": "Connor Florczyk", "photo": "connor-florczyk", "role": "42nd Ward · UX and reporting", "github": "cflorczyk9", "linkedin": "https://www.linkedin.com/in/connor-florczyk/"},
+          {"name": "Jackie Schmitz", "photo": "jackie-schmitz", "role": "43rd Ward · Personalization", "github": "jackieschmitz", "linkedin": "https://www.linkedin.com/in/jaclyn-s-7928a4134"},
         ] %}
         <ul class="fd-team">
           {% for person in team %}
