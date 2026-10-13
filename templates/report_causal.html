@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Causal report · Ward Wise{% endblock %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='report_ui.css', v=asset_version) }}">
+{% endblock %}
+
+{% block content %}
+  <main class="rel-page" id="ranked-view" data-mode="causal">
+    <header class="rel-head">
+      <p class="fd-eyebrow"><a href="{{ url_for('ui.reports_page') }}">Reports</a></p>
+      <h1 class="rel-title">Causal report</h1>
+      <p class="rel-muted">What tends to move <em>before</em> a measure: candidate drivers, ranked by how well the record supports them. Graded evidence from how measures have moved within places over time; it never proves one causes another.</p>
+      <form class="rel-question" onsubmit="return false">
+        <label class="rel-picker"><span class="visually-hidden">Measure</span><select id="ranked-metric"></select></label>
+        <span>across</span>
+        <div class="fd-seg rel-seg" id="ranked-area" role="group" aria-label="Geography">
+          <button type="button" data-value="community_area" aria-pressed="false">Neighborhoods</button>
+          <button type="button" data-value="ward" aria-pressed="false">Wards</button>
+          <button type="button" data-value="chi" aria-pressed="false">χGRIDs</button>
+        </div>
+      </form>
+    </header>
+    <section class="rel-answer" id="ranked-answer" aria-live="polite"><p class="fd-loading">Loading…</p></section>
+    <section id="ranked-facts"></section>
+    <section id="ranked-list" aria-live="polite"></section>
+    <section class="rel-more" id="ranked-more"></section>
+  </main>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='common.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='metric_icons.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='scoring.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='report_charts.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='report_common.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='report_ranked.js', v=asset_version) }}"></script>
+{% endblock %}

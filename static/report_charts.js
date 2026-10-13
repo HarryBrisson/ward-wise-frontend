@@ -482,6 +482,155 @@ window.WardWiseCharts = (function () {
   // ---- one delegated tooltip for every mark on every chart ----
   // Any element carrying data-wardtick + data-tip gets a fixed-position tooltip on hover, focus,
   // or tap. Installed once per container; safe to call again.
+  // ---- scatter: one marker per area, drawn at the container's real pixel size ----
+  // Unlike the viewBox charts above, this one measures its container and draws in pixels, so a
+  // photo marker is 32px on a laptop and 24px on a phone instead of shrinking with the chart.
+  // points: [{id, name, x, y, image?, glyph?, href?}]. Returns a disposer.
+  function niceTicks(lo, hi, count = 5) {
+    if (!(hi > lo)) return [lo];
+    const raw = (hi - lo) / count;
+    const pow = Math.pow(10, Math.floor(Math.log10(raw)));
+    const step = [1, 2, 2.5, 5, 10].map((m) => m * pow).find((s) => s >= raw) || raw;
+    const ticks = [];
+    for (let v = Math.ceil(lo / step) * step; v <= hi + step * 1e-9; v += step) ticks.push(+v.toFixed(10));
+    return ticks;
+  }
+
+  function median(values) {
+    const v = values.slice().sort((a, b) => a - b);
+    const m = v.length >> 1;
+    return v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2;
+  }
+
+  function scatter(el, opts) {
+    const { points = [], xLabel = "", yLabel = "", fmt = (v) => String(v), trend = null, dots = false } = opts;
+    let highlightId = opts.highlightId || null;
+    if (!el || !points.length) return () => {};
+    el.classList.add("wwc-scatter-wrap");
+    const card = document.createElement("div");
+    card.className = "wwc-scatter-card";
+    card.hidden = true;
+
+    function draw() {
+      const width = Math.max(300, Math.round(el.clientWidth || 600));
+      const phone = width < 480;
+      const height = Math.round(phone ? width * 1.15 : Math.min(600, Math.max(380, width * 0.6)));
+      const size = dots ? 9 : phone ? 24 : 32;
+      const m = { l: phone ? 52 : 68, r: size / 2 + 8, t: size / 2 + 8, b: phone ? 52 : 58 };
+      const xs = points.map((p) => p.x), ys = points.map((p) => p.y);
+      const pad = (lo, hi) => { const span = hi - lo || Math.abs(hi) || 1; return [lo - span * 0.06, hi + span * 0.06]; };
+      const [x0, x1] = pad(Math.min(...xs), Math.max(...xs));
+      const [y0, y1] = pad(Math.min(...ys), Math.max(...ys));
+      const px = (x) => m.l + ((x - x0) / (x1 - x0)) * (width - m.l - m.r);
+      const py = (y) => height - m.b - ((y - y0) / (y1 - y0)) * (height - m.t - m.b);
+      const xt = niceTicks(x0, x1, phone ? 4 : 5), yt = niceTicks(y0, y1, phone ? 4 : 5);
+      const grid = [
+        ...xt.map((t) => `<line class="wwc-grid" x1="${px(t)}" x2="${px(t)}" y1="${m.t}" y2="${height - m.b}"/>
+          <text class="wwc-tick" x="${px(t)}" y="${height - m.b + 18}" text-anchor="middle">${esc(fmt(t))}</text>`),
+        ...yt.map((t) => `<line class="wwc-grid" x1="${m.l}" x2="${width - m.r}" y1="${py(t)}" y2="${py(t)}"/>
+          <text class="wwc-tick" x="${m.l - 8}" y="${py(t) + 4}" text-anchor="end">${esc(fmt(t))}</text>`),
+      ].join("");
+      // Median guides split the cloud into four quadrants: "above the typical area on both", etc.
+      const mx = median(xs), my = median(ys);
+      const medians = `<line class="wwc-median" x1="${px(mx)}" x2="${px(mx)}" y1="${m.t}" y2="${height - m.b}"/>
+        <line class="wwc-median" x1="${m.l}" x2="${width - m.r}" y1="${py(my)}" y2="${py(my)}"/>`;
+      const line = trend
+        ? `<line class="wwc-trend" x1="${px(x0)}" y1="${py(trend.slope * x0 + trend.intercept)}" x2="${px(x1)}" y2="${py(trend.slope * x1 + trend.intercept)}"/>`
+        : "";
+      const order = points.slice().sort((a, b) => (a.id === highlightId) - (b.id === highlightId));
+      const marks = order.map((p, i) => {
+        const cx = px(p.x), cy = py(p.y), r = size / 2;
+        const mine = p.id === highlightId;
+        const showPhoto = p.image && !phone && !dots;
+        const body = showPhoto
+          ? `<image href="${esc(p.image)}" x="${cx - r}" y="${cy - r}" width="${size}" height="${size}" preserveAspectRatio="xMidYMid slice" clip-path="url(#wwcClip)"/>
+             <circle class="wwc-ring" cx="${cx}" cy="${cy}" r="${r}"/>`
+          : dots
+            ? `<circle class="wwc-dot" cx="${cx}" cy="${cy}" r="${r / 2 + 0.5}"/>`
+            : `<circle class="wwc-num-bg" cx="${cx}" cy="${cy}" r="${r}"/>
+               <text class="wwc-num" x="${cx}" y="${cy}" dy="0.35em" text-anchor="middle" style="font-size:${phone ? 10 : 12}px">${esc(p.glyph ?? "")}</text>`;
+        const halo = mine ? `<circle class="wwc-mine" cx="${cx}" cy="${cy}" r="${r + 4}"/>
+          <text class="wwc-mine-label" x="${cx}" y="${cy - r - 9}" text-anchor="middle">${esc(p.name)}</text>` : "";
+        return `<a class="wwc-mark${mine ? " is-mine" : ""}" href="${esc(p.href || "#")}" data-i="${points.indexOf(p)}" aria-label="${esc(`${p.name}: ${xLabel} ${fmt(p.x)}, ${yLabel} ${fmt(p.y)}`)}">${body}${halo}</a>`;
+      }).join("");
+      el.innerHTML = `
+        <svg class="wwc-scatter" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="${esc(`${yLabel} against ${xLabel}`)}">
+          <defs><clipPath id="wwcClip" clipPathUnits="objectBoundingBox"><circle cx="0.5" cy="0.5" r="0.5"/></clipPath></defs>
+          ${grid}${medians}
+          <line class="wwc-axis" x1="${m.l}" x2="${m.l}" y1="${m.t}" y2="${height - m.b}"/>
+          <line class="wwc-axis" x1="${m.l}" x2="${width - m.r}" y1="${height - m.b}" y2="${height - m.b}"/>
+          ${line}${marks}
+          <text class="wwc-axis-label" x="${m.l + (width - m.l - m.r) / 2}" y="${height - 10}" text-anchor="middle">${esc(xLabel)} →</text>
+          <text class="wwc-axis-label" transform="translate(16 ${m.t + (height - m.t - m.b) / 2}) rotate(-90)" text-anchor="middle">${esc(yLabel)} →</text>
+        </svg>`;
+      el.appendChild(card);
+    }
+
+    function showCard(target) {
+      const a = target?.closest?.(".wwc-mark");
+      if (!a) { card.hidden = true; return; }
+      const p = points[Number(a.dataset.i)];
+      const box = el.getBoundingClientRect(), mb = a.getBoundingClientRect();
+      card.innerHTML = `<strong>${esc(p.name)}</strong><span>${esc(xLabel)}: ${esc(fmt(p.x))}</span><span>${esc(yLabel)}: ${esc(fmt(p.y))}</span>${p.href ? `<em>Open its full report →</em>` : ""}`;
+      card.hidden = false;
+      const left = Math.min(Math.max(8, mb.left - box.left + mb.width / 2 - card.offsetWidth / 2), box.width - card.offsetWidth - 8);
+      const top = mb.top - box.top - card.offsetHeight - 10;
+      card.style.left = `${left}px`;
+      card.style.top = `${top < 0 ? mb.bottom - box.top + 10 : top}px`;
+    }
+    const over = (e) => showCard(e.target);
+    const out = (e) => { if (!el.contains(e.relatedTarget)) card.hidden = true; };
+    el.addEventListener("pointerover", over);
+    el.addEventListener("focusin", over);
+    el.addEventListener("pointerleave", out);
+
+    draw();
+    let last = el.clientWidth;
+    const ro = typeof ResizeObserver === "function"
+      ? new ResizeObserver(() => { if (Math.abs(el.clientWidth - last) > 4) { last = el.clientWidth; draw(); } })
+      : null;
+    ro?.observe(el);
+    const onWard = (e) => { if (opts.highlightFrom) { highlightId = opts.highlightFrom(e.detail?.ward); draw(); } };
+    document.addEventListener("fd:myward", onWard);
+    return () => { ro?.disconnect(); document.removeEventListener("fd:myward", onWard); el.removeEventListener("pointerover", over); el.removeEventListener("focusin", over); el.removeEventListener("pointerleave", out); };
+  }
+
+  // ---- small multiples for the over-time evidence ----
+  // Lag profile: change correlations with Y shifted -3..+3 years; bars above/below a zero line.
+  function lagBars(profile, { leadK = null } = {}) {
+    const rows = (profile || []).filter((d) => Number.isFinite(d.r));
+    if (!rows.length) return "";
+    const W = 280, H = 120, mid = 58, half = 46, bw = 26, gap = (W - 7 * bw) / 8;
+    const bars = rows.map((d) => {
+      const i = d.k + 3, x = gap + i * (bw + gap), h = Math.min(1, Math.abs(d.r)) * half;
+      const y = d.r >= 0 ? mid - h : mid;
+      return `<rect class="wwc-lag${d.k === leadK ? " is-lead" : ""}${d.k > 0 ? " is-later" : d.k < 0 ? " is-earlier" : ""}" x="${x}" y="${y}" width="${bw}" height="${Math.max(1, h)}" rx="3"><title>${d.k > 0 ? `Y ${d.k} yr later` : d.k < 0 ? `Y ${-d.k} yr earlier` : "same year"}: r = ${d.r.toFixed(2)}</title></rect>
+        <text class="wwc-lag-k" x="${x + bw / 2}" y="${H - 6}" text-anchor="middle">${d.k > 0 ? `+${d.k}` : d.k}</text>`;
+    }).join("");
+    return `<svg class="wwc-lagbars" viewBox="0 0 ${W} ${H}" role="img" aria-label="Correlation of changes at each lag">
+      <line class="wwc-axis" x1="0" x2="${W}" y1="${mid}" y2="${mid}"/>${bars}</svg>`;
+  }
+
+  // Event path: average Y movement in the years around X's sharpest jumps, against places that
+  // hadn't jumped yet. t = 0 is the jump year.
+  function eventPath(path, control) {
+    const pts = (path || []).map((v, i) => [i - 3, v]).filter(([, v]) => Number.isFinite(v));
+    if (pts.length < 3) return "";
+    const ctl = (control || []).map((v, i) => [i - 3, v]).filter(([, v]) => Number.isFinite(v));
+    const all = [...pts, ...ctl].map(([, v]) => v).concat([0]);
+    const lo = Math.min(...all), hi = Math.max(...all), span = hi - lo || 1;
+    const W = 280, H = 120, l = 10, r = 10, t = 12, b = 22;
+    const px = (k) => l + ((k + 3) / 6) * (W - l - r);
+    const py = (v) => t + (1 - (v - lo) / span) * (H - t - b);
+    const poly = (arr, cls) => `<polyline class="${cls}" points="${arr.map(([k, v]) => `${px(k)},${py(v)}`).join(" ")}"/>`;
+    return `<svg class="wwc-event" viewBox="0 0 ${W} ${H}" role="img" aria-label="Average change in the outcome around the driver's jumps">
+      <line class="wwc-axis" x1="${l}" x2="${W - r}" y1="${py(0)}" y2="${py(0)}"/>
+      <line class="wwc-median" x1="${px(0)}" x2="${px(0)}" y1="${t}" y2="${H - b}"/>
+      ${ctl.length ? poly(ctl, "wwc-event-control") : ""}${poly(pts, "wwc-event-line")}
+      ${[-3, 0, 3].map((k) => `<text class="wwc-lag-k" x="${px(k)}" y="${H - 6}" text-anchor="middle">${k === 0 ? "jump" : k > 0 ? `+${k} yr` : `${k} yr`}</text>`).join("")}
+    </svg>`;
+  }
+
   function attachTips(container) {
     if (!container || container.dataset.wwTips) return;
     container.dataset.wwTips = "1";
@@ -568,6 +717,5 @@ window.WardWiseCharts = (function () {
     bloom,
     humanizeDomain,
     DOMAIN_SHORT,
-    attachTips,
-  };
+    attachTips, scatter, lagBars, eventPath, niceTicks };
 })();

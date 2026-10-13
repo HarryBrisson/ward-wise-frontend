@@ -115,12 +115,30 @@
       "public": true
     },
     {
-      "key": "comparison",
-      "endpoint": "ui.report_comparison_page",
-      "label": "Metric comparison",
+      "key": "relationship",
+      "endpoint": "ui.relationship_page",
+      "label": "Metric relationship",
       "group": "Reports",
-      "blurb": "Any two measures plotted against each other across wards, with the correlation.",
-      "path": "/reports/comparison",
+      "blurb": "Any two measures side by side, and whether the record of how they move over time points to one driving the other.",
+      "path": "/reports/relationship",
+      "public": true
+    },
+    {
+      "key": "causal",
+      "endpoint": "ui.causal_page",
+      "label": "Causal report",
+      "group": "Reports",
+      "blurb": "What tends to move before a measure: candidate drivers, graded by the evidence.",
+      "path": "/reports/causal",
+      "public": true
+    },
+    {
+      "key": "impact",
+      "endpoint": "ui.impact_page",
+      "label": "Impact report",
+      "group": "Reports",
+      "blurb": "What tends to move after a measure changes: candidate effects, graded by the evidence.",
+      "path": "/reports/impact",
       "public": true
     },
     {
