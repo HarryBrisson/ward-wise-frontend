@@ -631,6 +631,84 @@ window.WardWiseCharts = (function () {
     </svg>`;
   }
 
+  // ---- the lag grid: every area-year at gaps of 0–5 years (relationship page) ----
+  // panels from WardWiseMetricPages.lagPanels. Each panel is one scatter: across = X in year t,
+  // up = Y in year t + k, split at (cx, cy) — zero for changes, the medians for levels. Dots are
+  // zero-length round-capped segments gathered into one path per class (a χGRID pair is thousands
+  // of area-years). Changes are heavy-tailed, so each axis is on a signed-log (asinh) scale around
+  // the split, in units of the typical distance from it: the quadrants are what the reader reads
+  // (there are no tick values to distort), and a handful of outliers no longer squash everything
+  // into the middle. The last 1% are pinned to the edge.
+  const LAG_GAP_LABEL = (k) => (k === 0 ? "Same year" : `${k} year${k === 1 ? "" : "s"} later`);
+
+  function lagGrid(panels, { mode = "changes", highlightId = null } = {}) {
+    const W = 200, H = 200, pad = 10;
+    const pct = (v) => (v == null ? "–" : `${Math.round(v * 100)}%`);
+    // signed-log position of v relative to the split c, and the 99th-percentile reach of those
+    const axis = (values, c) => {
+      const dev = values.map((v) => Math.abs(v - c)).filter((d) => d > 0).sort((a, b) => a - b);
+      const unit = dev[Math.floor(dev.length / 2)] || 1;
+      const t = (v) => Math.asinh((v - c) / unit);
+      const spread = values.map((v) => Math.abs(t(v))).sort((a, b) => a - b);
+      const lim = spread[Math.floor(0.99 * (spread.length - 1))] || 1;
+      return (v) => Math.max(-1, Math.min(1, t(v) / lim));
+    };
+    const sameWord = mode === "levels" ? "same side of the middle" : "moved the same way";
+    const cells = panels.map((p) => {
+      const title = `<figcaption><strong>${LAG_GAP_LABEL(p.k)}</strong>`;
+      if (p.n < 10) return `<figure class="wwc-lg-cell is-empty">${title}<span>Too few overlapping years</span></figcaption></figure>`;
+      const ax = axis(p.pts.map((d) => d.x), p.cx), ay = axis(p.pts.map((d) => d.y), p.cy);
+      const px = (v) => pad + ((ax(v) + 1) / 2) * (W - 2 * pad);
+      const py = (v) => pad + (1 - (ay(v) + 1) / 2) * (H - 2 * pad);
+      const paths = { same: "", opp: "", tie: "", you: "" };
+      for (const d of p.pts) {
+        const sx = Math.sign(d.x - p.cx), sy = Math.sign(d.y - p.cy);
+        const m = `M${px(d.x).toFixed(1)} ${py(d.y).toFixed(1)}h0`;
+        paths[!sx || !sy ? "tie" : sx === sy ? "same" : "opp"] += m;
+        if (highlightId && d.area === highlightId) paths.you += m;
+      }
+      const mid = W / 2;
+      return `<figure class="wwc-lg-cell">
+        <svg class="wwc-lg" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(LAG_GAP_LABEL(p.k))}: ${p.n} area-years, ${pct(p.same)} ${sameWord}">
+          <rect class="wwc-lg-quad" x="${mid}" y="0" width="${mid}" height="${mid}"/>
+          <rect class="wwc-lg-quad" x="0" y="${mid}" width="${mid}" height="${mid}"/>
+          <line class="wwc-axis" x1="${mid}" x2="${mid}" y1="0" y2="${H}"/>
+          <line class="wwc-axis" x1="0" x2="${W}" y1="${mid}" y2="${mid}"/>
+          ${paths.you ? `<path class="wwc-lg-you" d="${paths.you}"/>` : ""}
+          <path class="wwc-lg-dot is-tie" d="${paths.tie}"/>
+          <path class="wwc-lg-dot is-opp" d="${paths.opp}"/>
+          <path class="wwc-lg-dot is-same" d="${paths.same}"/>
+          <text class="wwc-lg-corner" x="${W - 6}" y="18" text-anchor="end">${mode === "levels" ? "both high" : "both up"}</text>
+          <text class="wwc-lg-corner" x="6" y="${H - 7}">${mode === "levels" ? "both low" : "both down"}</text>
+        </svg>
+        ${title}<span><b>${pct(p.same)}</b> ${sameWord}${p.r == null ? "" : ` · r ${p.r.toFixed(2)}`} · ${p.n.toLocaleString()} area-years</span></figcaption>
+      </figure>`;
+    }).join("");
+    return `<div class="wwc-lg-grid">${cells}</div>`;
+  }
+
+  // Share of area-years on the same side at each gap, as bars up or down from the 50% a coin flip
+  // would give: the interesting differences are a few points, invisible on a 0–100% scale.
+  function lagShareStrip(panels, { mode = "changes" } = {}) {
+    const rows = panels.filter((p) => p.same != null && p.n >= 10);
+    if (!rows.length) return "";
+    const W = 340, H = 130, plotW = 260, mid = 62, half = 42, bw = 30, gap = (plotW - 6 * bw) / 7;
+    const reach = Math.max(0.1, ...rows.map((p) => Math.abs(p.same - 0.5)));
+    const y = (v) => mid - ((v - 0.5) / reach) * half;
+    const best = rows.reduce((a, b) => (Math.abs(b.same - 0.5) > Math.abs(a.same - 0.5) ? b : a));
+    const bars = rows.map((p) => {
+      const x = gap + p.k * (bw + gap), top = Math.min(mid, y(p.same)), h = Math.max(1, Math.abs(y(p.same) - mid));
+      const above = p.same >= 0.5;
+      return `<rect class="wwc-lg-share${p === best ? " is-best" : ""}" x="${x}" y="${top}" width="${bw}" height="${h}" rx="3"><title>${LAG_GAP_LABEL(p.k)}: ${Math.round(p.same * 100)}% ${mode === "levels" ? "on the same side" : "moved the same way"} (${p.n} area-years)</title></rect>
+        <text class="wwc-lag-k" x="${x + bw / 2}" y="${above ? top - 4 : top + h + 12}" text-anchor="middle">${Math.round(p.same * 100)}%</text>
+        <text class="wwc-lag-k" x="${x + bw / 2}" y="${H - 4}" text-anchor="middle">${p.k === 0 ? "same yr" : `+${p.k} yr`}</text>`;
+    }).join("");
+    return `<svg class="wwc-lg-strip" viewBox="0 0 ${W} ${H}" role="img" aria-label="Share moving the same way at each gap, against 50%">
+      <line class="wwc-median" x1="0" x2="${plotW}" y1="${mid}" y2="${mid}"/>
+      <text class="wwc-lag-k" x="${plotW + 6}" y="${mid - 2}">50%</text>
+      <text class="wwc-lag-k" x="${plotW + 6}" y="${mid + 11}">coin flip</text>${bars}</svg>`;
+  }
+
   function attachTips(container) {
     if (!container || container.dataset.wwTips) return;
     container.dataset.wwTips = "1";
@@ -717,5 +795,5 @@ window.WardWiseCharts = (function () {
     bloom,
     humanizeDomain,
     DOMAIN_SHORT,
-    attachTips, scatter, lagBars, eventPath, niceTicks };
+    attachTips, scatter, lagBars, eventPath, lagGrid, lagShareStrip, LAG_GAP_LABEL, niceTicks };
 })();
