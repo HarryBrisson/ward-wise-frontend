@@ -1,5 +1,6 @@
 # Branch rules (set in the repo's Settings → Branches):
-#   main  — the stable site. PRs need a review from a code owner (below): the maintainer.
+#   main  — the stable site. PRs need a review from a code owner (below): the maintainer, and must
+#           come from `dev` (the required `main-from-dev` check, .github/workflows/main-from-dev.yml).
 #   dev   — the preview channel at dev.wardwise.org. PRs need one approving review from anyone
 #           with write access; collaborators merge their own work there.
 # Everything is owned by the maintainer on main; the deploy mechanism is owned everywhere.
