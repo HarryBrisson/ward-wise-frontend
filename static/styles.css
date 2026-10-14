@@ -5210,13 +5210,24 @@ html:not(.is-dark) .gn-theme .gn-theme-moon { animation: gn-spin 0.5s var(--ease
 html.is-theming, html.is-theming * { transition: background-color 0.35s ease, color 0.35s ease, border-color 0.35s ease, fill 0.35s ease, stroke 0.35s ease !important; }
 
 .gn {
+  position: sticky;
+  top: 0;
+  z-index: 1100;
+}
+
+/* Keep the header frost on a sibling layer.  A backdrop-filter on .gn itself
+   becomes the backdrop root for its dropdowns, preventing them from sampling
+   the page behind them. */
+.gn::before {
   -webkit-backdrop-filter: saturate(180%) blur(20px);
   backdrop-filter: saturate(180%) blur(20px);
   background: var(--glass);
   border-bottom: 1px solid var(--glass-line);
-  position: sticky;
-  top: 0;
-  z-index: 1100;
+  content: "";
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+  z-index: 0;
 }
 
 .gn-inner {
@@ -5229,6 +5240,8 @@ html.is-theming, html.is-theming * { transition: background-color 0.35s ease, co
   margin: 0 auto;
   max-width: 1080px;
   padding: 0 22px;
+  position: relative;
+  z-index: 1;
 }
 
 .gn .gn-brand {
@@ -6017,8 +6030,8 @@ body.fd-theme {
 .mw-button.is-set:hover { background: var(--blue-wash-2); }
 
 .mw-menu {
-  -webkit-backdrop-filter: saturate(180%) blur(24px);
-  backdrop-filter: saturate(180%) blur(24px);
+  -webkit-backdrop-filter: saturate(180%) blur(5px);
+  backdrop-filter: saturate(180%) blur(5px);
   background: var(--glass-strong);
   border-radius: 18px;
   box-shadow: var(--shadow-pop);
@@ -6987,7 +7000,7 @@ body:not(.fd-theme) .comparison-row.is-selected .comparison-row-community-areas 
   .fd-mcp .fd-mcp-top { flex-direction: column; }
   .fd-mcp .fd-mcp-icon { height: 52px; width: 52px; }
 }
-      
+
 
 /* About: the team, four cards with photos (same people and roles as the live site). */
 .fd-team { display: grid; gap: 20px; grid-template-columns: repeat(4, minmax(0, 1fr)); list-style: none; margin: 0; padding: 0; }
