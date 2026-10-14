@@ -44,9 +44,9 @@ def content_versions(static_dir: Path) -> dict[str, str]:
 def git_sha(default: str = "local") -> str:
     """The commit this build was rendered FROM: the checkout's own HEAD.
 
-    Not GITHUB_SHA: the Pages workflow builds both channels (main → root, next → /next) on a push to
+    Not GITHUB_SHA: the Pages workflow builds both channels (main → root, dev → /dev) on a push to
     either branch, so GITHUB_SHA names whichever branch triggered the run, and the root once reported
-    next's commit while serving main's pages. GITHUB_SHA is only the fallback when there's no git."""
+    the preview branch's commit while serving main's pages. GITHUB_SHA is only the fallback when there's no git."""
     try:
         return subprocess.check_output(["git", "rev-parse", "--short=12", "HEAD"], text=True,
                                        cwd=Path(__file__).resolve().parents[1], stderr=subprocess.DEVNULL).strip()
