@@ -15,7 +15,9 @@ deploy.**
 | `dev` | **dev.wardwise.org** — the preview channel, same live data | any collaborator, after one approving review |
 | `main` | **www.wardwise.org** — the stable site | the maintainer, via a PR from `dev` |
 
-Day to day you work against `dev`. When the preview looks right, open a PR `dev → main`; that
+Day to day you work against `dev`. A PR into `main` from any other branch fails the required
+`main-from-dev` check, so everything reaches the stable site through the preview first. When the
+preview looks right, open a PR `dev → main`; that
 PR is the release note. Both channels build from every push, so `dev.wardwise.org` is never behind
 what's merged.
 
