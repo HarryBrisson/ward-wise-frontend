@@ -84,8 +84,13 @@ def report_area(slug: str, area_id: str):
     return _render(page, request.path)
 
 
+def _redirect_keeping_query(target: str):
+    # Same as the built meta-refresh pages: the query string (metric, area…) carries over.
+    return lambda: redirect(target + (f"?{request.query_string.decode()}" if request.query_string else ""), 301)
+
+
 for _source, _target in _site.REDIRECTS.items():
-    app.add_url_rule(_source, endpoint=f"redirect_{_source}", view_func=(lambda t: (lambda: redirect(t, 301)))(_target))
+    app.add_url_rule(_source, endpoint=f"redirect_{_source}", view_func=_redirect_keeping_query(_target))
 
 
 @app.get("/static/<path:filename>")

@@ -17,7 +17,8 @@
   const api = window.WardWiseExplorer || {};
   const { esc, fmt } = P;
 
-  const state = { catalog: [], labels: {}, byId: {}, area: null, areaChosen: false, markers: {}, dispose: null };
+  const state = { catalog: [], labels: {}, byId: {}, area: null, areaChosen: false, markers: {}, dispose: null,
+    lagMode: "changes", lagSeries: null, lagFor: "" };
   const $ = (id) => document.getElementById(id);
   const label = (id) => state.labels[id] || id;
 
@@ -98,6 +99,65 @@
       <tbody>${rows}</tbody></table></details>`;
   }
 
+  // "Every place, every year": the area-years behind the over-time statistics, one small scatter
+  // per gap. Fetched once per pair and geography; the Changes/Levels toggle only redraws.
+  function lagCountsTable(panels, xL, yL) {
+    const levels = state.lagMode === "levels";
+    const heads = levels
+      ? ["Both high", `${xL} high, ${yL} low`, `${xL} low, ${yL} high`, "Both low"]
+      : ["Both up", `${xL} up, ${yL} down`, `${xL} down, ${yL} up`, "Both down"];
+    const rows = panels.filter((p) => p.n).map((p) => `<tr><th scope="row">${esc(C.LAG_GAP_LABEL(p.k))}</th>
+      ${["both_up", "x_up_y_down", "x_down_y_up", "both_down"].map((q) => `<td>${p.quads[q].toLocaleString()}</td>`).join("")}
+      <td>${p.same == null ? "–" : `${Math.round(p.same * 100)}%`}</td><td>${p.quads.tie.toLocaleString()}</td></tr>`).join("");
+    return `<details class="compare-table rel-table">
+      <summary>Show the counts behind each panel</summary>
+      <table><thead><tr><th scope="col">Gap</th>${heads.map((h) => `<th scope="col">${esc(h)}</th>`).join("")}
+        <th scope="col">Same ${levels ? "side" : "way"}</th><th scope="col">${levels ? "On a middle line" : "No change"}</th></tr></thead>
+      <tbody>${rows}</tbody></table></details>`;
+  }
+
+  function drawLag(xId, yId) {
+    const xL = label(xId), yL = label(yId);
+    const levels = state.lagMode === "levels";
+    $("rel-lag-intro").textContent = levels
+      ? `Each dot is one place in one year: ${xL} that year across, ${yL} the same year or up to five years later going up. The lines mark the middle of each.`
+      : `Each dot is one place in one year. Across: how much ${xL} changed that year compared with the city. Up: how much ${yL} changed the same year, or one to five years later, also compared with the city. Blue dots moved the same way; orange moved opposite ways.`;
+    const panels = P.lagPanels(state.lagSeries, state.lagMode);
+    if (!panels || !panels.some((p) => p.n >= 10)) {
+      $("rel-lag-body").innerHTML = `<p class="rel-muted">These two don't share enough measured years in these ${esc(P.areaWord(state.area))} to plot.</p>`;
+      return;
+    }
+    const highlightId = P.myAreaId(state.area);
+    $("rel-lag-body").innerHTML = `
+      ${C.lagGrid(panels, { mode: state.lagMode, highlightId })}
+      <div class="rel-lag-summary">
+        ${C.lagShareStrip(panels, { mode: state.lagMode })}
+        <p>${levels
+          ? "Share of place-years where both measures sit on the same side of the middle, at each gap. Levels mostly show which places are high or low on both, a fact about places that barely changes with the gap."
+          : "Share of place-years where both moved the same way, at each gap. Half is what two unrelated measures would show. If one measure leads the other, the share should be furthest from half at a gap above zero."}
+          ${highlightId ? " Your ward's dots are ringed." : ""}</p>
+      </div>
+      ${lagCountsTable(panels, xL, yL)}
+      <p class="rel-chart-note">This is the raw material behind "Which moves first?" below. Only measured years count: carried-forward values and the year in progress are left out, as in the statistics. Census 5-year estimates overlap from one year to the next, so their year-to-year changes are smoothed.</p>`;
+  }
+
+  async function renderLag(xId, yId) {
+    const key = `${xId}|${yId}|${state.area}`;
+    if (state.lagFor !== key) {
+      $("rel-lag-body").innerHTML = `<p class="fd-loading">Loading…</p>`;
+      const q = new URLSearchParams({ x: xId, y: yId, area_type: state.area });
+      state.lagSeries = await P.fetchJsonOrNull(`/api/metrics/pair-series?${q}`);
+      state.lagFor = key;
+      if ($("rel-x").value !== xId || $("rel-y").value !== yId) return;  // the reader moved on
+    }
+    if (!state.lagSeries) {
+      $("rel-lag-intro").textContent = "";
+      $("rel-lag-body").innerHTML = `<p class="rel-muted">The year-by-year rows for these two measures aren't available in these ${esc(P.areaWord(state.area))}: at least one has fewer than five measured years here.</p>`;
+      return;
+    }
+    drawLag(xId, yId);
+  }
+
   async function render() {
     const xId = $("rel-x").value, yId = $("rel-y").value;
     if (!xId || !yId) return;
@@ -144,12 +204,14 @@
       ? (P.myAreaId("ward") ? "Your ward is ringed." : "Pick your ward at the top of the page to ring it here.") + " Dashed lines mark the median area on each measure."
       : "Dashed lines mark the median area on each measure. Select a point to open that area's full report.";
 
+    renderLag(xId, yId);
+
     $("rel-evidence").innerHTML = rel ? evidenceHtml(rel) : `<div class="rel-evidence-head"><h2>Over time</h2></div>
       <p class="rel-muted">The over-time comparison for these measures is still being computed.</p>`;
 
     $("rel-more").innerHTML = `
       <div class="rel-links">
-        <a class="fd-more" href="${esc(P.causalUrl(yId, state.areaChosen ? state.area : ""))}">What tends to move before ${esc(label(yId))}</a>
+        <a class="fd-more" href="${esc(P.driversUrl(yId, state.areaChosen ? state.area : ""))}">What tends to move before ${esc(label(yId))}</a>
         <a class="fd-more" href="${esc(P.impactUrl(xId, state.areaChosen ? state.area : ""))}">What tends to move after ${esc(label(xId))}</a>
         <a class="fd-more" href="${esc(P.deepDiveUrl(yId, state.area))}">Deep dive: ${esc(label(yId))}</a>
         <button type="button" class="fd-btn fd-btn-ghost" id="rel-share">Copy share link</button>
@@ -187,6 +249,10 @@
       render();
     });
     P.wireSeg("rel-area", (value) => { state.area = value; state.areaChosen = true; render(); });
+    P.wireSeg("rel-lag-mode", (value) => {
+      state.lagMode = value;
+      if (state.lagSeries) drawLag($("rel-x").value, $("rel-y").value);
+    });
     await render();
   }
 

@@ -6773,6 +6773,19 @@ body:not(.fd-theme) .comparison-row-title { font-size: 16px; font-weight: 600; l
 body:not(.fd-theme) .comparison-row-community-areas { color: var(--ink-2); font-size: 13px; }
 body:not(.fd-theme) .comparison-row > strong { color: var(--ink); font-size: 17px; font-variant-numeric: tabular-nums; font-weight: 600; letter-spacing: -0.01em; }
 body:not(.fd-theme) .comparison-row-main img { border-radius: 10px; }
+/* The row markup nests rank + photo + title in .comparison-row-main; flatten it so each gets its own
+   column (rank · photo · name · score). Without this the three spilled out of the 22px rank column
+   and the name and score landed on top of the photo. */
+body:not(.fd-theme) .comparison-row { grid-template-columns: 22px 48px minmax(0, 1fr) auto; }
+body:not(.fd-theme) .comparison-row-main { display: contents; }
+body:not(.fd-theme) .comparison-row-main .ward-signifier-thumb,
+body:not(.fd-theme) .comparison-row-main .ward-signifier-fallback { height: 48px; width: 48px; }
+body:not(.fd-theme) .comparison-row-copy { min-width: 0; }
+body:not(.fd-theme) .comparison-row-title,
+body:not(.fd-theme) .comparison-row-community-areas { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+body:not(.fd-theme) .comparison-row > strong { justify-self: end; }
+body:not(.fd-theme) .comparison-row-bar,
+body:not(.fd-theme) .comparison-row-tags { grid-column: 2 / -1; }
 
 /* Measure picker: one blue button, soft gray pills, borderless tiles */
 body:not(.fd-theme) .metric-selection-actions { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; }
@@ -7111,6 +7124,34 @@ body:not(.fd-theme) .comparison-row.is-selected .comparison-row-community-areas 
 .wwc-scatter-card em { color: var(--link, var(--blue)); font-style: normal; margin-top: 2px; }
 
 .rel-evidence { margin-top: 40px; }
+/* "Every place, every year": the lag grid on the relationship page */
+.rel-lag { margin-top: 40px; }
+.rel-lag-head { align-items: flex-end; display: flex; flex-wrap: wrap; gap: 12px 24px; justify-content: space-between; margin-bottom: 16px; }
+.rel-lag-head h2 { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; margin: 0 0 6px; }
+.rel-lag-head p { color: var(--ink-2); font-size: 15px; margin: 0; max-width: 46rem; }
+.wwc-lg-grid { display: grid; gap: 10px; grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.wwc-lg-cell { align-content: start; background: var(--fill); border-radius: 14px; display: grid; gap: 6px; margin: 0; padding: 8px; }
+.wwc-lg-cell figcaption { display: grid; font-size: 12px; gap: 2px; line-height: 1.35; }
+.wwc-lg-cell figcaption span { color: var(--ink-2); }
+.wwc-lg-cell.is-empty { align-content: center; min-height: 140px; }
+.wwc-lg { aspect-ratio: 1; display: block; height: auto; width: 100%; }
+.wwc-lg-quad { fill: var(--blue); fill-opacity: 0.05; }
+.wwc-lg-dot { fill: none; stroke-linecap: round; stroke-opacity: 0.55; stroke-width: 6; }
+.wwc-lg-dot.is-same { stroke: var(--blue); }
+.wwc-lg-dot.is-opp { stroke: var(--chart-b); }
+.wwc-lg-dot.is-tie { stroke: var(--ink-3); stroke-opacity: 0.35; }
+.wwc-lg-you { fill: none; stroke: var(--ink); stroke-linecap: round; stroke-width: 11; stroke-opacity: 0.9; }
+.wwc-lg-corner { fill: var(--ink-3); font-size: 15px; }
+.rel-lag-summary { align-items: center; display: grid; gap: 18px; grid-template-columns: minmax(0, 340px) minmax(0, 1fr); margin: 18px 0 8px; }
+.rel-lag-summary p { color: var(--ink-2); font-size: 14px; line-height: 1.5; margin: 0; max-width: 40rem; }
+.wwc-lg-strip { display: block; height: auto; width: 100%; }
+.wwc-lg-share { fill: var(--ink-3); fill-opacity: 0.45; }
+.wwc-lg-share.is-best { fill: var(--blue); fill-opacity: 0.85; }
+@media (max-width: 1000px) { .wwc-lg-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 560px) {
+  .wwc-lg-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .rel-lag-summary { grid-template-columns: 1fr; }
+}
 .rel-evidence-head h2 { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; margin: 0 0 6px; }
 .rel-evidence-head p { color: var(--ink-2); font-size: 15px; margin: 0 0 18px; max-width: 46rem; }
 .rel-cards { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
@@ -7154,7 +7195,7 @@ html.is-dark .rel-grade-moderate { color: #4cd964; }
 .rel-links .fd-more { font-size: 15px; }
 .rel-table table { font-size: 14px; }
 
-/* Ranked lists on the causal and impact reports. */
+/* Ranked lists on the driver and impact analyses. */
 .rel-rank { display: grid; gap: 10px; list-style: none; margin: 0; padding: 0; }
 .rel-rank li a {
   align-items: center; background: var(--fill); border-radius: 14px; color: var(--ink); display: grid; gap: 4px 14px;
@@ -7179,3 +7220,13 @@ html.is-dark .rel-grade-moderate { color: #4cd964; }
   .rel-rank li a { grid-template-columns: 1fr auto; }
   .rel-rank .wwc-event { display: none; }
 }
+
+
+/* "How to read this" on the analysis toolkit pages. */
+.rel-howto { background: var(--fill); border-radius: 14px; margin: 10px 0 18px; max-width: 46rem; padding: 10px 16px; }
+.rel-howto summary { color: var(--link, var(--blue)); cursor: pointer; font-size: 15px; font-weight: 600; }
+.rel-howto[open] summary { margin-bottom: 8px; }
+.rel-howto-body { color: var(--ink); display: grid; font-size: 14px; gap: 8px; line-height: 1.5; }
+.rel-howto-body p, .rel-howto-body ul { margin: 0; }
+.rel-howto-body ul { padding-left: 18px; }
+.rel-howto-example { color: var(--ink-2); }

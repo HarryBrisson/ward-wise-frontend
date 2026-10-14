@@ -1,10 +1,11 @@
-// Causal report and impact report: one measure, and the other measures that tend to move
-// before it (causal: candidate drivers) or after it (impact: candidate effects), ranked by how well
-// the over-time record supports each link.
+// Driver analysis and impact analysis: one measure, and the other measures that tend to move
+// before it (drivers: candidate drivers) or after it (impact: candidate effects), ranked by how well
+// the over-time record supports each link. Part of the planner/administrator analysis toolkit.
 //
-// URL is state: /reports/causal?metric=<id>[&area=…] and /reports/impact?metric=<id>[&area=…].
+// URL is state: /reports/drivers?metric=<id>[&area=…] and /reports/impact?metric=<id>[&area=…]
+// (/reports/causal redirects to /reports/drivers).
 // The rankings are precomputed by the pipeline (shared/civic_data/dynamics.py in the API repo):
-//   GET /api/metrics/drivers?y=<id>&area_type=…   (causal)
+//   GET /api/metrics/drivers?y=<id>&area_type=…   (drivers)
 //   GET /api/metrics/impacts?x=<id>&area_type=…   (impact)
 //   GET /api/metrics/dynamics?metric=<id>&area_type=…   (the measure's own over-time facts)
 // Each response names its area_type; with no area in the URL the API picks the geography that
@@ -14,7 +15,7 @@
   const root = document.getElementById("ranked-view");
   if (!root) return;
 
-  const MODE = root.dataset.mode === "impact" ? "impact" : "causal";
+  const MODE = root.dataset.mode === "impact" ? "impact" : "drivers";
   const P = window.WardWiseMetricPages;
   const C = window.WardWiseCharts;
   const { esc } = P;
@@ -27,19 +28,24 @@
     P.writeQuery({ metric: $("ranked-metric").value, area: state.areaChosen ? state.area : "" });
   }
 
+  // Which of the five checks this pair passed, in words: the grade chip says how strong, this says why.
   function why(item) {
+    const r = Number(item.comove_r);
+    if (!item.checks) return Number.isFinite(r) ? `r ${r.toFixed(2)}` : "";  // older API: no per-check results
+    const passed = Object.fromEntries(item.checks.map((c) => [c.key, c.pass]));
     const bits = [];
-    if (Number.isFinite(item.comove_r)) bits.push(`moves ${item.comove_r > 0 ? "with" : "against"} it within places (r ${item.comove_r.toFixed(2)})`);
-    if (item.lead_k > 0) bits.push(MODE === "causal" ? `tends to change about ${item.lead_k} yr earlier` : `tends to change about ${item.lead_k} yr later`);
-    if (item.confounded) bits.push("fades when a common factor is held steady");
-    if ((item.flags || []).includes("shared_allocation")) bits.push("shares an estimation source");
-    if ((item.flags || []).includes("both_modeled")) bits.push("both modeled");
+    if (passed.comove) bits.push(`moves ${item.comove_r > 0 ? "with" : "against"} it (r ${Number(item.comove_r).toFixed(2)})`);
+    else if (Number.isFinite(item.comove_r)) bits.push(`barely moves with it (r ${item.comove_r.toFixed(2)})`);
+    if (passed.first) bits.push(MODE === "drivers" ? `moves first, ~${item.lead_k} yr ahead` : `follows ~${item.lead_k} yr later`);
+    if (passed.natural) bits.push(MODE === "drivers" ? "it responds to this one's jumps" : "responds to its jumps");
+    if (passed.confounders === false) bits.push("explained away by a common factor");
+    if (passed.mechanical === false) bits.push("tied by how the data is built");
     return bits.join(" · ");
   }
 
   function rowHtml(item, metricId) {
-    const other = MODE === "causal" ? item.x : item.y;
-    const [x, y] = MODE === "causal" ? [other, metricId] : [metricId, other];
+    const other = MODE === "drivers" ? item.x : item.y;
+    const [x, y] = MODE === "drivers" ? [other, metricId] : [metricId, other];
     return `<li><a href="${esc(P.relationshipUrl(x, y, state.areaChosen ? state.area : ""))}">
       <span class="rel-rank-name">${esc(label(other))}</span>
       ${P.gradeChip(item.grade)}
@@ -63,13 +69,13 @@
     if (!metricId) return;
     $("ranked-answer").innerHTML = `<p class="fd-loading">Loading…</p>`;
     $("ranked-list").innerHTML = "";
-    const q = new URLSearchParams(MODE === "causal" ? { y: metricId } : { x: metricId });
+    const q = new URLSearchParams(MODE === "drivers" ? { y: metricId } : { x: metricId });
     if (state.areaChosen) q.set("area_type", state.area);
-    const data = await P.fetchJsonOrNull(`/api/metrics/${MODE === "causal" ? "drivers" : "impacts"}?${q}`);
+    const data = await P.fetchJsonOrNull(`/api/metrics/${MODE === "drivers" ? "drivers" : "impacts"}?${q}`);
     if (!state.areaChosen) state.area = data?.area_type || "community_area";
     P.setSeg("ranked-area", state.area);
     syncUrl();
-    document.title = `${label(metricId)} · ${MODE === "causal" ? "Causal" : "Impact"} report · Ward Wise`;
+    document.title = `${label(metricId)} · ${MODE === "drivers" ? "Driver" : "Impact"} analysis · Ward Wise`;
 
     const items = data?.items || [];
     const supported = items.filter((i) => i.grade === "suggestive" || i.grade === "moderate");
@@ -80,21 +86,21 @@
       $("ranked-answer").innerHTML = `<p class="rel-answer-text">${name}</p><p class="rel-muted">${esc(data.reason || "There aren't enough years of data for this measure in these areas to compare how it moves with others.")}</p>`;
     } else {
       $("ranked-answer").innerHTML = `<p class="rel-answer-text">${supported.length
-        ? `${supported.length} measure${supported.length === 1 ? "" : "s"} tend${supported.length === 1 ? "s" : ""} to move ${MODE === "causal" ? "before" : "after"} ${name}, with at least suggestive evidence.`
-        : `Nothing yet moves ${MODE === "causal" ? "before" : "after"} ${name} with more than weak evidence. We can't tell what ${MODE === "causal" ? "drives" : "it affects"}.`}</p>
+        ? `${supported.length} measure${supported.length === 1 ? "" : "s"} tend${supported.length === 1 ? "s" : ""} to move ${MODE === "drivers" ? "before" : "after"} ${name}, with at least suggestive evidence.`
+        : `Nothing yet moves ${MODE === "drivers" ? "before" : "after"} ${name} with more than weak evidence. We can't tell what ${MODE === "drivers" ? "drives it" : "it affects"}.`}</p>
         <p class="rel-stats">Across ${esc(P.areaWord(state.area))}. Each row opens the full relationship, with the checks behind its grade.</p>`;
     }
     $("ranked-facts").innerHTML = factsHtml(data?.facts);
     $("ranked-list").innerHTML = items.length
-      ? `<h2 class="rel-sub">${MODE === "causal" ? "Candidate drivers" : "Candidate effects"}</h2><ul class="rel-rank">${items.map((i) => rowHtml(i, metricId)).join("")}</ul>`
+      ? `<h2 class="rel-sub">${MODE === "drivers" ? "Candidate drivers" : "Candidate effects"}</h2><ul class="rel-rank">${items.map((i) => rowHtml(i, metricId)).join("")}</ul>`
       : "";
     $("ranked-more").innerHTML = `<div class="rel-links">
-        <a class="fd-more" href="${esc(MODE === "causal" ? P.impactUrl(metricId, state.areaChosen ? state.area : "") : P.causalUrl(metricId, state.areaChosen ? state.area : ""))}">${MODE === "causal" ? `What moves after ${name}` : `What moves before ${name}`}</a>
+        <a class="fd-more" href="${esc(MODE === "drivers" ? P.impactUrl(metricId, state.areaChosen ? state.area : "") : P.driversUrl(metricId, state.areaChosen ? state.area : ""))}">${MODE === "drivers" ? `What moves after ${name}` : `What moves before ${name}`}</a>
         <a class="fd-more" href="${esc(P.deepDiveUrl(metricId, state.area))}">Deep dive: ${name}</a>
         <button type="button" class="fd-btn fd-btn-ghost" id="ranked-share">Copy share link</button>
       </div>${P.methodologyBlock([metricId], state.byId)}`;
     $("ranked-share")?.addEventListener("click", (e) => P.copyShareLink(e.currentTarget));
-    window.WardWiseExplorer?.track?.(`metric_${MODE}_report`, { metric_id: metricId, area_type: state.area });
+    window.WardWiseExplorer?.track?.(`metric_${MODE}_analysis`, { metric_id: metricId, area_type: state.area });
   }
 
   async function init() {
@@ -109,7 +115,7 @@
       state.area = q.get("area");
       state.areaChosen = true;
     }
-    const fallback = MODE === "causal" ? "violent_crime_rate_per_10000" : "menu_total_usd";
+    const fallback = MODE === "drivers" ? "violent_crime_rate_per_10000" : "menu_total_usd";
     const metric = state.byId[q.get("metric")] ? q.get("metric") : (state.byId[fallback] ? fallback : state.allIds[0]);
     P.fillGroupedSelect($("ranked-metric"), state.catalog, metric);
     $("ranked-metric").addEventListener("change", render);
