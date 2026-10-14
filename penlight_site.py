@@ -55,7 +55,7 @@ PAGES: tuple[Page, ...] = (
     Page("k3_dictionary", "/k3/dictionary", "k3_dictionary.html", "ui.k3_dictionary"),
     Page("reports", "/reports", "reports_hub.html", "ui.reports_page"),
     Page("relationship", "/reports/relationship", "report_relationship.html", "ui.relationship_page"),
-    Page("causal", "/reports/causal", "report_causal.html", "ui.causal_page"),
+    Page("drivers", "/reports/drivers", "report_drivers.html", "ui.drivers_page"),
     Page("impact", "/reports/impact", "report_impact.html", "ui.impact_page"),
     Page("deepdive", "/reports/deep-dive", "report_deepdive.html", "ui.report_deepdive_page"),
     Page("term", "/reports/term", "report_term.html", "ui.report_term_page"),
@@ -84,6 +84,8 @@ REDIRECTS: dict[str, str] = {
     "/metrics": "/reports",
     # the comparison page became the relationship page (2026-10); the query string rides along
     "/reports/comparison": "/reports/relationship",
+    # the causal report became the driver analysis (2026-10)
+    "/reports/causal": "/reports/drivers",
 }
 
 # Endpoints that live in the private app (Flask on Lambda). Same host in production — CloudFront

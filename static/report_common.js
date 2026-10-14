@@ -1,4 +1,4 @@
-// Shared by the metric pages (relationship, deep dive, causal, impact): the catalog load, area
+// Shared by the metric pages (relationship, deep dive, driver and impact analysis): the catalog load, area
 // markers, the "what is this metric?" block, the correlation statistics and their plain-English
 // reading, and the pieces of the over-time evidence (grade chip, checklist).
 // Each page is its own template and script now; this is the part they had in common.
@@ -188,6 +188,67 @@ window.WardWiseMetricPages = (function () {
     return cov / (dx * dy);
   }
 
+  // --- the lag grid: every area-year at gaps of 0–5 years ------------------------------------
+  // series = /api/metrics/pair-series: {areas, x: {y0, v: [[value|null per year] per area]}, y: …}.
+  // "changes" uses the statistics' own year-adjusted change (the year-over-year difference minus
+  // that year's mean across areas: faster or slower than the city), so the zero lines split each
+  // panel into moved-the-same-way and moved-opposite-ways. "levels" plots the values themselves,
+  // split at each panel's medians.
+  const LAG_GAPS = [0, 1, 2, 3, 4, 5];
+
+  function yearAdjustedChanges(rows) {
+    const d = rows.map((row) => row.map((v, t) => (t > 0 && v != null && row[t - 1] != null ? v - row[t - 1] : null)));
+    const T = Math.max(0, ...d.map((row) => row.length));
+    for (let t = 0; t < T; t += 1) {
+      let sum = 0, n = 0;
+      for (const row of d) if (row[t] != null) { sum += row[t]; n += 1; }
+      if (n) for (const row of d) if (row[t] != null) row[t] -= sum / n;
+    }
+    return d;
+  }
+
+  function medianOf(values) {
+    const s = [...values].sort((a, b) => a - b);
+    const m = Math.floor(s.length / 2);
+    return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+  }
+
+  function lagPanels(series, mode = "changes") {
+    const xs = series?.x, ys = series?.y;
+    if (!xs?.v || !ys?.v) return null;
+    const prep = mode === "levels" ? (rows) => rows : yearAdjustedChanges;
+    const X = prep(xs.v), Y = prep(ys.v);
+    const areas = series.areas || [];
+    return LAG_GAPS.map((k) => {
+      const pts = [];
+      areas.forEach((area, a) => {
+        (X[a] || []).forEach((xv, t) => {
+          if (xv == null) return;
+          const year = xs.y0 + t, ty = year + k - ys.y0;
+          const yv = ty >= 0 ? Y[a]?.[ty] : null;
+          if (yv != null) pts.push({ area, year, x: xv, y: yv });
+        });
+      });
+      const cx = mode === "levels" && pts.length ? medianOf(pts.map((d) => d.x)) : 0;
+      const cy = mode === "levels" && pts.length ? medianOf(pts.map((d) => d.y)) : 0;
+      const quads = { both_up: 0, x_up_y_down: 0, x_down_y_up: 0, both_down: 0, tie: 0 };
+      for (const d of pts) {
+        const sx = Math.sign(d.x - cx), sy = Math.sign(d.y - cy);
+        if (!sx || !sy) quads.tie += 1;
+        else quads[sx > 0 ? (sy > 0 ? "both_up" : "x_up_y_down") : (sy > 0 ? "x_down_y_up" : "both_down")] += 1;
+      }
+      const decided = pts.length - quads.tie;
+      const years = pts.map((d) => d.year);
+      return {
+        k, pts, n: pts.length, cx, cy, quads,
+        r: pts.length >= 10 ? pearson(pts.map((d) => [d.x, d.y])) : null,
+        same: decided ? (quads.both_up + quads.both_down) / decided : null,
+        yearFrom: years.length ? Math.min(...years) : null,
+        yearTo: years.length ? Math.max(...years) : null,
+      };
+    });
+  }
+
   // Spearman's ρ = Pearson on the ranks. Catches any monotonic relationship — including curved/log
   // ones a straight-line Pearson r understates — so a big ρ-vs-r gap flags a non-linear tie.
   function rank(values) {
@@ -264,7 +325,8 @@ window.WardWiseMetricPages = (function () {
   const relationshipUrl = (xId, yId, areaType) => withArea("/reports/relationship", { x: xId, y: yId }, areaType);
   const comparisonUrl = relationshipUrl; // the comparison page became the relationship page
   const deepDiveUrl = (metricId, areaType) => withArea("/reports/deep-dive", { metric: metricId }, areaType);
-  const causalUrl = (metricId, areaType) => withArea("/reports/causal", { metric: metricId }, areaType);
+  const driversUrl = (metricId, areaType) => withArea("/reports/drivers", { metric: metricId }, areaType);
+  const causalUrl = driversUrl; // the causal report became the driver analysis
   const impactUrl = (metricId, areaType) => withArea("/reports/impact", { metric: metricId }, areaType);
 
   // --- grouped picker -------------------------------------------------------------------------
@@ -393,8 +455,8 @@ window.WardWiseMetricPages = (function () {
   return {
     esc, fmt, areaWord, areaParam, loadCatalog, loadMarkers, fillSelect, wireToggle, setToggle,
     writeQuery, copyShareLink, metricAbout, methodologyBlock,
-    pearson, spearman, regression, NEGLIGIBLE_R, correlationSentence, comparisonUrl, deepDiveUrl,
-    relationshipUrl, causalUrl, impactUrl, fillGroupedSelect, setSeg, wireSeg, scatterPoints, myAreaId,
+    pearson, spearman, regression, NEGLIGIBLE_R, lagPanels, LAG_GAPS, correlationSentence, comparisonUrl, deepDiveUrl,
+    relationshipUrl, causalUrl, driversUrl, impactUrl, fillGroupedSelect, setSeg, wireSeg, scatterPoints, myAreaId,
     answerSentence, gradeChip, gradeSentence, checklist, fetchJsonOrNull, humanizeCategory, REPORT_SLUG,
   };
 })();

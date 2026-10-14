@@ -13,6 +13,7 @@
     <header class="rel-head">
       <p class="fd-eyebrow"><a href="{{ url_for('ui.reports_page') }}">Reports</a></p>
       <h1 class="rel-title">Metric relationship</h1>
+      {% include "_how_to_read.html" %}
       <form class="rel-question" id="rel-question" onsubmit="return false">
         <span>How does</span>
         <label class="rel-picker"><span class="visually-hidden">Outcome (vertical axis)</span><select id="rel-y"></select></label>
@@ -31,6 +32,19 @@
     <section class="rel-answer" id="rel-answer" aria-live="polite"><p class="fd-loading">Loading…</p></section>
     <section class="rel-chart" id="rel-chart" aria-label="Each area plotted by the two measures"></section>
     <p class="rel-chart-note" id="rel-chart-note"></p>
+    <section class="rel-lag" id="rel-lag" aria-labelledby="rel-lag-title">
+      <div class="rel-lag-head">
+        <div>
+          <h2 id="rel-lag-title">Every place, every year</h2>
+          <p id="rel-lag-intro"></p>
+        </div>
+        <div class="fd-seg rel-seg" id="rel-lag-mode" role="group" aria-label="Plot changes or levels">
+          <button type="button" data-value="changes" aria-pressed="true">Changes</button>
+          <button type="button" data-value="levels" aria-pressed="false">Levels</button>
+        </div>
+      </div>
+      <div id="rel-lag-body" aria-live="polite"></div>
+    </section>
     <section class="rel-evidence" id="rel-evidence" aria-live="polite"></section>
     <section class="rel-more" id="rel-more"></section>
   </main>

@@ -104,8 +104,8 @@
         ${P.metricAbout(m)}
         <p class="deepdive-line"><a href="/dictionary?metric=${encodeURIComponent(id)}">Dictionary entry</a></p>
         <div class="rel-links deepdive-why">
-          <a class="fd-more" href="${esc(P.causalUrl(id))}">What drives it: causal report</a>
-          <a class="fd-more" href="${esc(P.impactUrl(id))}">What it affects: impact report</a>
+          <a class="fd-more" href="${esc(P.driversUrl(id))}">What drives it: driver analysis</a>
+          <a class="fd-more" href="${esc(P.impactUrl(id))}">What it affects: impact analysis</a>
         </div>
       </section>
       <section class="deepdive-section">
