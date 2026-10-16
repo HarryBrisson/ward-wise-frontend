@@ -5,8 +5,6 @@
 
 {% block content %}
   <main>
-    <p class="fd-proposal">Proposal preview. Signing up confirms in your browser and sends nothing. The email preview uses live city records.</p>
-
     <section class="fd-ab-hero">
       <div class="fd-wrap fd-stack">
         <p class="fd-eyebrow">Ward alerts</p>
@@ -41,12 +39,16 @@
           </div>
 
           <div class="fd-ab-block fd-ab-send">
-            <label class="fd-ab-label" for="fd-alert-email">Email</label>
+            <label class="fd-ab-label" for="fd-alert-email" data-fd-ab-email-label>Email</label>
             <div class="fd-ab-send-row">
               <input id="fd-alert-email" name="email" type="email" required placeholder="you@example.com" autocomplete="email">
-              <button type="submit" class="fd-btn">Sign up</button>
+              <button type="submit" class="fd-btn" data-fd-ab-submit>Sign up</button>
             </div>
+            {# a field people never see: bots fill it in, and the API quietly ignores those sign-ups #}
+            <input type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" class="fd-hp">
             <p id="fd-alert-note" class="fd-small" role="status"></p>
+            <p class="fd-small fd-ab-privacy" data-fd-ab-privacy>We'll email you once to confirm. Your address is used only for these alerts, never shared, and every email has a one-click unsubscribe.</p>
+            <button type="button" class="fd-link-btn" data-fd-ab-unsubscribe hidden>Unsubscribe from all alerts</button>
           </div>
         </form>
 
