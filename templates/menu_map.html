@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Project map · Menu money · Ward Wise{% endblock %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='report_ui.css', v=asset_version) }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='editorial.css', v=asset_version) }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='menu_hub.css', v=asset_version) }}">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+{% endblock %}
+
+{% block content %}
+  <main class="ed-page mh-page" aria-live="polite">
+    <header class="ed-masthead mh-masthead">
+      <p class="ed-kicker">Aldermanic menu money · Project map</p>
+      <h1>Every project, on the map.</h1>
+      <p class="ed-standfirst">Each dot is a project line from the city's menu postings, sized by cost and colored by category. Filter by year, ward or category; click a dot for its source.</p>
+    </header>
+    {% include "_menu_tabs.html" %}
+    <div id="mh-map"><p class="report-loading">Loading…</p></div>
+  </main>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='common.js', v=asset_version) }}"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="{{ url_for('static', filename='menu_hub.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='menu_map.js', v=asset_version) }}"></script>
+{% endblock %}
