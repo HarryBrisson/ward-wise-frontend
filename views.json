@@ -71,6 +71,24 @@
       "public": true
     },
     {
+      "key": "menu_prices",
+      "endpoint": "ui.menu_prices_page",
+      "label": "Infrastructure menu prices",
+      "group": "Explore",
+      "blurb": "What each menu item costs a ward, with the source of every price.",
+      "path": "/menu/prices",
+      "public": true
+    },
+    {
+      "key": "menu_costs",
+      "endpoint": "ui.menu_costs_page",
+      "label": "What wards paid for projects",
+      "group": "Explore",
+      "blurb": "How much each kind of menu project actually cost: counts, spread, cheapest and priciest, by year and ward.",
+      "path": "/menu/costs",
+      "public": true
+    },
+    {
       "key": "planning",
       "endpoint": "ui.planning",
       "label": "Planners and community groups",
