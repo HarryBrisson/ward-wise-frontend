@@ -170,6 +170,15 @@
       "public": true
     },
     {
+      "key": "methodology",
+      "endpoint": "ui.methodology_page",
+      "label": "How the evidence works",
+      "group": "Analysis toolkit",
+      "blurb": "Every over-time check behind the relationship, driver and impact reports: the formulas, the thresholds, the significance tests and their limits.",
+      "path": "/reports/methodology",
+      "public": true
+    },
+    {
       "key": "dictionary",
       "endpoint": "ui.dictionary_page",
       "label": "Metric dictionary",

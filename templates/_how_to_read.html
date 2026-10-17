@@ -19,6 +19,11 @@
     <p><strong>What it can't tell you.</strong> This is observational data from 50–300 places over 5–25 years. A strong
       grade means the timing and the checks line up with one measure affecting the other; it doesn't prove it.
       "We can't tell" is not "no effect".</p>
+    <p><strong>Is it more than chance?</strong> Every check carries a significance test that respects shared shocks:
+      each place's history is paired with other places' at random, so a citywide shock (COVID hit every neighborhood
+      at once) can't pass for a link, and every count of place-years sits next to its effective N, the number of
+      distinct years. Both directions are always shown.
+      <a href="{{ url_for('ui.methodology_page') }}">How every check works</a>.</p>
     <p class="rel-howto-example">Worked example:
       <a href="/reports/relationship?x=cta_l_station_entries&amp;y=restaurants_per_10000_residents">'L' ridership and restaurant density</a>,
       graded suggestive: restaurants respond after sharp ridership changes, but ridership moving first doesn't survive the

@@ -188,13 +188,17 @@ window.WardWiseMetricPages = (function () {
     return cov / (dx * dy);
   }
 
-  // --- the lag grid: every area-year at gaps of 0–5 years ------------------------------------
-  // series = /api/metrics/pair-series: {areas, x: {y0, v: [[value|null per year] per area]}, y: …}.
-  // "changes" uses the statistics' own year-adjusted change (the year-over-year difference minus
-  // that year's mean across areas: faster or slower than the city), so the zero lines split each
-  // panel into moved-the-same-way and moved-opposite-ways. "levels" plots the values themselves,
-  // split at each panel's medians.
-  const LAG_GAPS = [0, 1, 2, 3, 4, 5];
+  // --- the lag grid: every area-year at gaps of −5..+5 years ----------------------------------
+  // series = /api/metrics/pair-series: {areas, x: {y0, v: [[value|null per year] per area]}, y: …,
+  // agreement: {gaps: [{k, n, n_years, same, r, quads, p, sig, null_mean, null_band, ci, by_year,
+  // r_by_year}]}}. k > 0 reads Y k years after X; k < 0 reads it before (X is the later one).
+  // The API computes every number shown for "changes" (shared/civic_data/dynamics.py
+  // agreement_profile: same-direction share, area-shuffle p, year-bootstrap range, effective N); this
+  // only lays out the points to draw. "changes" are the statistics' own year-adjusted change (the
+  // year-over-year difference minus that year's mean across areas: faster or slower than the city),
+  // so the zero lines split each panel into moved-the-same-way and moved-opposite-ways. "levels"
+  // plots the values themselves, split at each panel's medians: descriptive only, no test.
+  const LAG_GAPS = [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5];
 
   function yearAdjustedChanges(rows) {
     const d = rows.map((row) => row.map((v, t) => (t > 0 && v != null && row[t - 1] != null ? v - row[t - 1] : null)));
@@ -213,12 +217,23 @@ window.WardWiseMetricPages = (function () {
     return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
   }
 
+  function quadCounts(pts, cx, cy) {
+    const quads = { both_up: 0, x_up_y_down: 0, x_down_y_up: 0, both_down: 0, tie: 0 };
+    for (const d of pts) {
+      const sx = Math.sign(d.x - cx), sy = Math.sign(d.y - cy);
+      if (!sx || !sy) quads.tie += 1;
+      else quads[sx > 0 ? (sy > 0 ? "both_up" : "x_up_y_down") : (sy > 0 ? "x_down_y_up" : "both_down")] += 1;
+    }
+    return quads;
+  }
+
   function lagPanels(series, mode = "changes") {
     const xs = series?.x, ys = series?.y;
     if (!xs?.v || !ys?.v) return null;
-    const prep = mode === "levels" ? (rows) => rows : yearAdjustedChanges;
-    const X = prep(xs.v), Y = prep(ys.v);
+    const levels = mode === "levels";
+    const X = levels ? xs.v : yearAdjustedChanges(xs.v), Y = levels ? ys.v : yearAdjustedChanges(ys.v);
     const areas = series.areas || [];
+    const server = Object.fromEntries((series.agreement?.gaps || []).map((g) => [g.k, g]));
     return LAG_GAPS.map((k) => {
       const pts = [];
       areas.forEach((area, a) => {
@@ -229,22 +244,19 @@ window.WardWiseMetricPages = (function () {
           if (yv != null) pts.push({ area, year, x: xv, y: yv });
         });
       });
-      const cx = mode === "levels" && pts.length ? medianOf(pts.map((d) => d.x)) : 0;
-      const cy = mode === "levels" && pts.length ? medianOf(pts.map((d) => d.y)) : 0;
-      const quads = { both_up: 0, x_up_y_down: 0, x_down_y_up: 0, both_down: 0, tie: 0 };
-      for (const d of pts) {
-        const sx = Math.sign(d.x - cx), sy = Math.sign(d.y - cy);
-        if (!sx || !sy) quads.tie += 1;
-        else quads[sx > 0 ? (sy > 0 ? "both_up" : "x_up_y_down") : (sy > 0 ? "x_down_y_up" : "both_down")] += 1;
-      }
+      const g = server[k];
+      if (!levels && g) return { ...g, k, pts, cx: 0, cy: 0 };
+      // levels (descriptive), or an API that predates the agreement statistics
+      const cx = levels && pts.length ? medianOf(pts.map((d) => d.x)) : 0;
+      const cy = levels && pts.length ? medianOf(pts.map((d) => d.y)) : 0;
+      const quads = quadCounts(pts, cx, cy);
       const decided = pts.length - quads.tie;
       const years = pts.map((d) => d.year);
       return {
-        k, pts, n: pts.length, cx, cy, quads,
+        k, pts, n: pts.length, cx, cy, quads, p: null, sig: false,
         r: pts.length >= 10 ? pearson(pts.map((d) => [d.x, d.y])) : null,
         same: decided ? (quads.both_up + quads.both_down) / decided : null,
-        yearFrom: years.length ? Math.min(...years) : null,
-        yearTo: years.length ? Math.max(...years) : null,
+        years: years.length ? [Math.min(...years), Math.max(...years)] : null,
       };
     });
   }
@@ -434,12 +446,21 @@ window.WardWiseMetricPages = (function () {
     return esc((GRADE_TEXT[grade] || GRADE_TEXT.none)[1]);
   }
 
-  function checklist(items) {
+  // Each check carries `detail` (the numbers), `why` (in words: why it failed, or what holds it up)
+  // and sometimes `caveat` (a pass that rests on one year). A failed check always says why, so a
+  // reader can see what kept a pair's grade down; passes keep to the numbers. labelFor turns the
+  // metric ids the API puts in the common-factor check ("Survives controlling for poverty_pct") into
+  // their names.
+  function checklist(items, labelFor = null) {
     if (!items?.length) return "";
+    const named = (text, c) => (labelFor && c.z?.length
+      ? c.z.reduce((acc, id) => acc.split(id).join(labelFor(id)), text || "") : text);
     return `<ul class="rel-checklist">${items.map((c) => `
       <li class="${c.pass ? "is-pass" : "is-fail"}">
         <span class="rel-check" aria-hidden="true">${c.pass ? "✓" : "–"}</span>
-        <span><strong>${esc(c.label)}</strong>${c.detail ? ` <span class="rel-check-detail">${esc(c.detail)}</span>` : ""}</span>
+        <span><strong>${esc(named(c.label, c))}</strong>${c.detail ? ` <span class="rel-check-detail">${esc(named(c.detail, c))}</span>` : ""}
+          ${!c.pass && c.why ? `<span class="rel-check-why">${esc(named(c.why, c))}</span>` : ""}
+          ${c.caveat ? `<span class="rel-check-caveat">${esc(named(c.caveat, c))}</span>` : ""}</span>
       </li>`).join("")}</ul>`;
   }
 
