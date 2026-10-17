@@ -5424,6 +5424,10 @@ body.fd-theme {
 .fd-grid-2 { display: grid; gap: 20px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
 .fd-proposal { border-bottom: 1px solid var(--hair); color: var(--ink-2); font-size: 12px; padding: 10px 0; text-align: center; }
+/* honeypot: off-screen, never focusable by keyboard users */
+.fd-hp { height: 1px; left: -9999px; opacity: 0; position: absolute; width: 1px; }
+.fd-ab-privacy { color: var(--ink-3); margin-top: 6px; }
+.fd-ab-note-ok { color: var(--green, #1a7f37); }
 
 /* --- Home ----------------------------------------------------------------- */
 
