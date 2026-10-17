@@ -43,6 +43,9 @@
   margin: 0.7rem auto 0;
   max-width: var(--measure-text);
 }
+/* The site theme's `.fd-theme p { margin: 0 }` outranks a single class, which dropped the auto
+   margins and left the centered standfirst hugging the left edge. */
+.ed-masthead .ed-standfirst { margin: 0.7rem auto 0; }
 
 .ed-howto {
   border-bottom: 1px solid var(--border);
