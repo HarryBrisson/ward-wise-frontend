@@ -170,3 +170,7 @@
 .mc-names { font-size: 0.85rem; margin: 0.8rem 0; }
 .mc-names summary { cursor: pointer; font-weight: 600; }
 @media (max-width: 640px) { .mc-ward-label { display: none; } }
+
+/* /menu overview: the data leads; question prompts and "how to read this" follow as context. */
+#menu-body + .mh-questions { border-top: 3px double var(--text); margin-top: 2.2rem; padding-top: 1.2rem; }
+#menu-root > .ed-howto:last-child { border-bottom: 0; margin-bottom: 0; }
