@@ -19,15 +19,17 @@
     </header>
     {% include "_menu_tabs.html" %}
 
+    <div id="menu-body"><p class="report-loading">Loading the menu books…</p></div>
+
     <section class="mh-questions" aria-label="Start with a question">
       <p class="ed-section-label">Start with a question</p>
       <ul>
-        <li><a href="/menu/compare?wards=40,50&amp;year=2023&amp;category=Sidewalk+Repair">Neighbors across Granville: why did Ward 40 put 24.6% into sidewalks and Ward 50 4.1%?</a></li>
-        <li><a href="/menu/compare?wards=1,32,35,47&amp;year=2025&amp;category=Pedestrian+Infrastructure">Which wards put money into walking and biking?</a></li>
+        <li><a href="/menu/compare?wards=19,25&amp;year=2025&amp;category=Street+Resurfacing">In 2025 one ward put nearly all its menu money into repaving, and another under 4%. Where does yours fall?</a></li>
+        <li><a href="/menu/compare?wards=49,48,47&amp;year=2025&amp;category=Pedestrian+Infrastructure">Twelve wards spent nothing on walking or biking projects in 2025. Which wards spent the most?</a></li>
+        <li><a href="/menu?sort=menu_budget_utilization&amp;dir=asc">Not every ward spends its full allotment. Who left the most unspent?</a></li>
+        <li><a href="/menu?y=2005">Repaving went from about 38% of the average ward's menu money in 2005 to 58% by 2015. What did wards buy before?</a></li>
         <li><a href="/menu/costs?type=street_resurfacing">How much more does a block of resurfacing cost than it used to, and does it depend on the ward?</a></li>
         <li><a href="/menu/ward">What did my ward buy last year, street by street?</a></li>
-        <li><a href="/menu/map?category=Cameras">Where has menu money paid for cameras?</a></li>
-        <li><a href="/menu/data">I'm writing a story: where's the data and how do I cite it?</a></li>
       </ul>
     </section>
 
@@ -40,8 +42,6 @@
         <div><h3>Where the numbers come from.</h3><p>The city's published menu program books, one line per project. Shares are computed from the dollars on those lines. Before 2019 some lines could not be placed on a map; that affects the "spread" measure, not the shares.</p></div>
       </div>
     </section>
-
-    <div id="menu-body"><p class="report-loading">Loading the menu books…</p></div>
   </main>
 {% endblock %}
 
