@@ -1,0 +1,14 @@
+{# Menu money hub tabs. Each tab is its own page (static site), so the bar is plain links. #}
+{% set menu_tabs = [
+  ('ui.menu_page', 'Overview'),
+  ('ui.menu_ward_page', 'Ward spending'),
+  ('ui.menu_compare_page', 'Compare wards'),
+  ('ui.menu_map_page', 'Project map'),
+  ('ui.menu_prices_page', 'Price list'),
+  ('ui.menu_data_page', 'Data & methods'),
+] %}
+<nav class="mh-tabs" aria-label="Menu money sections">
+  {% for endpoint, label in menu_tabs %}
+    <a href="{{ url_for(endpoint) }}"{% if request.endpoint == endpoint %} class="is-active" aria-current="page"{% endif %}>{{ label }}</a>
+  {% endfor %}
+</nav>

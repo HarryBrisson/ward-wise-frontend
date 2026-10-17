@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Price list · Menu money · Ward Wise{% endblock %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='report_ui.css', v=asset_version) }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='editorial.css', v=asset_version) }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='menu_hub.css', v=asset_version) }}">
+{% endblock %}
+
+{% block content %}
+  <main class="ed-page mh-page" aria-live="polite">
+    <header class="ed-masthead mh-masthead">
+      <p class="ed-kicker">Aldermanic menu money · Infrastructure menu</p>
+      <h1>What a block of anything costs.</h1>
+      <p class="ed-standfirst">The unit prices CDOT charges against a ward's menu money: resurfacing, sidewalks, speed humps, bike lanes and more. Every price shows where it came from, and how it has changed.</p>
+    </header>
+    {% include "_menu_tabs.html" %}
+    <div id="mh-prices"><p class="report-loading">Loading…</p></div>
+  </main>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='common.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='menu_hub.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='menu_prices.js', v=asset_version) }}"></script>
+{% endblock %}

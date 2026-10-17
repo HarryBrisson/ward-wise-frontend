@@ -71,6 +71,15 @@
       "public": true
     },
     {
+      "key": "menu_prices",
+      "endpoint": "ui.menu_prices_page",
+      "label": "Infrastructure menu prices",
+      "group": "Explore",
+      "blurb": "What each menu item costs a ward, with the source of every price.",
+      "path": "/menu/prices",
+      "public": true
+    },
+    {
       "key": "planning",
       "endpoint": "ui.planning",
       "label": "Planners and community groups",
