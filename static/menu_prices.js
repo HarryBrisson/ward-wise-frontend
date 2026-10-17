@@ -83,6 +83,7 @@
       <p class="mp-price">${priceText(item.headline)} <span class="mp-meta">(${item.headline.menu_year}, ${esc(sourceOf(item.headline).label)})</span></p>
       ${latest ? `<p class="mp-desc">${esc(latest.description)}</p>` : ""}
       ${history(item.list)}
+      <p><a href="/menu/costs?type=${encodeURIComponent(item.slug)}">What wards actually paid for this →</a> <span class="mp-meta">(every project, cheapest to most expensive)</span></p>
       <p class="ed-section-label">Every price we have, with its source</p>
       <div class="mh-table-wrap"><table class="mh-table">
         <thead><tr><th>Year</th><th class="num">Price</th><th>Unit</th><th>Source</th><th>Where in it</th><th>Notes</th></tr></thead>
