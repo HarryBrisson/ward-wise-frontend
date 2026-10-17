@@ -68,6 +68,7 @@ PAGES: tuple[Page, ...] = (
     Page("menu_compare", "/menu/compare", "menu_compare.html", "ui.menu_compare_page"),
     Page("menu_map", "/menu/map", "menu_map.html", "ui.menu_map_page"),
     Page("menu_prices", "/menu/prices", "menu_prices.html", "ui.menu_prices_page"),
+    Page("menu_costs", "/menu/costs", "menu_costs.html", "ui.menu_costs_page"),
     Page("menu_data", "/menu/data", "menu_data.html", "ui.menu_data_page"),
     Page("near", "/near", "near.html", "ui.near_page"),
     Page("near_change", "/near/change", "near_change.html", "ui.near_change_page"),

@@ -135,3 +135,38 @@
   .mh-strip { height: 6rem; }
   .mp-legend dl { grid-template-columns: 1fr; }
 }
+
+/* costs (/menu/costs) */
+.mc-explain { background: var(--surface-muted, rgb(0 0 0 / 4%)); border-radius: var(--radius-md, 0.75rem); font-size: 0.9rem; margin: 0.4rem 0 1rem; padding: 0.7rem 1rem; }
+.mc-explain summary { cursor: pointer; font-weight: 700; }
+.mc-explain li { line-height: 1.45; margin: 0.3rem 0; }
+.mc-list th a { font-weight: 700; }
+.mc-spark { color: var(--hue, currentColor); display: block; }
+.mc-chart { margin: 0.3rem 0 1rem; }
+.mc-chart svg { display: block; height: auto; max-width: 100%; }
+.mc-grid { stroke: var(--border, #e3e5ea); stroke-width: 1; }
+.mc-axis { fill: var(--muted-text); font-size: 11px; }
+.mc-whisker { stroke: color-mix(in srgb, var(--hue, #0b7892) 40%, transparent); stroke-width: 1.5; }
+.mc-box { stroke: color-mix(in srgb, var(--hue, #0b7892) 55%, transparent); stroke-linecap: round; stroke-width: 9; }
+.mc-median { fill: var(--text); }
+.mc-price { fill: var(--menu-cat-2); stroke: var(--text); stroke-width: 1; }
+.mc-chart figcaption { color: var(--muted-text); font-size: 0.78rem; }
+.mc-key { display: inline-block; height: 0.6rem; margin: 0 0.15rem 0 0.4rem; vertical-align: middle; width: 0.6rem; }
+.mc-key-box { background: color-mix(in srgb, var(--hue, #0b7892) 55%, transparent); border-radius: 3px; }
+.mc-key-whisker { border-left: 2px solid color-mix(in srgb, var(--hue, #0b7892) 40%, transparent); width: 0; }
+.mc-key-median { background: var(--text); border-radius: 50%; }
+.mc-key-price { background: var(--menu-cat-2); border: 1px solid var(--text); }
+.mc-wards { align-items: flex-end; display: grid; gap: 2px; grid-auto-columns: 1fr; grid-auto-flow: column; height: 7rem; list-style: none; margin: 0.4rem 0 1.8rem; padding: 0; }
+.mc-wards li { align-items: flex-end; display: flex; height: 100%; justify-content: center; position: relative; }
+.mc-ward-bar { background: color-mix(in srgb, var(--hue, #0b7892) 45%, transparent); border-radius: 2px 2px 0 0; display: block; width: 100%; }
+.mc-wards li:hover .mc-ward-bar { background: var(--hue, #0b7892); }
+.mc-ward-label { color: var(--muted-text); font-size: 0.6rem; position: absolute; top: 100%; }
+.mc-example-grid { display: grid; gap: 0.5rem 1.5rem; grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); }
+.mc-examples ol { list-style: none; margin: 0; padding: 0; }
+.mc-examples li { border-bottom: 1px solid var(--border, #e3e5ea); display: flex; flex-direction: column; gap: 0.1rem; padding: 0.5rem 0; }
+.mc-ex-cost { font-family: var(--serif); font-size: 1.15rem; font-weight: 600; }
+.mc-ex-meta, .mc-ex-links { color: var(--muted-text); font-size: 0.8rem; }
+.mc-ex-loc { font-size: 0.85rem; }
+.mc-names { font-size: 0.85rem; margin: 0.8rem 0; }
+.mc-names summary { cursor: pointer; font-weight: 600; }
+@media (max-width: 640px) { .mc-ward-label { display: none; } }
