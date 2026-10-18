@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+
+{% block title %}How the over-time evidence works · Ward Wise{% endblock %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='report_ui.css', v=asset_version) }}">
+{% endblock %}
+
+{% block content %}
+  {# The plain-language twin of docs/dynamics_methodology.md in the API repo (the source of truth).
+     Thresholds quote shared/civic_data/dynamics.py; change both when one changes. Planner audience:
+     statistical terms are fine, each with a plain gloss. #}
+  <main class="rel-page method-page" id="methodology-view">
+    <header class="rel-head">
+      <p class="fd-eyebrow"><a href="{{ url_for('ui.reports_page') }}">Reports</a></p>
+      <h1 class="rel-title">How the over-time evidence works</h1>
+      <p class="method-lead">The <a href="{{ url_for('ui.relationship_page') }}">relationship</a>,
+        <a href="{{ url_for('ui.drivers_page') }}">driver</a> and <a href="{{ url_for('ui.impact_page') }}">impact</a>
+        reports ask whether the record of how two measures moved, place by place and year by year, lines up with one
+        affecting the other. This page lists every check, the formula behind it, the threshold it has to clear, and what
+        it can't tell you.</p>
+      <p class="method-callout"><strong>Evidence, not proof.</strong> This is observational data from 50–300 places
+        over 5–25 years. A strong grade means the timing and the checks line up with one measure affecting the other;
+        it doesn't prove it. "We can't tell" is not "no effect". We never say "causes".</p>
+      <nav class="method-toc" aria-label="On this page">
+        <a href="#data">What goes in</a><a href="#change">The year-adjusted change</a><a href="#scatter">The scatter</a>
+        <a href="#agreement">Every place, every year</a><a href="#checks">The five checks</a><a href="#grade">The grade</a><a href="#lose-grade">Why a pair can lose a grade</a>
+        <a href="#shocks">Shared shocks and effective N</a><a href="#limits">Known limits</a>
+      </nav>
+    </header>
+
+    <section class="method-section" id="data">
+      <h2>What goes in</h2>
+      <p>Measured values only: one per measure, place and data year. We leave out values carried forward from an
+        earlier year (they'd read as "no change"), measures that never change, undated snapshots (such as today's
+        Google Places counts), the year in progress, and on χGRIDs every cell that is estimated from the wards around
+        it (neighbouring cells would be near-copies).</p>
+      <table class="method-table">
+        <thead><tr><th scope="col">Gate</th><th scope="col">Value</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Measured years a measure needs on a geography</th><td>5</td></tr>
+          <tr><th scope="row">Places with both measures</th><td>20</td></tr>
+          <tr><th scope="row">Overlapping years a pair needs</th><td>5</td></tr>
+          <tr><th scope="row">Place-years of paired changes</th><td>30</td></tr>
+          <tr><th scope="row">Overlapping years before "moves first" or the jump study can count</th><td>10</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="method-section" id="change">
+      <h2>The year-adjusted change</h2>
+      <p>Every over-time number uses the same quantity: how much a measure changed in a place from one year to the next,
+        <em>compared with the city as a whole</em> that year.</p>
+      <p class="method-formula">ΔX̃<sub>a,t</sub> = (X<sub>a,t</sub> − X<sub>a,t−1</sub>) − average over places of (X<sub>t</sub> − X<sub>t−1</sub>)</p>
+      <p>Subtracting the city's average removes a shock that moves every place by the <em>same</em> amount. It does
+        not remove a shock that hits places unevenly, which is why the tests below compare against shuffled places
+        rather than against zero or 50%.</p>
+    </section>
+
+    <section class="method-section" id="scatter">
+      <h2>The scatter</h2>
+      <p>The big chart at the top of the relationship page is one dot per place in the latest year. The dashed lines are
+        the <strong>medians</strong> of the two measures (not the averages), so each quarter holds the places above or
+        below the middle place on each. Pearson r measures the straight-line tie; Spearman ρ (the same on ranks) catches
+        curved ones. Where places differ, they differ in a hundred ways at once, so the scatter says nothing about one
+        measure affecting the other. That's what the over-time checks are for.</p>
+    </section>
+
+    <section class="method-section" id="agreement">
+      <h2>Every place, every year</h2>
+      <p>Each small panel pairs every place's change in the first measure (X) with its change in the second (Y) at a
+        gap of k years. <strong>Y later</strong> (k = +1…+5) reads Y after X; <strong>X later</strong> (k = −1…−5) reads
+        it before. Both directions are shown because a link that only shows up with X later points the other way.</p>
+      <dl class="method-defs">
+        <dt>Same-direction share</dt>
+        <dd>Place-years where both rose or both fell, out of those where neither was exactly unchanged.</dd>
+        <dt>Shuffled places (the area-permutation test)</dt>
+        <dd>We pair each place's whole X history with a randomly drawn <em>other</em> place's whole Y history, 1,000
+          times (seeded, so the page always shows the same numbers). That keeps every year's citywide shock and each
+          measure's own drift, and breaks only the link between places. The p-value is the share of shuffles at least
+          as far from their average as the real share. The grey band on the chart is where the middle 95% of shuffles
+          land.</dd>
+        <dt>Why not 50%?</dt>
+        <dd>A shock that hits a few places very hard pulls the city's average down that year, which puts most places
+          "above the city" on both measures at once. The share then runs well above 50% with no link between places
+          at all. Shuffling keeps that year, so the share has to beat the shuffles, not a coin flip.</dd>
+        <dt>Eleven gaps, eleven tests</dt>
+        <dd>About one gap in twenty would clear p &lt; 0.05 by luck. A gap is marked ✓ only if it passes the
+          Benjamini–Hochberg correction across the eleven (false discovery rate 5%).</dd>
+        <dt>95% range, resampling years</dt>
+        <dd>We redraw whole years with replacement 1,000 times and recompute the share. If one year carries the
+          result, its range is wide.</dd>
+        <dt>Which years carry it?</dt>
+        <dd>The bar chart under the grid splits each year's same-way and opposite-way counts, so a single year such as
+          2020 doing the work is visible.</dd>
+      </dl>
+    </section>
+
+    <section class="method-section" id="checks">
+      <h2>The five checks</h2>
+      <p>Each runs for the first measure → the second, and separately for the second → the first; the relationship page
+        shows both directions side by side.</p>
+
+      <h3>1. They move together within places <span class="method-kind">evidence</span></h3>
+      <p>The correlation of the two year-adjusted changes, with the second measure in the same year or up to three years
+        later, whichever is strongest (an effect that lands a year later has no same-year correlation and still
+        counts). It passes when |r| ≥ <b>0.25</b> <em>and</em> its shuffled-places test survives the correction for
+        every pair we test on that geography (about 20,000; Benjamini–Hochberg, 5%).</p>
+      <p class="method-note">Each shuffle takes its own best lag too, so choosing the strongest lag is part of the test.
+        Its p comes from how many shuffle-standard-deviations the real r sits above the shuffles' average (200 shuffles
+        per geography; a smooth p is what the correction across 20,000 pairs needs). The 95% range resamples whole years
+        at the chosen lag.</p>
+      <p class="method-note"><strong>Rests on one year?</strong> We also drop each year in turn and recompute r. If
+        leaving out a single year takes away more than half of it (or flips its sign), the card says so: "rests mostly
+        on 2020: without that year, r = 0.11". That's the signature of a shock that hit the same places in both measures
+        in one year. It's shown as a caveat, not used to lower the grade: a year can matter for real reasons, and with
+        15–25 years one year is a big share of the evidence. You decide how much weight it deserves.</p>
+
+      <h3>2. The first measure tends to move first <span class="method-kind">evidence</span></h3>
+      <p>Two things must agree. The correlations with the second measure later must beat those with it earlier (best
+        later |r| ≥ <b>0.1</b> and at least <b>0.05</b> above the best earlier one). And the first measure's past changes
+        must help predict the second's beyond the second's own past (a Granger test:
+        ΔỸ<sub>t</sub> on ΔỸ<sub>t−1</sub> and ΔX̃<sub>t−1</sub>, with standard errors clustered by place), surviving the
+        correction across every pair, while the reverse test does <em>not</em> clear |t| ≥ <b>1.96</b>. Needs 10
+        overlapping years; never counted when either measure is a 5-year census average.</p>
+
+      <h3>3. The second responds to the first's sharp jumps <span class="method-kind">evidence</span></h3>
+      <p>A "jump" is a year-adjusted change beyond <b>2</b> standard deviations of the measure's own changes. We follow the
+        second measure from three years before to three years after each jump (in standard-deviation units, relative to
+        the year before, flipped so every jump points up), against places with no jump of their own in that window.
+        It passes when the average move afterwards is at least <b>0.2</b> SD in the same direction as the correlation,
+        the jumps are spread over at least <b>5</b> different years, the second wasn't already moving beforehand (drift
+        under half the effect), and the shuffled-places test survives the correction across pairs.</p>
+      <p class="method-note">The jump chart's grey band shows where the line falls when each jump is paired with a
+        randomly drawn other place. The dot grid shows every jump by place and year: twenty jumps in one year are one
+        shock, not twenty experiments.</p>
+
+      <h3>4. Survives controlling for a common factor <span class="method-kind">condition</span></h3>
+      <p>A third measure Z whose changes move with both (|r| ≥ <b>0.3</b> with each; relatives of the two measures are
+        skipped) could explain the link. We read Z <em>at the same lag as the link</em>: Z with the first measure in the
+        same year, Z with the second as many years later as the link itself. All three correlations are taken on the
+        <em>same</em> place-years, where the two measures and Z are all measured, and Z needs at least <b>5</b> such years
+        to be tried. (Mixing a 20-year link with a Z measured for 3 years produces nonsense, such as a link that
+        "reverses" when you control for Z.) Measures that move strongly with both but haven't enough shared years are
+        listed as not tried, with their years. Then:</p>
+      <p class="method-formula">partial r = (r<sub>XY</sub> − r<sub>XZ</sub> · r<sub>YZ</sub>) / √((1 − r<sub>XZ</sub>²)(1 − r<sub>YZ</sub>²))</p>
+      <p>The link holds if the partial r keeps its sign and at least <b>half</b> the size of r<sub>XY</sub> on those shared years. The three strongest candidates
+        are shown, each must hold, and the check is labelled with the measures it tried. Only measures we track can be
+        tried: a common cause we don't measure can't be ruled out.</p>
+
+      <h3>5. Not tied together by how the data is built <span class="method-kind">condition</span></h3>
+      <p>Fails when both measures are spread onto these areas from the same source boundaries the same way, both are
+        modeled estimates, or both come from the same underlying records (violent and property crime are both police
+        incident reports, for example).</p>
+    </section>
+
+    <section class="method-section" id="grade">
+      <h2>The grade</h2>
+      <table class="method-table">
+        <thead><tr><th scope="col">Grade</th><th scope="col">Needs</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">We can't tell</th><td>Check 1 fails: they don't measurably move together within places.</td></tr>
+          <tr><th scope="row">Weak</th><td>Check 1 passes, but a condition (4 or 5) fails, or neither 2 nor 3 passes.</td></tr>
+          <tr><th scope="row">Suggestive</th><td>Checks 1, 4 and 5, plus 2 <em>or</em> 3.</td></tr>
+          <tr><th scope="row">Moderate</th><td>All five.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="method-section" id="lose-grade">
+      <h2>Why a pair can lose a grade</h2>
+      <p>Every failed check on a relationship page says in words what stopped it. These are the reasons, and why each
+        one is there:</p>
+      <dl class="method-defs">
+        <dt>"Their changes barely line up"</dt>
+        <dd>The change correlation is under 0.25. Without that, there's nothing for the other checks to explain, so
+          the grade is "We can't tell".</dd>
+        <dt>"Clears 0.25, but random pairings of places do this too often"</dt>
+        <dd>With tens of thousands of pairs tested, some will clear any fixed bar by luck, and a citywide shock can make
+          unrelated measures look linked. The correlation has to beat what pairing each place with a random other place
+          gives, after correcting for every pair tested. This is the most common reason a pair drops from "weak" to
+          "We can't tell" since these tests were added.</dd>
+        <dt>"This only counts once the first check passes"</dt>
+        <dd>Timing and jump responses mean little for two measures that don't move together, so they aren't counted
+          then.</dd>
+        <dt>"Its sharp jumps fall in only N different years"</dt>
+        <dd>Twenty jumps in one year are one shock, not twenty experiments; the jump comparison needs jumps in at least
+          five different years.</dd>
+        <dt>"Random pairings move this much after jumps too often"</dt>
+        <dd>The response after jumps has to beat the same jumps given to random other places.</dd>
+        <dt>"Holding Z fixed, the link keeps less than half its size"</dt>
+        <dd>Another measure moving both could explain the link. The grade is capped at "weak", and the page names Z so
+          you can look at it.</dd>
+        <dt>"They can move together just because…"</dt>
+        <dd>The two come from the same records or the same estimation method, which ties them together mechanically.
+          Also capped at "weak".</dd>
+      </dl>
+      <p class="method-note">Two things are shown but never lower a grade: a link that <em>rests mostly on one year</em>,
+        and a census 5-year average's blurred timing (which only blocks the "moves first" check). Pairs computed before
+        these tests existed keep the grade they had until the next data build.</p>
+    </section>
+
+    <section class="method-section" id="shocks">
+      <h2>Shared shocks and effective N</h2>
+      <p>Poverty and violent crime across Chicago's 77 neighborhoods give 1,078 place-years of paired changes, but only
+        14 distinct years. A citywide shock such as COVID hits all 77 neighborhoods in the same year: it is one
+        observation, close to N = 1, not 77. So next to every count of place-years the reports show the
+        <strong>effective N ≈ distinct years</strong>, and every test above respects it: shuffling places keeps the shock
+        years intact, and the 95% ranges resample whole years.</p>
+    </section>
+
+    <section class="method-section" id="limits">
+      <h2>Known limits</h2>
+      <ul class="method-list">
+        <li><strong>Census 5-year averages.</strong> American Community Survey figures average five years, so consecutive
+          years share four of them. Their changes are small and blurred in time, and the "moves first" check is never
+          counted for them.</li>
+        <li><strong>Shared shocks.</strong> Uneven citywide shocks survive the year adjustment. The shuffled-places test and
+          the year resampling are the defence; the per-year bars show when one year carries a result.</li>
+        <li><strong>Few jump years.</strong> The jump study needs jumps spread over at least five different years.</li>
+        <li><strong>Present-day snapshots only.</strong> Some measures (Google Places counts) exist only as today's
+          snapshot, with no history, so they never enter the over-time checks.</li>
+        <li><strong>Many tests.</strong> Tens of thousands of pairs are tested on each geography; every test is corrected
+          for that, and the agreement grid for its eleven gaps.</li>
+        <li><strong>Observational data.</strong> Passing every check is consistent with one measure affecting the other.
+          Unmeasured common causes, effects within the same year in both directions, and changes in how data is
+          collected can all pass them too.</li>
+      </ul>
+      <p class="method-note">Every shuffle and resample is seeded, so a rebuild from the same data gives the same numbers.
+        The code and the tests that plant known patterns (a two-year lag that must be found in one direction only, a
+        shared shock that must not pass, a common factor that must be named) live with the API.</p>
+    </section>
+  </main>
+{% endblock %}

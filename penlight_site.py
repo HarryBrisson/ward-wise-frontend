@@ -58,6 +58,7 @@ PAGES: tuple[Page, ...] = (
     Page("drivers", "/reports/drivers", "report_drivers.html", "ui.drivers_page"),
     Page("impact", "/reports/impact", "report_impact.html", "ui.impact_page"),
     Page("deepdive", "/reports/deep-dive", "report_deepdive.html", "ui.report_deepdive_page"),
+    Page("methodology", "/reports/methodology", "report_methodology.html", "ui.methodology_page"),
     Page("term", "/reports/term", "report_term.html", "ui.report_term_page"),
     Page("years", "/reports/data-years", "report_years.html", "ui.report_years_page"),
     Page("report", "/report", "report.html", "ui.report_page"),
