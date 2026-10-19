@@ -115,6 +115,7 @@
 .mp-vz { background: color-mix(in srgb, var(--positive) 15%, transparent); border-radius: 999px; color: var(--text); font-size: 0.72rem; font-weight: 700; padding: 0.05rem 0.45rem; }
 .mp-src { border-radius: 4px; font-size: 0.72rem; font-weight: 700; padding: 0.05rem 0.35rem; white-space: nowrap; }
 .mp-primary_document, .mp-official_secondary { background: color-mix(in srgb, var(--positive) 16%, transparent); }
+.mp-foia_response { background: color-mix(in srgb, var(--positive) 16%, transparent); }
 .mp-ward_wise_2023_unverified, .mp-derived { background: color-mix(in srgb, var(--menu-cat-2) 22%, transparent); }
 .mp-ward_office_secondary { background: var(--surface-muted, rgb(0 0 0 / 6%)); }
 .mp-history { color: var(--hue, currentColor); margin: 0.5rem 0 0; }
