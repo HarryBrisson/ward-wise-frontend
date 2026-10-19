@@ -64,17 +64,20 @@
   const SOURCES = {
     primary_document: "A price sheet issued by CDOT or OBM.",
     official_secondary: "CDOT's prices as reproduced in the City's 2017 Inspector General audit.",
-    ward_wise_2023_unverified: "CDOT's 2023 Aldermanic Menu packet, from a copy kept by Ward Wise volunteers (no city-hosted copy found).",
+    foia_response: "CDOT's 2023 Aldermanic Menu packet, obtained by Ward Wise Chicago through a FOIA request.",
+    ward_wise_2023_unverified: "CDOT's 2023 Aldermanic Menu packet, obtained by Ward Wise Chicago through a FOIA request.",  // pre-v1.1.2 label
     derived: "The fixed price that recurs in the City's own spending postings that year.",
     ward_office_secondary: "A price table a ward office posted for participatory budgeting.",
   };
-  const RANK = { primary_document: 0, official_secondary: 1, ward_wise_2023_unverified: 2, derived: 3, ward_office_secondary: 4 };
+  const RANK = { primary_document: 0, foia_response: 1, ward_wise_2023_unverified: 1, official_secondary: 2, derived: 3, ward_office_secondary: 4 };
+  // The 2023 packet's rows; data releases before v1.1.2 call them ward_wise_2023_unverified.
+  const isPacket = (r) => r.verification === "foia_response" || r.verification === "ward_wise_2023_unverified";
   const rank = (r) => RANK[r.verification] ?? 9;
 
   // The price on the menu: the 2023 packet when the item is in it (one menu year for the whole
   // card), else the newest best-sourced price.
   function headline(list) {
-    const packet = list.find((r) => r.verification === "ward_wise_2023_unverified");
+    const packet = list.find(isPacket);
     if (packet) return packet;
     return list.filter((r) => r.unit_cost != null)
       .sort((a, b) => (b.menu_year - a.menu_year) || (rank(a) - rank(b)))[0] || list[0];
@@ -107,7 +110,7 @@
     const head = list.length ? headline(list) : null;
     const p = price(head);
     const vz = list.some((r) => r.vision_zero);
-    const offYear = head && head.verification !== "ward_wise_2023_unverified";
+    const offYear = head && !isPacket(head);
     return `
       <li class="rm-item${open ? " is-open" : ""}" id="item-${esc(slug)}">
         <button type="button" class="rm-row" data-slug="${esc(slug)}" aria-expanded="${open}" aria-controls="detail-${esc(slug)}">
