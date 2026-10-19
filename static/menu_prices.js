@@ -30,7 +30,7 @@
       ["arterial_bump_out", "Arterial bump-out", "A curb extension at a busy corner."],
       ["pedestrian_refuge_island", "Refuge island", "A raised island mid-crossing, so you cross one direction at a time."],
     ] },
-    { title: "Slower streets", items: [
+    { title: "Safer streets", items: [
       ["street_speed_hump", "Speed humps", "A pair of humps on one block."],
       ["traffic_circle", "Traffic circle", "A small planted circle that slows an intersection without a stop sign."],
     ] },
@@ -49,6 +49,17 @@
       ["traffic_signal", "Traffic signal", "A new signal or left-turn arrow."],
     ] },
   ];
+
+  // Photos from CDOT's 2023 Aldermanic Menu packet (the same images the old wardwisechicago.org
+  // used), recompressed to ~40 KB under static/menu-items/<slug>.jpg. Shown only when an item is
+  // opened, so the list itself stays text.
+  const PHOTOS = new Set([
+    "alley_resurfacing", "alley_speed_hump", "arterial_bump_out", "bike_lane", "buffered_bike_lane",
+    "concrete_alley_apron", "cul_de_sac", "curb_gutter", "diagonal_parking", "floodlight", "green_alley",
+    "light_pole_painting", "neighborhood_greenway", "pedestrian_refuge_island", "protected_bike_lane",
+    "residential_bump_outs", "sidewalk_replacement", "signal_pole_painting", "street_lighting",
+    "street_resurfacing", "street_speed_hump", "traffic_circle",
+  ]);
 
   const SOURCES = {
     primary_document: "A price sheet issued by CDOT or OBM.",
@@ -113,7 +124,13 @@
     const desc = (list.find((r) => r.description) || {}).description || "";
     const hist = historyLine(list, head);
     const rows = list.slice().sort((a, b) => (b.menu_year - a.menu_year) || (rank(a) - rank(b)));
-    return `
+    const name = (SECTIONS.flatMap((sec) => sec.items).find((i) => i[0] === slug) || [])[1] || head.item;
+    const photo = PHOTOS.has(slug) ? `
+      <figure class="rm-photo">
+        <img src="/static/menu-items/${esc(slug)}.jpg" alt="${esc(name)}, an example in Chicago" loading="lazy" decoding="async">
+        <figcaption>Photo: CDOT, 2023 Aldermanic Menu</figcaption>
+      </figure>` : "";
+    return `${photo}
       ${desc ? `<p class="rm-desc">${esc(desc)}</p>` : ""}
       ${head.conversion_note ? `<p class="rm-note">${esc(head.conversion_note)}</p>` : ""}
       ${hist ? `<p class="rm-history"><span class="rm-label">Price over time</span> ${hist}</p>` : ""}
@@ -165,7 +182,15 @@
     let open = new URLSearchParams(window.location.search).get("item");
     if (open && !bySlug[open]) open = null;
     render(bySlug, payload.release, open);
-    if (open) document.getElementById(`item-${open}`)?.scrollIntoView({ block: "center" });
+    if (open) {
+      // A shared link lands on its item; the photo above it changes the height, so settle again
+      // once it has loaded.
+      if ("scrollRestoration" in history) history.scrollRestoration = "manual";  // else a reload snaps back
+      const target = document.getElementById(`item-${open}`);
+      const settle = () => target?.scrollIntoView({ block: "start" });
+      requestAnimationFrame(settle);
+      target?.querySelector(".rm-photo img")?.addEventListener("load", settle, { once: true });
+    }
 
     // One item open at a time; the URL follows so an open item can be shared.
     root.addEventListener("click", (event) => {
