@@ -203,7 +203,7 @@
 }
 .rm-section h2::before, .rm-section h2::after { color: var(--muted-text); content: "—"; margin: 0 0.6rem; }
 .rm-section ul { list-style: none; margin: 0; padding: 0; }
-.rm-item { break-inside: avoid; }
+.rm-item { break-inside: avoid; scroll-margin-top: 5rem; }  /* clear the sticky site header on deep links */
 .rm-row {
   align-items: baseline;
   background: none;
@@ -251,3 +251,6 @@
 .rm-sources li { line-height: 1.4; margin-bottom: 0.35rem; }
 .rm-foot { border-top: 1px solid var(--border, #d5d8df); color: var(--muted-text); font-family: var(--serif); font-size: 0.82rem; margin-top: 0.4rem; padding-top: 1rem; text-align: center; }
 .fd-theme .rm-foot p { margin: 0.3rem auto; max-width: 40rem; }
+.rm-photo { margin: 0.5rem 0 0.6rem; }
+.rm-photo img { border-radius: 3px; display: block; height: auto; max-height: 18rem; max-width: 100%; }  /* no forced crop: some packet scans are two photos side by side */
+.rm-photo figcaption { color: var(--muted-text); font-size: 0.72rem; margin-top: 0.25rem; }
