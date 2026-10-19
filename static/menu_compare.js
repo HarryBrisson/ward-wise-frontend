@@ -1,6 +1,8 @@
 // Menu money · Compare: two to five wards side by side, category by category, for one year —
 // plus every ward's value for one category, so a "4% vs 24%" can be seen against all fifty.
-// URL is state: /menu/compare?wards=40,50&year=2023&metric=share|cost&category=
+// Over a span of years the shares are cumulative: each ward's dollars summed across the range, then
+// divided by its total — a smoother picture than any single year.
+// URL is state: /menu/compare?wards=40,50&from=2018&to=2025&metric=share|cost&category=  (?year= = one year)
 (function () {
   "use strict";
   const M = window.WardWiseMenu;
@@ -8,24 +10,24 @@
   if (!root) return;
   const esc = M.esc;
   const MAX_WARDS = 5;
-  const state = { data: null, wards: [], year: null, metric: "share", category: null };
+  const state = { data: null, wards: [], from: null, to: null, agg: {}, metric: "share", category: null };
 
-  function readUrl() {
+  function readUrl(data) {
     const params = new URLSearchParams(window.location.search);
+    Object.assign(state, M.readRange(params, data));
     state.wards = (params.get("wards") || "").split(",").map(Number).filter((w) => w >= 1 && w <= 50);
     state.wards = [...new Set(state.wards)].slice(0, MAX_WARDS);
-    state.year = Number(params.get("year")) || null;
     state.metric = params.get("metric") === "cost" ? "cost" : "share";
     state.category = params.get("category") || null;
   }
 
   function writeUrl() {
-    M.setUrl("/menu/compare", { wards: state.wards.join(","), year: state.year,
+    M.setUrl("/menu/compare", { wards: state.wards.join(","), ...M.rangeParams(state.from, state.to),
       metric: state.metric === "share" ? null : "cost", category: state.category });
   }
 
   function value(ward, category) {
-    const cell = (((state.data.cells || {})[String(state.year)] || {})[String(ward)] || {})[category];
+    const cell = (state.agg[String(ward)] || {})[category];
     if (!cell) return 0;
     return state.metric === "share" ? cell[1] : cell[0];
   }
@@ -33,8 +35,12 @@
 
   function render() {
     const data = state.data;
-    const average = M.averageShares(data, state.year);
-    const yearCells = (data.cells || {})[String(state.year)] || {};
+    state.agg = M.rangeCells(data, state.from, state.to);
+    const yearCells = state.agg;
+    const average = {};
+    const spending = Object.values(yearCells).filter((cats) => Object.values(cats).some((c) => c[0] > 0));
+    spending.forEach((cats) => Object.entries(cats).forEach(([cat, c]) => { average[cat] = (average[cat] || 0) + c[1] / spending.length; }));
+    const span = M.rangeLabel(state.from, state.to);
     const categories = (data.categories || []).filter((cat) => Object.values(yearCells).some((cells) => cells[cat]));
     // Order rows by the selected wards' combined spending, so the comparison leads with what matters.
     categories.sort((a, b) => state.wards.reduce((s, w) => s + value(w, b), 0) - state.wards.reduce((s, w) => s + value(w, a), 0));
@@ -46,14 +52,15 @@
     const controls = `
       <div class="ed-controls">
         <div class="mh-ward-chips">${chips}${state.wards.length < MAX_WARDS ? `<label class="report-select">Add <select id="mh-add"><option value="">ward…</option>${M.wardOptions(null)}</select></label>` : ""}</div>
-        <label class="report-select">Year <select id="mh-year">${M.yearOptions(data, state.year)}</select></label>
+        ${M.rangeControls(data, state.from, state.to, "mc")}
         <div class="mh-toggle" role="group" aria-label="Show">
           <button type="button" data-metric="share" aria-pressed="${state.metric === "share"}">Share</button>
           <button type="button" data-metric="cost" aria-pressed="${state.metric === "cost"}">Dollars</button>
         </div>
       </div>
       ${neighbors.length ? `<p class="mh-note">Add its neighbors: ${neighbors.map((n) => `<button type="button" class="ww-linkbtn" data-add="${n}">Ward ${n}</button>`).join(" ")}</p>` : ""}
-      ${M.isPartial(data, state.year) ? `<p class="mh-note">${state.year} is a partial year (year-to-date).</p>` : ""}`;
+      ${state.from !== state.to ? `<p class="mh-note">${span}: dollars summed across the years, shares of each ward's total for the whole span. Ward numbers are as posted each year; ward boundaries changed in 2015 and 2023.</p>` : ""}
+      ${M.rangePartial(data, state.from, state.to) ? `<p class="mh-note">${state.to} is a partial year (year-to-date).</p>` : ""}`;
 
     if (!state.wards.length) {
       root.innerHTML = `${controls}<p class="report-empty">Pick two or more wards to compare.</p><div id="mh-cite"></div>`;
@@ -61,8 +68,8 @@
       return;
     }
 
-    const head = `<tr><th>Category</th>${state.wards.map((w) => `<th class="num"><a href="/menu/ward?ward=${w}&year=${state.year}">Ward ${w}</a></th>`).join("")}${state.metric === "share" ? '<th class="num mh-avg">Average ward</th>' : ""}</tr>`;
-    const totals = `<tr class="mh-total"><th>Total spent</th>${state.wards.map((w) => `<td class="num">${M.money((M.wardTotal(data, w, state.year) || {}).total)}</td>`).join("")}${state.metric === "share" ? "<td></td>" : ""}</tr>`;
+    const head = `<tr><th>Category</th>${state.wards.map((w) => `<th class="num"><a href="/menu/ward?ward=${w}&year=${state.to}">Ward ${w}</a></th>`).join("")}${state.metric === "share" ? '<th class="num mh-avg">Average ward</th>' : ""}</tr>`;
+    const totals = `<tr class="mh-total"><th>Total spent</th>${state.wards.map((w) => `<td class="num">${M.money((M.rangeTotal(data, w, state.from, state.to) || {}).total)}</td>`).join("")}${state.metric === "share" ? "<td></td>" : ""}</tr>`;
     const body = categories.map((cat) => {
       const values = state.wards.map((w) => value(w, cat));
       const hi = Math.max(...values);
@@ -76,7 +83,7 @@
     root.innerHTML = `${controls}
       <div class="mh-table-wrap"><table class="mh-table mh-compare-table"><thead>${head}</thead><tbody>${totals}${body}</tbody></table></div>
       <section class="mh-strip-section" aria-label="Every ward">
-        <p class="ed-section-label">Every ward, ${esc(state.category || "")} ${state.metric === "share" ? "share" : "dollars"}, ${state.year}</p>
+        <p class="ed-section-label">Every ward, ${esc(state.category || "")} ${state.metric === "share" ? "share" : "dollars"}, ${span}</p>
         ${strip()}
         <p class="mh-note">Click a category row above to change this strip. Highlighted bars are the wards you picked.</p>
       </section>
@@ -101,14 +108,14 @@
   function bind() {
     const add = root.querySelector("#mh-add");
     if (add) add.addEventListener("change", (e) => addWard(Number(e.target.value)));
-    root.querySelector("#mh-year").addEventListener("change", (e) => { state.year = Number(e.target.value); writeUrl(); render(); });
+    M.bindRange(root, "mc", (from, to) => { Object.assign(state, { from, to }); writeUrl(); render(); });
     root.querySelectorAll("[data-metric]").forEach((b) => b.addEventListener("click", () => { state.metric = b.dataset.metric; writeUrl(); render(); }));
     root.querySelectorAll("[data-remove]").forEach((b) => b.addEventListener("click", () => {
       state.wards = state.wards.filter((w) => w !== Number(b.dataset.remove)); writeUrl(); render();
     }));
     root.querySelectorAll("[data-add]").forEach((b) => b.addEventListener("click", () => addWard(Number(b.dataset.add))));
     root.querySelectorAll("[data-category]").forEach((b) => b.addEventListener("click", () => { state.category = b.dataset.category; writeUrl(); render(); }));
-    const label = state.wards.length ? `Wards ${state.wards.join(", ")}, ${state.year}, ${state.metric === "share" ? "share of spending" : "dollars"} by category` : "Compare wards";
+    const label = state.wards.length ? `Wards ${state.wards.join(", ")}, ${M.rangeLabel(state.from, state.to)}, ${state.metric === "share" ? "share of spending" : "dollars"} by category` : "Compare wards";
     M.renderCite(root.querySelector("#mh-cite"), state.data.release, label);
   }
 
@@ -118,10 +125,9 @@
     render();
   }
 
-  readUrl();
   M.summary().then((data) => {
     state.data = data;
-    if (!M.years(data).includes(state.year)) state.year = M.defaultYear(data);
+    readUrl(data);
     writeUrl();
     render();
   }).catch((error) => M.unavailable(root, error));
