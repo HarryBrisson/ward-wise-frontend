@@ -210,16 +210,14 @@ window.WardWiseExplorer = {
     return this.fetchMetricChunks("/api/metrics/timeline", metricIds, params, "Unable to load history.", (parts) => {
       // A series' values line up with its own response's snapshot list, and each chunk's list only
       // covers that chunk's metrics. Build the union, then re-place every series onto it (null = not measured).
-      const union = [];
-      const slot = new Map();
+      // One response lists snapshots oldest first; keep that order across chunks so charts don't zigzag.
+      const byId = new Map();
       for (const part of parts) {
-        for (const snap of part.snapshots || []) {
-          if (!slot.has(snap.snapshot_id)) {
-            slot.set(snap.snapshot_id, union.length);
-            union.push(snap);
-          }
-        }
+        for (const snap of part.snapshots || []) if (!byId.has(snap.snapshot_id)) byId.set(snap.snapshot_id, snap);
       }
+      const when = (snap) => `${snap.period_end || snap.collected_at || ""}|${snap.snapshot_id}`;
+      const union = [...byId.values()].sort((a, b) => (when(a) < when(b) ? -1 : when(a) > when(b) ? 1 : 0));
+      const slot = new Map(union.map((snap, i) => [snap.snapshot_id, i]));
       const series = [];
       for (const part of parts) {
         const snaps = part.snapshots || [];
