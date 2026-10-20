@@ -4942,6 +4942,15 @@ body:has(#near-picker:not([hidden])) .near-layout { max-width: 1180px; }
 @media (max-width: 640px) {
   .map-legend { width: 9.5rem; }
   .map-overlays-tr { right: 0.6rem; }
+  /* On a phone the top-right sits on the north-side wards; the lower-left corner of the frame is
+     empty (the city leans toward the lake), so park the key there, above the Map details switch. */
+  .map-card:not(.is-lens) .map-overlays-tr {
+    bottom: 4.2rem;
+    justify-items: start;
+    left: 0.6rem;
+    right: auto;
+    top: auto;
+  }
 }
 
 @media (max-width: 640px) {
