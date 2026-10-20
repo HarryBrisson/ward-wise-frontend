@@ -1,6 +1,9 @@
 {% extends "base.html" %}
 
-{% block title %}Visual signifiers — Ward Wise Penlight  <script>
+{% block title %}Visual signifiers — Ward Wise Penlight{% endblock %}
+
+{% block scripts %}
+  <script>
     // Every area's photo with its provenance, from /api/signifiers/groups. Same markup the server
     // used to render; escaped because captions and credits are free text from the sources.
     (function () {

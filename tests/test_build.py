@@ -25,7 +25,7 @@ def test_ci_sanity_check_passes(built_site: Path):
     assert check_build.main(["check_build.py", str(built_site)]) == 0
 
 
-KNOWN_BAD_TITLE = {"/signifiers": "title block never closed, swallows the page script"}
+KNOWN_BAD_TITLE = {}
 
 
 @pytest.mark.parametrize("path", [
