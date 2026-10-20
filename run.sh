@@ -15,8 +15,8 @@ if [[ -f .venv/Scripts/activate ]]; then
 else
     source .venv/bin/activate
 fi
-pip install --quiet --upgrade pip
-pip install --quiet -r requirements.txt
+python -m pip install --quiet --upgrade pip
+python -m pip install --quiet -r requirements.txt
 
 echo "Penlight frontend on http://localhost:${PORT:-1837}"
 echo "API: ${PENLIGHT_API_BASE:-https://penlight.wardwise.org}"
