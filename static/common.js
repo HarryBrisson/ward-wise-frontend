@@ -155,20 +155,84 @@ window.WardWiseExplorer = {
     );
   },
 
+  // The API takes the metric list as one comma-joined GET parameter, and its proxy answers 414 once
+  // the URL passes ~8 KB (about 290 ids is already over). Split the list into requests that stay well
+  // under that, run them in parallel, and merge so callers still see a single response.
+  async fetchMetricChunks(path, metricIds, params, message, merge) {
+    const MAX_ENCODED = 3000;
+    const chunks = [];
+    let current = [];
+    let size = 0;
+    for (const id of metricIds || []) {
+      const cost = encodeURIComponent(id).length + 3; // +3 for the encoded comma
+      if (current.length && size + cost > MAX_ENCODED) {
+        chunks.push(current);
+        current = [];
+        size = 0;
+      }
+      current.push(id);
+      size += cost;
+    }
+    if (current.length || !chunks.length) chunks.push(current);
+    const results = await Promise.all(
+      chunks.map((ids) => {
+        const q = new URLSearchParams();
+        if (ids.length) q.set("metrics", ids.join(","));
+        for (const [key, value] of params) q.set(key, value);
+        return this.fetchJson(`${path}?${q.toString()}`, message);
+      }),
+    );
+    return results.length === 1 ? results[0] : merge(results);
+  },
+
   async fetchComparison(metricIds, areaType = "ward") {
-    const params = new URLSearchParams();
-    if (metricIds?.length) params.set("metrics", metricIds.join(","));
-    if (areaType) params.set("area_type", areaType);
-    return this.fetchJson(`/api/metrics/comparison?${params.toString()}`, "Unable to load comparison data.");
+    const params = areaType ? [["area_type", areaType]] : [];
+    return this.fetchMetricChunks("/api/metrics/comparison", metricIds, params, "Unable to load comparison data.", (parts) => {
+      // Every chunk lists the same areas; fold each area's values together.
+      const rows = new Map();
+      for (const part of parts) {
+        for (const row of part.rows || []) {
+          const key = `${row.area_type}:${row.area_id}`;
+          const have = rows.get(key);
+          if (have) Object.assign(have.values, row.values);
+          else rows.set(key, { ...row, values: { ...row.values } });
+        }
+      }
+      return { ...parts[0], metrics: parts.flatMap((part) => part.metrics || []), rows: [...rows.values()] };
+    });
   },
 
   async fetchTimeline({ metricIds = [], areaType = "ward", areaId, wardId } = {}) {
-    const params = new URLSearchParams();
-    if (metricIds.length) params.set("metrics", metricIds.join(","));
-    if (areaType) params.set("area_type", areaType);
-    if (areaId) params.set("area_id", areaId);
-    if (wardId && areaType === "precinct") params.set("ward", wardId);
-    return this.fetchJson(`/api/metrics/timeline?${params.toString()}`, "Unable to load history.");
+    const params = [];
+    if (areaType) params.push(["area_type", areaType]);
+    if (areaId) params.push(["area_id", areaId]);
+    if (wardId && areaType === "precinct") params.push(["ward", wardId]);
+    return this.fetchMetricChunks("/api/metrics/timeline", metricIds, params, "Unable to load history.", (parts) => {
+      // A series' values line up with its own response's snapshot list, and each chunk's list only
+      // covers that chunk's metrics. Build the union, then re-place every series onto it (null = not measured).
+      const union = [];
+      const slot = new Map();
+      for (const part of parts) {
+        for (const snap of part.snapshots || []) {
+          if (!slot.has(snap.snapshot_id)) {
+            slot.set(snap.snapshot_id, union.length);
+            union.push(snap);
+          }
+        }
+      }
+      const series = [];
+      for (const part of parts) {
+        const snaps = part.snapshots || [];
+        for (const item of part.series || []) {
+          const values = new Array(union.length).fill(null);
+          (item.values || []).forEach((value, i) => {
+            if (snaps[i]) values[slot.get(snaps[i].snapshot_id)] = value;
+          });
+          series.push({ ...item, values });
+        }
+      }
+      return { ...parts[0], series, snapshots: union };
+    });
   },
 
   async fetchTimeseries({ metricId, areaType = "ward", areaId } = {}) {
