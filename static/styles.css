@@ -4018,6 +4018,11 @@ select {
   .yearsgrid-prov { display: none; }
   .yearsgrid-row { grid-template-columns: minmax(8rem, 1.5fr) minmax(0, 3fr) auto; }
 }
+
+@media (max-width: 640px) {
+  /* Must follow the 960px rule: the earlier phone override lost to it, so the row kept three
+     columns for two visible cells (badge and note are hidden). */
+  .yearsgrid-row { grid-template-columns: minmax(0, 1fr) auto; }
 }
 
 /* Cross-reference between metrics that measure the same thing from different sources. */

@@ -15,7 +15,6 @@ VIEWPORTS = {"phone": {"width": 390, "height": 844}, "desktop": {"width": 1440, 
 # Pages that scroll sideways on dev today. strict: once a fix lands the xfail itself fails, so the
 # entry has to come out with the fix.
 KNOWN_OVERFLOW: dict[tuple[str, str], str] = {
-    ("/reports/data-years", "phone"): "year grid keeps its desktop columns",
     ("/k3/dictionary", "phone"): "k3 shell has no phone layout",
 }
 
