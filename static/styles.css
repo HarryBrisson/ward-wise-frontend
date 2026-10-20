@@ -4704,6 +4704,10 @@ body:has(#near-picker:not([hidden])) .near-layout { max-width: 1180px; }
 .notes-table th { border-bottom: 1px solid var(--border, #d9dee6); padding: 0.2rem 0.5rem; text-align: left; }
 .notes-table td { border-bottom: 1px solid color-mix(in srgb, var(--shadow-ink) 6%, transparent); padding: 0.2rem 0.5rem; vertical-align: top; }
 .notes-families td:last-child { max-width: 30rem; }
+/* The tables are built by data_notes.js with no wrapper, so the table itself scrolls sideways on a phone. */
+@media (max-width: 640px) {
+  .notes-table { display: block; overflow-x: auto; }
+}
 
 /* methodology modal */
 .near-methodology { border: 1px solid var(--border, #d9dee6); border-radius: 12px; max-width: 640px; padding: 1.1rem 1.3rem; }
