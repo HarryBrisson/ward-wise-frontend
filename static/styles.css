@@ -5403,10 +5403,19 @@ body.fd-theme {
   color: var(--ink);
   font: inherit;
   font-size: 17px;
+  /* `font: inherit` pulls in the bold weight of an enclosing form label, so reset it here */
+  font-weight: 400;
+  max-width: 100%;
   min-height: 48px;
+  min-width: 0;
+  overflow: hidden;
   padding: 12px 16px;
+  text-overflow: ellipsis;
   width: 100%;
 }
+/* placeholders read as hints, not typed text */
+.fd-theme input::placeholder,
+.fd-theme textarea::placeholder { color: var(--muted-text); font-weight: 400; opacity: 1; }
 .fd-theme select {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none' stroke='%236e6e73' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m1 1.5 5 5 5-5'/%3E%3C/svg%3E");
   background-position: right 16px center;
