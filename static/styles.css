@@ -4656,7 +4656,7 @@ body:has(#near-picker:not([hidden])) .near-layout { max-width: 1180px; }
 
 /* location-first chooser: the map is the fallback, not the toll gate */
 .near-choose { margin: 0 0 1.5rem; max-width: 34rem; }
-.near-choose-lead { color: var(--muted-text, #667); font-size: 1rem; margin: 0 0 0.9rem; }
+.near-choose-lead { color: var(--muted-text, #667); font-size: 1rem; margin: 0 0 1.25rem; }
 .near-locate-primary {
   background: var(--action, #155e75);
   border: none;
@@ -4668,6 +4668,7 @@ body:has(#near-picker:not([hidden])) .near-layout { max-width: 1180px; }
   font-weight: 600;
   padding: 0.65rem 1.4rem;
 }
+.near-locate-primary { margin-top: 0.5rem; }
 .near-locate-primary:disabled { cursor: default; opacity: 0.65; }
 .near-choose-alt {
   background: none;
@@ -4676,7 +4677,9 @@ body:has(#near-picker:not([hidden])) .near-layout { max-width: 1180px; }
   cursor: pointer;
   font: inherit;
   font-size: 0.9rem;
-  margin-left: 0.9rem;
+  display: block;
+  margin: 0.25rem 0 0;
+  padding: 0;
   text-decoration: underline;
 }
 .near-choose-privacy { color: var(--muted, #667); font-size: 0.8rem; margin: 0.8rem 0 0; }
@@ -4717,9 +4720,11 @@ body:has(#near-picker:not([hidden])) .near-layout { max-width: 1180px; }
 .near-methodology li { font-size: 0.85rem; margin-bottom: 0.4rem; }
 
 /* address lookup */
-.near-address-form { display: flex; gap: 0.4rem; margin: 0.6rem 0; }
-.near-address-form input { border: 1px solid var(--border, #d9dee6); border-radius: 8px; flex: 1; font: inherit; max-width: 22rem; padding: 0.35rem 0.6rem; }
+.near-address-form { display: flex; gap: 0.5rem; margin: 1rem 0 0.9rem; }
+.near-address-form button { border-radius: 8px; flex: 0 0 auto; padding-inline: 1rem; }
+.near-address-form input { border: 1px solid var(--border, #d9dee6); border-radius: 8px; flex: 1; font: inherit; max-width: 22rem; min-width: 0; padding: 0.5rem 0.7rem; text-overflow: ellipsis; }
 .near-address-bar { margin: 0; }
+.near-address-bar button { padding-inline: 0.6rem; }
 .near-address-bar input { font-size: 0.82rem; max-width: 13rem; padding: 0.25rem 0.5rem; }
 
 
