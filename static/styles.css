@@ -2999,6 +2999,19 @@ select {
   gap: 0.5rem;
 }
 
+/* inside the suggestion forms the shared label rule makes labels grids and inputs 100% wide,
+   which stacks the checkbox above its sentence */
+.metric-recommendation-form .settings-option {
+  align-items: flex-start;
+  display: flex;
+}
+
+.metric-recommendation-form .settings-option input {
+  flex: 0 0 auto;
+  margin-top: 0.2rem;
+  width: auto;
+}
+
 /* Change-over-time coverage: a small info icon beside the equation; detail lives in its tooltip. */
 .delta-info {
   background: var(--surface-muted);
