@@ -5343,12 +5343,18 @@ html.is-theming, html.is-theming * { transition: background-color 0.35s ease, co
     justify-content: flex-start;
     order: 3;
     overflow-x: auto;
-    padding: 12px 0;
+    padding: 0;
     scrollbar-width: none;
   }
   .gn-links::-webkit-scrollbar { display: none; }
-  /* Fade the last link so the row reads as one you can swipe. */
-  .gn-links { -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent); mask-image: linear-gradient(90deg, #000 88%, transparent); padding-right: 24px; }
+  /* Links keep their 13px type but get ~44px tap areas from padding. */
+  .gn .gn-links a { padding: 15px 0; }
+  /* "More" is pinned to the right edge of the strip so it never scrolls out of sight; the rest of
+     the links scroll under it. The opaque background hides them, the left shadow is the swipe cue. */
+  .gn .gn-more { background: var(--bg); box-shadow: -12px 0 10px -4px var(--bg); flex: none; padding-left: 4px; position: sticky; right: 0; }
+  .gn .gn-more .gn-more-toggle { padding: 15px 4px; }
+  /* Pull the 44px tap area out of the layout so the top row keeps its height. */
+  .gn .gn-theme, .gn .gn-account .nav-account-button { height: 44px; margin-block: -7px; width: 44px; }
 }
 
 /* --- Theme ---------------------------------------------------------------- */
@@ -7136,6 +7142,8 @@ body:not(.fd-theme) .comparison-row.is-selected .comparison-row-community-areas 
 .gn .gn-more-menu a[aria-current="page"] { background: var(--fill); font-weight: 600; }
 
 .gn-account { position: relative; display: flex; align-items: center; }
+/* display:flex above would otherwise beat [hidden], showing an empty circle to signed-out visitors. */
+.gn-account[hidden] { display: none; }
 .gn-account .nav-account-button { width: 30px; height: 30px; border-radius: 50%; border: 0; background: var(--fill); color: var(--ink); font: 600 12px/1 -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif; cursor: pointer; display: grid; place-items: center; }
 .gn .gn-account .nav-account-email { color: var(--ink-2); font-size: 12px; margin: 8px 18px 6px; overflow: hidden; text-overflow: ellipsis; }
 
