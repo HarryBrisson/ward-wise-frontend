@@ -3277,11 +3277,18 @@ select {
   }
 }
 
+/* !important on the box properties: form-field rules such as .fd-theme input[type="text"] are more
+   specific and otherwise stretch a hidden input back to full width, which scrolled the page sideways. */
 .visually-hidden {
+  border: 0 !important;
   clip: rect(0 0 0 0);
-  height: 1px; width: 1px;
+  clip-path: inset(50%);
+  height: 1px !important; width: 1px !important;
+  margin: -1px !important;
   overflow: hidden;
+  padding: 0 !important;
   position: absolute;
+  white-space: nowrap;
 }
 
 /* Support page: action cards + nomination coverage + metric growth */
@@ -4010,6 +4017,7 @@ select {
   /* the badges are the first thing to go when the row can't hold four columns */
   .yearsgrid-prov { display: none; }
   .yearsgrid-row { grid-template-columns: minmax(8rem, 1.5fr) minmax(0, 3fr) auto; }
+}
 }
 
 /* Cross-reference between metrics that measure the same thing from different sources. */
