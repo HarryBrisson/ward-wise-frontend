@@ -140,7 +140,9 @@
   text-decoration: none;
 }
 
-.ww-cta:hover { filter: brightness(1.08); }
+/* .fd-theme a (styles.css) is more specific than .ww-cta and turned the label link-blue on the fill; match it. */
+.fd-theme .ww-cta { color: var(--on-accent); }
+.fd-theme .ww-cta:hover { filter: brightness(1.08); text-decoration: none; }
 .ww-cta.ghost { background: transparent; border-color: var(--border); color: var(--text); }
 .ww-cta.ghost:hover { border-color: var(--hue-bright); color: var(--hue); }
 
@@ -465,7 +467,7 @@ a.wardreport-area:hover { color: var(--hue); }
 .report-add { align-items: center; display: flex; flex-wrap: wrap; font-size: 0.8rem; font-weight: 700; gap: 0.5rem; margin-top: 0.7rem; }
 .report-add select { background: var(--surface-raised); border: 1px solid var(--border); border-radius: 0.6rem; color: var(--text); font: inherit; font-size: 0.85rem; max-width: 100%; padding: 0.35rem 0.5rem; }
 
-.report-ctas { margin-top: 0; }
+.report-ctas { margin-top: 1rem; }
 .report-peek .ww-peekhead:first-child { margin-top: 0; }
 .report-overtime .ww-mainhead { margin-bottom: 0.4rem; }
 .ww-trendcap { color: var(--muted-text); font-size: 0.78rem; margin: 0.5rem 0 0; }
