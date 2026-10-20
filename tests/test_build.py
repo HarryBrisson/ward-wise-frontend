@@ -63,3 +63,31 @@ def test_internal_links_resolve(built_site: Path):
                 continue
             broken.append(f"{path} -> {target}")
     assert not broken, "links to pages the build does not contain:\n" + "\n".join(sorted(broken))
+
+
+# Attributes whose values a visitor can read (tooltips, screen readers, empty-field hints).
+VISIBLE_ATTRS = re.compile(r'\s(?:title|alt|aria-label|placeholder)="([^"]*)"')
+# Text that comes from views.json (maintainer-owned), so it can't be fixed from a template.
+# Delete the entry when the maintainer renames it there.
+KNOWN_PENLIGHT = {"/reports": 'views.json blurb "Every measure Penlight tracks"'}
+META_DESCRIPTION = re.compile(r'<meta\s+name="description"\s+content="([^"]*)"')
+
+
+def test_no_penlight_in_visible_text(built_site: Path):
+    """The old name "Penlight" stays out of anything a visitor reads. Hostnames, CSS classes,
+    the penlight-build meta and code comments are not visible, so they are stripped first."""
+    leaks = []
+    for path in ALL_PATHS:
+        if path in KNOWN_PENLIGHT:
+            continue
+        html = page_file(built_site, path).read_text(encoding="utf-8")
+        title = re.search(r"<title>(.*?)</title>", html, re.S)
+        found = [title.group(1)] if title else []
+        found += META_DESCRIPTION.findall(html)
+        html = re.sub(r"<!--.*?-->", "", html, flags=re.S)
+        html = re.sub(r"<(script|style)\b.*?</\1>", "", html, flags=re.S | re.I)
+        found += VISIBLE_ATTRS.findall(html)
+        found.append(re.sub(r"<[^>]*>", " ", html))
+        if any("Penlight" in chunk for chunk in found):
+            leaks.append(path)
+    assert not leaks, 'visible "Penlight" on: ' + ", ".join(leaks)

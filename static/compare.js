@@ -332,7 +332,7 @@
   function render() {
     const el = root();
     if (!el) return;
-    document.title = `${nameFor(state.a)} vs ${nameFor(state.b)} — Ward Wise Penlight`;
+    document.title = `${nameFor(state.a)} vs ${nameFor(state.b)} — Ward Wise`;
     const duels = basketIds().map(duelFor).filter(Boolean).sort((x, y) => y.gap - x.gap);
     el.innerHTML = renderHead() + renderVerdict(duels) + renderMix() + renderDuels(duels);
     C.attachTips(el);
