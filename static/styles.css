@@ -3639,7 +3639,7 @@ select {
 
 /* API docs + admin API keys */
 .api-docs-layout .metrics-panel { display: grid; gap: 0.6rem; }
-.api-code { background: color-mix(in srgb, var(--shadow-ink) 4%, transparent); border: 1px solid color-mix(in srgb, var(--shadow-ink) 8%, transparent); border-radius: var(--radius-md); padding: 0.8rem 0.9rem; font-size: 0.78rem; line-height: 1.5; overflow-x: auto; margin: 0; }
+.api-code { background: color-mix(in srgb, var(--shadow-ink) 4%, transparent); border: 1px solid color-mix(in srgb, var(--shadow-ink) 8%, transparent); border-radius: var(--radius-md); padding: 0.8rem 0.9rem; font-size: 0.78rem; line-height: 1.5; overflow-x: auto; white-space: pre-wrap; word-break: break-all; margin: 0; }
 .api-note { color: var(--muted-text); font-size: 0.85rem; margin: 0; max-width: 52rem; }
 .api-note code, .api-docs-layout h2 code { background: color-mix(in srgb, var(--shadow-ink) 5%, transparent); border-radius: 4px; padding: 0.05rem 0.3rem; font-size: 0.92em; }
 .api-list { color: var(--muted-text); font-size: 0.85rem; margin: 0; padding-left: 1.1rem; display: grid; gap: 0.35rem; max-width: 52rem; }
