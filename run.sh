@@ -10,7 +10,11 @@ if [ ! -d .venv ]; then
 fi
 
 # shellcheck disable=SC1091
-source .venv/bin/activate
+if [[ -f .venv/Scripts/activate ]]; then
+    source .venv/Scripts/activate
+else
+    source .venv/bin/activate
+fi
 pip install --quiet --upgrade pip
 pip install --quiet -r requirements.txt
 
