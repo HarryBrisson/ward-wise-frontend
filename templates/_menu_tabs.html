@@ -13,3 +13,10 @@
     <a href="{{ url_for(endpoint) }}"{% if request.endpoint == endpoint %} class="is-active" aria-current="page"{% endif %}>{{ label }}</a>
   {% endfor %}
 </nav>
+<script>
+  /* On phones the tab row scrolls sideways; bring the current tab into view. Set scrollLeft directly so the page itself never jumps. */
+  (function () {
+    var nav = document.querySelector(".mh-tabs"), cur = nav && nav.querySelector("[aria-current]");
+    if (cur) nav.scrollLeft = Math.max(0, cur.getBoundingClientRect().left - nav.getBoundingClientRect().left + nav.scrollLeft - 16);
+  })();
+</script>

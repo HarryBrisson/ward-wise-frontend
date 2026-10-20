@@ -19,6 +19,12 @@
   white-space: nowrap;
 }
 .mh-tabs a:hover { color: var(--text); }
+/* Phone: seven labels wrapped onto three ragged lines, so keep one row and let it scroll (the active tab is scrolled into view by _menu_tabs.html). */
+@media (max-width: 640px) {
+  .mh-tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .mh-tabs::-webkit-scrollbar { display: none; }
+  .mh-tabs a { flex: none; }
+}
 .mh-tabs a.is-active { border-bottom-color: var(--hue, currentColor); color: var(--text); }
 
 .mh-questions ul { display: grid; gap: 0.5rem 1.5rem; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); list-style: none; margin: 0 0 1.6rem; padding: 0; }
@@ -61,6 +67,16 @@
 
 /* tables */
 .mh-table-wrap { overflow-x: auto; margin: 0.4rem 0 1.2rem; }
+/* Scroll cue shared with .menu-table-wrap: an edge shadow shows on whichever side has more columns, and the first column stays put so rows keep their label. */
+.mh-table-wrap, .menu-table-wrap {
+  background:
+    linear-gradient(to right, var(--surface) 30%, transparent) 0 0 / 2rem 100% no-repeat local,
+    linear-gradient(to left, var(--surface) 30%, transparent) 100% 0 / 2rem 100% no-repeat local,
+    linear-gradient(to right, rgb(0 0 0 / 18%), transparent) 0 0 / 0.7rem 100% no-repeat scroll,
+    linear-gradient(to left, rgb(0 0 0 / 18%), transparent) 100% 0 / 0.7rem 100% no-repeat scroll;
+}
+.mh-table tr > :first-child, .menu-table tr:not(.menu-detail-row) > :first-child { background: var(--surface); left: 0; position: sticky; z-index: 2; }
+.mh-table tr.is-active > :first-child { background: var(--surface-muted); }
 .mh-table { border-collapse: collapse; font-size: 0.88rem; width: 100%; }
 .mh-table th, .mh-table td { border-bottom: 1px solid var(--border, #e3e5ea); padding: 0.4rem 0.5rem; text-align: left; vertical-align: top; }
 .mh-table thead th { color: var(--muted-text); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; }
@@ -128,6 +144,8 @@
 .mp-legend dd { margin: 0; color: var(--muted-text); }
 
 .mh-prose { max-width: var(--measure-text, 40rem); }
+.mh-prose .ed-section-label { margin-top: 1.8rem; }
+.mh-prose .ed-section-label:first-child { margin-top: 0; }
 .mh-prose li { line-height: 1.5; margin-bottom: 0.35rem; }
 
 @media (max-width: 640px) {
