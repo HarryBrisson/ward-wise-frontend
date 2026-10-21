@@ -74,6 +74,7 @@
     { family: "property_crimes", label: "Property crime", color: "#92400e", scale: 0.2 },
     { family: "permits", label: "Permits", color: "#1d4ed8", scale: 0.5 },
     { family: "crashes", label: "Crashes", color: "#c2410c", scale: 0.4 },
+    { family: "rezonings", label: "Rezonings", color: "#0f766e", scale: 2 },
   ];
   const layerEnabled = { licenses_new: true, licenses_closed: true };
 
@@ -95,7 +96,25 @@
     [/street|transport|lighting|sidewalk|alley/i, "🚧"], [/park/i, "🌳"], [/school/i, "🏫"],
     [/camera|security/i, "📷"],
   ];
+  // rezoning rows: [lat, lng, year, "RS-3 → RM-5 · 1234 N X St", capacity_sqft_delta, category],
+  // category upzoning|downzoning|lateral. An unknown category falls back to lateral's look.
+  const REZONING_STYLE = {
+    upzoning: { emoji: "🏗️", color: "#c2410c", label: "Upzoning" },
+    downzoning: { emoji: "🏡", color: "#1d4ed8", label: "Downzoning" },
+    lateral: { emoji: "📐", color: "#64748b", label: "Lateral rezoning" },
+  };
+  const rezoningStyle = (category) => REZONING_STYLE[category] || REZONING_STYLE.lateral;
+  const escHtml = (text) => String(text == null ? "" : text).replace(/[&<>"']/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  // eLMS-derived text is not ours: escape it, and drop rows the map can't place
+  const validRow = (r) => Array.isArray(r) && Number.isFinite(r[0]) && Number.isFinite(r[1])
+    && Number.isFinite(r[2]);
+  const fmtSqft = (value) => (Number.isFinite(value)
+    ? `${value > 0 ? "+" : value < 0 ? "−" : "±"}${Math.round(Math.abs(value)).toLocaleString()} sq ft zoned`
+    : null);
+
   function emojiFor(category, kind) {
+    if (kind === "rezoning") return rezoningStyle(category).emoji;
     if (kind === "menu_money") {
       for (const [pattern, emoji] of MENU_EMOJI) if (pattern.test(category || "")) return emoji;
       return "🚧";
@@ -548,9 +567,9 @@
     const events = payload.events || {};
     if (!terms.length || !Object.keys(events).length) return "";
     const inTerm = (kind, term) => (events[kind] || [])
-      .filter((r) => r[2] >= term.from && r[2] <= (term.to || term.from));
+      .filter((r) => validRow(r) && r[2] >= term.from && r[2] <= (term.to || term.from));
     const withData = terms.filter((term) =>
-      ["business_open", "business_closed", "business_closed_observed", "menu_money"]
+      ["business_open", "business_closed", "business_closed_observed", "menu_money", "rezoning"]
         .some((kind) => inTerm(kind, term).length));
     if (!withData.length) return "";
     if (!detailTerm || !withData.some((t) => t.term === detailTerm)) {
@@ -567,8 +586,17 @@
       ...inTerm("business_closed_observed", active).map((r) => ({ r, marker: "†" })),
     ].sort((a, b) => b.r[2] - a.r[2]);
     const menu = inTerm("menu_money", active).sort((a, b) => b[2] - a[2] || (b[4] || 0) - (a[4] || 0));
+    const rezonings = inTerm("rezoning", active).sort((a, b) => b[2] - a[2]);
+    const hasRezonings = terms.some((term) => inTerm("rezoning", term).length);
+    if (!hasRezonings && detailFocus === "rezoning") detailFocus = "all";
 
-    const item = (r, marker, kind) =>
+    const rezoningItem = (r) => {
+      const sqft = fmtSqft(r[4]);
+      return `<li><span class="near-detail-year">${r[2]}</span> ${emojiFor(r[5], "rezoning")} ${escHtml(r[3])}` +
+        `${sqft ? ` <em>${sqft}</em>` : ""}` +
+        ` <span class="near-detail-cat">${rezoningStyle(r[5]).label}</span></li>`;
+    };
+    const item = (r, marker, kind) => kind === "rezoning" ? rezoningItem(r) :
       `<li><span class="near-detail-year">${r[2]}</span> ${emojiFor(r[5], kind)} ${r[3]}` +
       `${marker ? `<sup>${marker}</sup>` : ""}` +
       `${r[4] != null ? ` <em>${fmt(r[4], { dollars: true })}</em>` : ""}` +
@@ -583,7 +611,8 @@
     };
 
     const FOCUSES = [["all", "Everything"], ["business_open", "New businesses"],
-                     ["business_closed", "Closures"], ["menu_money", "Menu-money projects"]];
+                     ["business_closed", "Closures"], ["menu_money", "Menu-money projects"],
+                     ...(hasRezonings ? [["rezoning", "Rezonings"]] : [])];
     const focusChips = FOCUSES.map(([key, label]) =>
       `<button type="button" class="near-detail-chip near-focus-chip${detailFocus === key ? " is-active" : ""}"
         data-focus="${key}">${label}</button>`).join("");
@@ -597,12 +626,14 @@
         ${list("New businesses", "#15803d", opened, 250)}
         ${list("Closures", "#b91c1c", closed, 250)}
         ${list("Menu-money projects", "#7c2d92", menu, 250, "menu_money")}
+        ${list("Rezonings", "#0f766e", rezonings, 250, "rezoning")}
       </div>
       <p class="near-verdict-note"><sup>*</sup> licence-rule closure: the last licence expired
         with no later transaction, lagged two years so late renewals don't read as deaths.
         <sup>†</sup> Google-observed: a matched business whose listing is marked permanently
         closed — covers recent years the licence rule can't see yet, incomplete by nature.
-        Map markers: green opened, red closed, purple menu projects.</p>
+        Map markers: green opened, red closed, purple menu projects${hasRezonings
+          ? "; rezonings 🏗️ up (orange), 🏡 down (blue), 📐 lateral (grey), passed ordinances only" : ""}.</p>
     </section>`;
   }
 
@@ -621,7 +652,7 @@
     if (detailMarkers) detailMap.removeLayer(detailMarkers);
     const events = payload.events || {};
     const inTerm = (kind) => (events[kind] || [])
-      .filter((r) => r[2] >= active.from && r[2] <= (active.to || active.from));
+      .filter((r) => validRow(r) && r[2] >= active.from && r[2] <= (active.to || active.from));
     // tooltip: what it is first, then when/how much, then where — a menu row used to show only
     // its location string, which read as an address with no explanation attached
     const marker = (r, color, kindLabel, kind) => {
@@ -637,6 +668,17 @@
           html: `<span style="--pin:${color}">${emojiFor(category, kind)}</span>` }),
       }).bindTooltip(`${head}<br>${bits.join(" · ")}${where}`);
     };
+    const rezoningMarker = (r) => {
+      const [, , year, text, sqftDelta, category] = r;
+      const style = rezoningStyle(category);
+      const bits = [`${year}`, style.label];
+      const sqft = fmtSqft(sqftDelta);
+      if (sqft) bits.push(sqft);
+      return L.marker([r[0], r[1]], {
+        icon: L.divIcon({ className: "near-emoji-pin", iconSize: [22, 22],
+          html: `<span style="--pin:${style.color}">${style.emoji}</span>` }),
+      }).bindTooltip(`<strong>${escHtml(text) || "Rezoning"}</strong><br>${bits.join(" · ")}`);
+    };
     const show = (kind) => detailFocus === "all" || detailFocus === kind
       || (detailFocus === "business_closed" && kind === "business_closed_observed");
     const groups = [];
@@ -648,6 +690,8 @@
       groups.push(...inTerm("business_closed_observed").map((r) => marker(r, "#7f1d1d", "Closed (seen on Google)", "business")));
     if (show("menu_money"))
       groups.push(...inTerm("menu_money").map((r) => marker(r, "#7c2d92", "Menu-money project", "menu_money")));
+    if (show("rezoning"))
+      groups.push(...inTerm("rezoning").map(rezoningMarker));
     detailMarkers = L.layerGroup(groups).addTo(detailMap);
     const point = payload.point || {};
     if (Number.isFinite(point.lat)) {
