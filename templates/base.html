@@ -88,7 +88,7 @@
     {% block head %}{% endblock %}
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css', v=asset_version) }}">
   </head>
-  <body class="{% block body_class %}fd-theme{% endblock %}" data-page="{{ page_key }}">
+  <body class="{% block body_class %}fd-theme{% endblock %}" data-page="{{ page_key }}" data-alerts-sending="{{ 'true' if site_flags.alerts_sending else 'false' }}">
     {% set nav = [
       ('ui.map_page', 'Map'),
       ('ui.residents', 'Your ward'),
@@ -117,7 +117,7 @@
         </a>
         <nav class="gn-links" aria-label="Main navigation">
           {% for endpoint, label in nav %}
-            <a href="{{ url_for(endpoint) }}"{% if request.endpoint == endpoint %} class="is-active" aria-current="page"{% endif %}>{{ label }}</a>
+            <a href="{{ url_for(endpoint) }}"{% if request.endpoint == endpoint %} class="is-active" aria-current="page"{% endif %}>{{ label }}{% if endpoint == 'ui.alerts' and not site_flags.alerts_sending %} <span class="gn-badge">testing</span>{% endif %}</a>
           {% endfor %}
           {# Every other view (reports, comparisons, data years…) from the registry (views.json),
              grouped, behind one "More" menu so the bar keeps five words. #}
@@ -178,7 +178,7 @@
             <ul>
               <li><a href="{{ url_for('ui.map_page') }}">Map</a></li>
               <li><a href="{{ url_for('ui.residents') }}">Ward report cards</a></li>
-              <li><a href="{{ url_for('ui.alerts') }}">Ward alerts</a></li>
+              <li><a href="{{ url_for('ui.alerts') }}">Ward alerts{% if not site_flags.alerts_sending %} (in testing){% endif %}</a></li>
               <li><a href="{{ url_for('ui.dictionary_page') }}">Metric dictionary</a></li>
             </ul>
           </div>

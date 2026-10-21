@@ -96,11 +96,11 @@
 
     <section class="fd-section fd-center">
       <div class="fd-wrap fd-narrow fd-stack">
-        <p class="fd-eyebrow">Ward alerts</p>
+        <p class="fd-eyebrow">Ward alerts{% if not site_flags.alerts_sending %} · in testing{% endif %}</p>
         <h2 class="fd-h1">Know before it's decided.</h2>
-        <p class="fd-sub">An email when your alderperson introduces legislation, a hearing opens for comment, or a building permit lands on your block.</p>
+        <p class="fd-sub">{% if not site_flags.alerts_sending %}Coming soon: {% endif %}An email when your alderperson introduces legislation, a hearing opens for comment, or a building permit lands on your block.</p>
         <div class="fd-actions" style="margin-top: 12px">
-          <a class="fd-btn" href="{{ url_for('ui.alerts') }}">Get ward alerts</a>
+          <a class="fd-btn" href="{{ url_for('ui.alerts') }}">{{ "Get ward alerts" if site_flags.alerts_sending else "Join the early list" }}</a>
           <a class="fd-more" href="{{ url_for('ui.residents') }}">Contact your alderperson</a>
         </div>
       </div>
