@@ -186,7 +186,9 @@
     const byDay = new Map();
     for (const run of payload.catalog_growth || []) {
       if (!run.date) continue;
-      byDay.set(run.date, Math.max(byDay.get(run.date) || 0, run.metric_catalog));
+      // metric_catalog_visible is the public count; older runs only recorded the raw catalog size
+      const count = run.metric_catalog_visible ?? run.metric_catalog;
+      byDay.set(run.date, Math.max(byDay.get(run.date) || 0, count));
     }
     let points = [...byDay.entries()]
       .sort(([a], [b]) => a.localeCompare(b))
@@ -204,8 +206,9 @@
     // The catalog only grows — show the high-water mark so early partial pipeline
     // runs (a handful of metrics on bring-up day) don't dip the line.
     // "Today" is the count a visitor can browse: the manifest's visible catalog, the same number home,
-    // the map and the dictionary show. Run history counts the raw pipeline catalog, which also holds
-    // metrics still waiting on public data, so it is capped at today's count to stay in those units.
+    // the map and the dictionary show. Runs from before metric_catalog_visible was recorded count the raw
+    // pipeline catalog, which also holds metrics still waiting on public data, so history is capped at
+    // today's count to stay in those units.
     const visibleNow = (manifest?.metrics || []).length;
     if (visibleNow) {
       const today = new Date().toISOString().slice(0, 10);
