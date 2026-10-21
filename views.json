@@ -183,7 +183,7 @@
       "endpoint": "ui.dictionary_page",
       "label": "Metric dictionary",
       "group": "Reference",
-      "blurb": "Every measure Penlight tracks — what it means, where it comes from, how it's computed.",
+      "blurb": "Every measure Ward Wise tracks — what it means, where it comes from, how it's computed.",
       "path": "/dictionary",
       "public": true
     },

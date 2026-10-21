@@ -825,7 +825,7 @@
         if (counts[el.dataset.fdCount]) el.textContent = counts[el.dataset.fdCount];
       });
     } catch (_error) {
-      /* the numbers in the markup are the fallback */
+      /* the markup holds a neutral placeholder, never a stale number */
     }
   }
 
@@ -2101,25 +2101,120 @@
       window.open(URL.createObjectURL(new Blob([doc], { type: "text/html" })), "_blank");
     });
 
-    form.addEventListener("submit", (event) => {
-      // No mailing list exists yet. Confirm in place so the flow can be clicked through.
+    // Sign-up and manage. A new address gets a confirmation email first (double opt-in); links in
+    // that email and in every alert come back here with ?m=<token> to change or stop alerts.
+    const params = new URLSearchParams(window.location.search);
+    const manageToken = params.get("m");
+    const submitButton = root.querySelector("[data-fd-ab-submit]");
+    const emailLabel = root.querySelector("[data-fd-ab-email-label]");
+    const privacy = root.querySelector("[data-fd-ab-privacy]");
+    const unsubscribeButton = root.querySelector("[data-fd-ab-unsubscribe]");
+    // penlight_site.SITE_FLAGS.alerts_sending, via <body data-alerts-sending>. Until alerts launch, every
+    // message says so: sign-ups are real (an early list) but no alert email goes out yet.
+    const sending = document.body.dataset.alertsSending === "true";
+    const FLASH = {
+      confirmed: sending
+        ? "You're confirmed. Your alerts start with the next email."
+        : "You're confirmed and on the early list. Alerts are still in testing, so nothing is sent yet; your first alert goes out when they launch.",
+      unsubscribed: "You're unsubscribed. No more alert emails will be sent.",
+      expired: "That link has expired or isn't valid. Sign up again below and we'll send a fresh one.",
+      suppressed: "Email to this address keeps bouncing, so alerts are paused. Sign up again with another address.",
+    };
+    const say = (text, ok) => { note.textContent = text; note.classList.toggle("fd-ab-note-ok", Boolean(ok)); };
+    if (FLASH[params.get("alerts")]) say(FLASH[params.get("alerts")], params.get("alerts") === "confirmed");
+
+    function whenFirst() {
+      return view.freq === "monthly" ? "on the first Monday of next month" : "next Monday";
+    }
+
+    function syncControls() {
+      topicList.querySelectorAll("input[name=topics]").forEach((box) => { box.checked = view.on.has(box.value); });
+      urgentBox.checked = view.urgent;
+      seg.querySelectorAll("button").forEach((button) => button.setAttribute("aria-pressed", String(button.dataset.value === view.freq)));
+      moveThumb();
+    }
+
+    function enterManageMode(prefs) {
+      emailInput.value = prefs.email;
+      emailInput.readOnly = true;
+      emailInput.required = false;
+      emailLabel.textContent = "Alerts for";
+      toNode.textContent = prefs.email;
+      submitButton.textContent = prefs.status === "unsubscribed" ? "Turn alerts back on" : "Save changes";
+      privacy.hidden = true;
+      unsubscribeButton.hidden = prefs.status === "unsubscribed";
+      view.on = new Set(prefs.topics);
+      view.freq = prefs.frequency;
+      view.urgent = Boolean(prefs.urgent_zoning);
+      syncControls();
+      save();
+      if (prefs.ward && prefs.ward !== view.ward) {
+        view.ward = prefs.ward;
+        paintWard();
+        loadAlder();
+        load();
+      }
+      if (prefs.status === "unsubscribed" && !params.get("alerts")) say(FLASH.unsubscribed);
+    }
+
+    async function alertsApi(path, body) {
+      const response = await fetch(path, body === undefined ? {} : {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || "Something went wrong. Try again in a few minutes.");
+      return data;
+    }
+
+    if (manageToken) {
+      alertsApi(`/api/alerts/preferences?m=${encodeURIComponent(manageToken)}`)
+        .then(enterManageMode)
+        .catch((error) => say(error.message));
+    }
+
+    unsubscribeButton.addEventListener("click", async () => {
+      try {
+        const prefs = await alertsApi(`/api/alerts/preferences?m=${encodeURIComponent(manageToken)}`, { unsubscribe: true });
+        enterManageMode(prefs);
+        say(FLASH.unsubscribed);
+      } catch (error) {
+        say(error.message);
+      }
+    });
+
+    form.addEventListener("submit", async (event) => {
       event.preventDefault();
       if (!view.ward) {
-        note.textContent = "Choose your ward first.";
+        say("Choose your ward first.");
         if (my) my.open();
         return;
       }
       if (!view.on.size) {
-        note.textContent = "Turn on at least one topic.";
+        say("Turn on at least one topic.");
         return;
       }
-      if (!emailInput.checkValidity()) {
+      if (!manageToken && !emailInput.checkValidity()) {
         showFieldError(emailInput);
         return;
       }
-      const names = TOPICS.filter((t) => view.on.has(t.id)).map((t) => t.label.toLowerCase());
-      const list = names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}` : names[0];
-      note.textContent = `You're on the list. The first email goes to ${emailInput.value.trim()} ${view.freq === "monthly" ? "at the start of next month" : "next Monday"}, with ${list} for Ward ${Number(view.ward)}.`;
+      const prefs = { ward: view.ward, topics: [...view.on], frequency: view.freq, urgent: view.urgent };
+      submitButton.disabled = true;
+      try {
+        if (manageToken) {
+          const saved = await alertsApi(`/api/alerts/preferences?m=${encodeURIComponent(manageToken)}`, prefs);
+          enterManageMode(saved);
+          say(sending ? `Saved. Your next email goes out ${whenFirst()}.`
+            : "Saved. Alerts are still in testing, so nothing is sent yet; your first alert goes out when they launch.", true);
+        } else {
+          await alertsApi("/api/alerts/subscribe", { ...prefs, email: emailInput.value.trim(), website: form.elements.website.value });
+          say(sending ? `Check ${emailInput.value.trim()} for a confirmation email. Click its link and your first alert goes out ${whenFirst()}.`
+            : `Check ${emailInput.value.trim()} for a confirmation email. Click its link to join the early list. Alerts are still in testing, so your first alert goes out when they launch.`, true);
+        }
+      } catch (error) {
+        say(error.message);
+      } finally {
+        submitButton.disabled = false;
+      }
     });
 
     paintWard();

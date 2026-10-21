@@ -32,6 +32,14 @@ VIEWS_JSON = ROOT / "views.json"
 SITE_BASE_DEFAULT = "https://www.wardwise.org"
 PUBLIC_BASE = "https://www.wardwise.org"
 
+# Features that are built but don't yet do everything their pages describe. Templates read these (and
+# base.html hands them to JS as <body data-*>), so the "in testing" copy flips in one place at launch.
+SITE_FLAGS = {
+    # Ward alert emails. Sign-up and confirmation work; the digest and same-day emails are switched off
+    # until launch. Set True in the same change as `scripts/remote_pipeline.sh schedule --alerts-on`.
+    "alerts_sending": False,
+}
+
 
 @dataclass(frozen=True)
 class Page:
@@ -175,6 +183,7 @@ def make_environment(version_for: Callable[[str], str], *, app_base: str = "", g
         "ga_id": ga_id,
         "build_sha": build_sha,
         "app_base": app_base,
+        "site_flags": SITE_FLAGS,
     })
     return env
 

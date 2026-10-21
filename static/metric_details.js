@@ -267,12 +267,15 @@
     const scoringLabel = defaultWeight > 0
       ? "Included in the default composite when ward data is available."
       : "Not currently included in the default composite.";
+    const dates = options.dates?.[metric.metric_id] || {};
     return `
-      <details class="metric-definition-card" id="metric-entry-${WardWiseExplorer.escapeHtml(metric.metric_id)}">
+      <details class="metric-definition-card" id="metric-entry-${WardWiseExplorer.escapeHtml(metric.metric_id)}"
+        data-added="${WardWiseExplorer.escapeHtml(dates.added || "")}" data-through="${WardWiseExplorer.escapeHtml(dates.through || "")}">
         <summary class="metric-definition-summary">
           <span class="metric-definition-heading">
             <span class="metric-definition-title">${WardWiseExplorer.escapeHtml(metric.label || metric.metric_id)}</span>
             ${renderMetricStatusBadge(status)}
+            ${renderMetricDates(metric, dates)}
           </span>
           <span>${WardWiseExplorer.escapeHtml(metric.description || "No definition is available yet.")}</span>
         </summary>
@@ -294,6 +297,14 @@
               <dt>Latest period</dt>
               <dd>${WardWiseExplorer.escapeHtml(metricCoveragePeriod(metricCoverage))}</dd>
             </div>
+            ${dates.added ? `<div>
+              <dt>Added to Ward Wise</dt>
+              <dd>${WardWiseExplorer.escapeHtml(formatCalendarDate(dates.added))}</dd>
+            </div>` : ""}
+            ${dates.through ? `<div>
+              <dt>Data through</dt>
+              <dd>${WardWiseExplorer.escapeHtml(formatThrough(dates.through))}</dd>
+            </div>` : ""}
             <div>
               <dt>Scoring direction</dt>
               <dd>${WardWiseExplorer.escapeHtml(directionLabel)}</dd>
@@ -312,6 +323,63 @@
         </div>
       </details>
     `;
+  }
+
+  // "Added" = the first pipeline run that recorded the measure (from /api/metrics/history-summary).
+  // "Data through" = the newest period its data covers: the latest period end (YYYY-MM-DD) when the
+  // source dates its rows, else just its newest data year (YYYY). Both sort as strings, and a bare
+  // year ranks below any dated period in that year (a modeled 2026 isn't fresher than Oct 19, 2026).
+  function metricDates(coverage, historySummary, manifest) {
+    const dates = {};
+    const entry = (id) => (dates[id] = dates[id] || {});
+    (historySummary?.points || []).forEach((point) => {
+      (point.added || []).forEach((metric) => {
+        if (!dates[metric.id]?.added) entry(metric.id).added = localDay(point.collected_at);
+      });
+    });
+    const years = manifest?.metric_data_years || {};
+    const ids = new Set([...Object.keys(years), ...Object.keys(coverage || {})]);
+    ids.forEach((id) => {
+      const periodEnd = String(coverage?.[id]?.latest_period_end || "").slice(0, 10);
+      const newestYear = Math.max(...(years[id] || []).map(Number).filter(Number.isFinite));
+      // the dated period end is more precise, so it wins unless the data years run past it
+      const through = periodEnd && !(Number(periodEnd.slice(0, 4)) < newestYear)
+        ? periodEnd
+        : Number.isFinite(newestYear) ? String(newestYear) : "";
+      if (through) entry(id).through = through;
+    });
+    return dates;
+  }
+
+  // A run's timestamp as the reader's calendar day (an evening Chicago run is UTC's next day).
+  function localDay(instant) {
+    const date = new Date(instant);
+    if (Number.isNaN(date.getTime())) return "";
+    const pad = (n) => String(n).padStart(2, "0");
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  }
+
+  // Dates are calendar days, not instants: format from the parts so Chicago doesn't read the 18th.
+  function formatCalendarDate(value) {
+    const [year, month, day] = String(value).split("-").map(Number);
+    if (!year || !month || !day) return String(value || "");
+    return new Date(year, month - 1, day).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+  }
+
+  // A bare year or a year-end period reads as the year ("2023"); a feed updated mid-year keeps its day.
+  function formatThrough(value) {
+    const text = String(value);
+    return text.length === 4 || text.endsWith("-12-31") ? text.slice(0, 4) : formatCalendarDate(text);
+  }
+
+  function renderMetricDates(metric, dates) {
+    const parts = [];
+    if (dates.added) parts.push(`<span>Added ${WardWiseExplorer.escapeHtml(formatCalendarDate(dates.added))}</span>`);
+    if (dates.through) parts.push(`<span>Data through ${WardWiseExplorer.escapeHtml(formatThrough(dates.through))}</span>`);
+    if (!parts.length) return "";
+    // the domain tag only shows in the ranked (flat) view, where the grouping is gone
+    const domain = formatMetricCategory(GNHUSA_DOMAIN_BY_ID.has(metric.category) ? metric.category : "reviews");
+    return `<span class="metric-definition-dates"><span class="metric-definition-domain">${WardWiseExplorer.escapeHtml(domain)}</span>${parts.join("")}</span>`;
   }
 
   function renderMetricNominator(metric, isAdmin) {
@@ -599,13 +667,14 @@
   }
 
   window.WardWiseMetricDetails = {
-    render({ metrics, coverage, snapshots, isAdmin = false }) {
+    render({ metrics, coverage, snapshots, isAdmin = false, dates = {} }) {
       const latestSnapshot = latestMetricSnapshot(snapshots);
       return [
         renderCalculationNote(latestSnapshot),
-        renderMetricDefinitionGroups(metrics, coverage || {}, snapshots || [], { isAdmin }),
+        renderMetricDefinitionGroups(metrics, coverage || {}, snapshots || [], { isAdmin, dates }),
       ].join("");
     },
+    metricDates,
     metricStatus,
     metricStatusNote,
     metricCoverageLabel,
@@ -632,14 +701,20 @@
   const metricsRoot = document.getElementById("metrics-content");
   if (metricsRoot) {
     const isAdmin = metricsRoot.dataset.isAdmin === "true";
-    WardWiseExplorer.fetchMetrics()
-      .then((metricData) => {
+    // The two date sources are extras: if either fails the dictionary still renders, just undated.
+    Promise.all([
+      WardWiseExplorer.fetchMetrics(),
+      WardWiseExplorer.fetchJson("/api/metrics/history-summary", "").catch(() => null),
+      WardWiseExplorer.fetchExplorerManifest().catch(() => null),
+    ])
+      .then(([metricData, historySummary, manifest]) => {
         metricsRoot.innerHTML = WardWiseMetricDetails.render({
           metrics: metricData.metrics,
           coverage: metricData.coverage || {},
           snapshots: metricData.snapshots,
           weights: metricData.default_weights || {},
           isAdmin,
+          dates: metricDates(metricData.coverage || {}, historySummary, manifest),
         });
         const wanted = new URLSearchParams(location.search).get("metric");
         if (wanted) revealEntry(wanted);
