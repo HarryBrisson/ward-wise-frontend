@@ -171,8 +171,12 @@
     const node = document.getElementById("about-metric-growth");
     if (!node) return;
     let payload;
+    let manifest = null;
     try {
-      payload = await getSummary();
+      [payload, manifest] = await Promise.all([
+        getSummary(),
+        api.fetchExplorerManifest ? api.fetchExplorerManifest().catch(() => null) : null,
+      ]);
     } catch (error) {
       node.innerHTML = `<p class="about-error">Couldn't load metric history right now.</p>`;
       return;
@@ -199,10 +203,21 @@
     }
     // The catalog only grows — show the high-water mark so early partial pipeline
     // runs (a handful of metrics on bring-up day) don't dip the line.
+    // "Today" is the count a visitor can browse: the manifest's visible catalog, the same number home,
+    // the map and the dictionary show. Run history counts the raw pipeline catalog, which also holds
+    // metrics still waiting on public data, so it is capped at today's count to stay in those units.
+    const visibleNow = (manifest?.metrics || []).length;
+    if (visibleNow) {
+      const today = new Date().toISOString().slice(0, 10);
+      if (!points.length || points[points.length - 1].collected_at < today) {
+        points.push({ collected_at: today, metric_count: visibleNow });
+      }
+    }
     let runningMax = 0;
     let previous = null;
     points = points.map((p) => {
       runningMax = Math.max(runningMax, p.metric_count);
+      if (visibleNow) runningMax = Math.min(runningMax, visibleNow);
       const point = { ...p, metric_count: runningMax,
                       added_count: previous === null ? 0 : Math.max(0, runningMax - previous) };
       previous = runningMax;

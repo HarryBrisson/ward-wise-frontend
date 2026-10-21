@@ -5453,6 +5453,8 @@ body.fd-theme {
 /* placeholders read as hints, not typed text */
 .fd-theme input::placeholder,
 .fd-theme textarea::placeholder { color: var(--muted-text); font-weight: 400; opacity: 1; }
+/* the single-line ellipsis above would stop a long textarea entry from scrolling */
+.fd-theme textarea { overflow: auto; text-overflow: clip; }
 .fd-theme select {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none' stroke='%236e6e73' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m1 1.5 5 5 5-5'/%3E%3C/svg%3E");
   background-position: right 16px center;

@@ -69,7 +69,7 @@ def test_internal_links_resolve(built_site: Path):
 VISIBLE_ATTRS = re.compile(r'\s(?:title|alt|aria-label|placeholder)="([^"]*)"')
 # Text that comes from views.json (maintainer-owned), so it can't be fixed from a template.
 # Delete the entry when the maintainer renames it there.
-KNOWN_PENLIGHT = {"/reports": 'views.json blurb "Every measure Penlight tracks"'}
+KNOWN_PENLIGHT: dict[str, str] = {}
 META_DESCRIPTION = re.compile(r'<meta\s+name="description"\s+content="([^"]*)"')
 
 
