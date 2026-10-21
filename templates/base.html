@@ -89,11 +89,13 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css', v=asset_version) }}">
   </head>
   <body class="{% block body_class %}fd-theme{% endblock %}" data-page="{{ page_key }}" data-alerts-sending="{{ 'true' if site_flags.alerts_sending else 'false' }}">
+    {# Alerts earn a place in the bar once they send (penlight_site.SITE_FLAGS); until then they sit
+       under More, marked "testing". #}
     {% set nav = [
       ('ui.map_page', 'Map'),
       ('ui.residents', 'Your ward'),
       ('ui.menu_page', 'Menu money'),
-      ('ui.alerts', 'Alerts'),
+    ] + ([('ui.alerts', 'Alerts')] if site_flags.alerts_sending else []) + [
       ('ui.dictionary_page', 'Data'),
       ('ui.about_page', 'About'),
     ] %}
@@ -117,11 +119,11 @@
         </a>
         <nav class="gn-links" aria-label="Main navigation">
           {% for endpoint, label in nav %}
-            <a href="{{ url_for(endpoint) }}"{% if request.endpoint == endpoint %} class="is-active" aria-current="page"{% endif %}>{{ label }}{% if endpoint == 'ui.alerts' and not site_flags.alerts_sending %} <span class="gn-badge">testing</span>{% endif %}</a>
+            <a href="{{ url_for(endpoint) }}"{% if request.endpoint == endpoint %} class="is-active" aria-current="page"{% endif %}>{{ label }}</a>
           {% endfor %}
           {# Every other view (reports, comparisons, data years…) from the registry (views.json),
              grouped, behind one "More" menu so the bar keeps five words. #}
-          {# Views already in the bar (Map, Your ward, Alerts, Data) are left out of More. #}
+          {# Views already in the bar (Map, Your ward, Data, and Alerts once they send) are left out of More. #}
           {% set top_endpoints = nav | map(attribute=0) | list %}
           {% set top_paths = [] %}{% for endpoint, label in nav %}{% set _ = top_paths.append(url_for(endpoint)) %}{% endfor %}
           <div class="gn-more">
@@ -134,7 +136,7 @@
                   <div class="gn-more-group">
                     <p class="gn-more-heading">{{ group }}</p>
                     {% for view in listed %}
-                      <a href="{{ view.path }}"{% if request.path == view.path %} aria-current="page"{% endif %}>{{ view.label }}</a>
+                      <a href="{{ view.path }}"{% if request.path == view.path %} aria-current="page"{% endif %}>{{ view.label }}{% if view.key == 'alerts' and not site_flags.alerts_sending %} <span class="gn-badge">testing</span>{% endif %}</a>
                     {% endfor %}
                   </div>
                 {% endif %}
