@@ -67,6 +67,11 @@ window.WardWiseMetricTags = (function () {
     summer_day_sensor_temp_c: ["health"],
     summer_night_humidity_pct: ["health"],
     pm25_sensor_annual_ugm3: ["health"],
+    // Zoning: rezoning is the clearest aldermanic lever (prerogative), so it also reads as governance.
+    rezonings_passed_per_km2: ["physical_environment", "good_governance"],
+    rezonings_upzoning_share: ["physical_environment", "good_governance"],
+    rezonings_to_multifamily_share: ["physical_environment", "good_governance", "material_wellbeing"],
+    zoned_capacity_added_sqft_per_km2: ["physical_environment", "material_wellbeing"],
   };
 
   const keywords = {
@@ -245,6 +250,10 @@ window.WardWiseMetricTags = (function () {
     summer_day_sensor_temp_c: "heat afternoon temperature sun exposure summer weather sensors purpleair hot days",
     summer_night_humidity_pct: "humidity muggy damp summer weather night sensors purpleair dew",
     pm25_sensor_annual_ugm3: "air quality pollution particulates pm2.5 smoke sensors purpleair breathing asthma",
+    rezonings_passed_per_km2: "zoning rezoning zoning change map amendment ordinance alderman prerogative development housing density",
+    rezonings_upzoning_share: "zoning rezoning upzoning upzone density taller bigger buildings far development housing growth",
+    rezonings_to_multifamily_share: "zoning rezoning multifamily apartments flats condos density housing supply development",
+    zoned_capacity_added_sqft_per_km2: "zoning rezoning upzoning capacity square feet floor area far density housing development growth",
   };
 
   function keywordsFor(metricId) {
