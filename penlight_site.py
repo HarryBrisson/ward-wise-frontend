@@ -50,6 +50,7 @@ PAGES: tuple[Page, ...] = (
     Page("residents", "/for/residents", "residents.html", "ui.residents"),
     Page("planning", "/for/planning", "planning.html", "ui.planning"),
     Page("business", "/for/business", "business.html", "ui.business"),
+    Page("financing", "/for/financing", "financing.html", "ui.financing"),
     Page("alerts", "/alerts", "alerts.html", "ui.alerts"),
     Page("k3", "/k3", "k3.html", "ui.k3"),
     Page("k3_dictionary", "/k3/dictionary", "k3_dictionary.html", "ui.k3_dictionary"),

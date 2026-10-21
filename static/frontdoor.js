@@ -163,6 +163,16 @@
         "violent_crime_rate_per_10000",
       ],
     },
+    // Same layout as the snapshot, with rows split into sections ([data-fd-rows="<key>"]).
+    financing: {
+      areaType: "community_area",
+      framing: "neutral",
+      metrics: ["median_household_income"],
+      sections: {
+        demographics: ["median_household_income"],
+        business: [],
+      },
+    },
   };
 
   // Plain names for the rows. The API labels carry their source in parentheses, which the
@@ -297,6 +307,21 @@
       </div>`;
   }
 
+  // The dictionary's own words for each measure, for pages that print an appendix.
+  function appendixEntry(metric) {
+    const name = SHORT_LABELS[metric.metric_id] || metric.label;
+    const source = metric.source_url
+      ? `<a href="${esc(metric.source_url)}" target="_blank" rel="noopener">${esc(metric.source)}</a>`
+      : esc(metric.source || "");
+    return `
+      <div style="margin-top: 20px">
+        <h3><a href="/dictionary#metric-entry-${esc(metric.metric_id)}">${esc(name)}</a></h3>
+        ${metric.methodology ? `<p class="fd-small"><strong>How to read it:</strong> ${esc(metric.methodology)}</p>` : ""}
+        ${metric.calculation ? `<p class="fd-small"><strong>How it is calculated:</strong> ${esc(metric.calculation)}</p>` : ""}
+        ${source ? `<p class="fd-small"><strong>Source:</strong> ${source}</p>` : ""}
+      </div>`;
+  }
+
   function readHash(key) {
     return new URLSearchParams(window.location.hash.slice(1)).get(key);
   }
@@ -323,6 +348,10 @@
     const my = window.WardWiseMyWard;
     const picker = root.querySelector("[data-fd-picker]");
     const rowsEl = root.querySelector("[data-fd-rows]");
+    // A sectioned set fills each [data-fd-rows="<key>"] with its own metrics.
+    const slots = [...root.querySelectorAll("[data-fd-rows]")];
+    const idsFor = (slot) => set.sections?.[slot.dataset.fdRows] || set.metrics;
+    const appendixEl = root.querySelector("[data-fd-appendix]");
     const titleEl = root.querySelector("[data-fd-title]");
     const eyebrowEl = root.querySelector("[data-fd-eyebrow]");
     const metaEl = root.querySelector("[data-fd-meta]");
@@ -341,7 +370,7 @@
     if (isWard && !early) {
       showEmpty(true);
     } else {
-      rowsEl.innerHTML = skelRows(set.metrics.length);
+      slots.forEach((slot) => { slot.innerHTML = skelRows(idsFor(slot).length || 1); });
       if (mapSlot) mapSlot.innerHTML = `<div class="fd-skel fd-map-skel" aria-hidden="true"></div>`;
       if (titleEl && early) titleEl.textContent = `Ward ${Number(early)}`;
       if (summaryEl && set.framing === "ranked") {
@@ -362,7 +391,7 @@
       data = await api.fetchComparison(set.metrics, set.areaType);
     } catch (error) {
       rowsEl.innerHTML = failNotice(error);
-      [mapSlot, summaryEl, metaEl].forEach((node) => { if (node) node.innerHTML = ""; });
+      [...slots.slice(1), appendixEl, mapSlot, summaryEl, metaEl].forEach((node) => { if (node) node.innerHTML = ""; });
       // The contact card and City Clerk feeds have their own sources, so they can still show.
       if (early) document.dispatchEvent(new CustomEvent("fd:area", { detail: { areaType: set.areaType, areaId: early } }));
       return;
@@ -370,6 +399,7 @@
     const metrics = set.metrics
       .map((id) => data.metrics.find((metric) => metric.metric_id === id))
       .filter(Boolean);
+    if (appendixEl) appendixEl.innerHTML = metrics.map(appendixEntry).join("");
     const areas = [...data.rows].sort((a, b) => (isWard
       ? Number(a.area_id) - Number(b.area_id)
       : a.display_name.localeCompare(b.display_name)));
@@ -400,8 +430,14 @@
       document.dispatchEvent(new CustomEvent("fd:area", { detail: { areaType: set.areaType, areaId } }));
       const area = areas.find((row) => row.area_id === areaId);
       const spots = metrics.map((metric) => standing(data.rows, metric, areaId));
-      rowsEl.innerHTML = metrics.map((metric, i) => metricRow(metric, spots[i], set.framing, areaNoun)).join("");
-      settleDots(rowsEl);
+      slots.forEach((slot) => {
+        const ids = idsFor(slot);
+        const rows = metrics
+          .map((metric, i) => (ids.includes(metric.metric_id) ? metricRow(metric, spots[i], set.framing, areaNoun) : ""))
+          .join("");
+        slot.innerHTML = rows || `<p class="fd-small">No measures in this section yet.</p>`;
+        settleDots(slot);
+      });
       if (titleEl) titleEl.textContent = area ? area.display_name : "";
       root.querySelectorAll("[data-fd-link]").forEach((link) => {
         link.href = link.dataset.fdLink.replace("{id}", areaId);
