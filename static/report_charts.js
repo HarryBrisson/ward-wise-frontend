@@ -612,18 +612,26 @@ window.WardWiseCharts = (function () {
   }
 
   // Event path: average Y movement in the years around X's sharpest jumps, against places that
-  // hadn't jumped yet. t = 0 is the jump year.
-  function eventPath(path, control) {
+  // hadn't jumped yet. t = 0 is the jump year. band = [lo[], hi[]]: the middle 95% of the same path
+  // when each jump is paired with another, randomly drawn place's Y (the area-shuffle null).
+  function eventPath(path, control, band = null) {
     const pts = (path || []).map((v, i) => [i - 3, v]).filter(([, v]) => Number.isFinite(v));
     if (pts.length < 3) return "";
     const ctl = (control || []).map((v, i) => [i - 3, v]).filter(([, v]) => Number.isFinite(v));
-    const all = [...pts, ...ctl].map(([, v]) => v).concat([0]);
+    const bandPts = band && band[0] && band[1]
+      ? band[0].map((lo, i) => [i - 3, lo, band[1][i]]).filter(([, lo, hi]) => Number.isFinite(lo) && Number.isFinite(hi))
+      : [];
+    const all = [...pts, ...ctl].map(([, v]) => v).concat([0], ...bandPts.map(([, lo, hi]) => [lo, hi]));
     const lo = Math.min(...all), hi = Math.max(...all), span = hi - lo || 1;
     const W = 280, H = 120, l = 10, r = 10, t = 12, b = 22;
     const px = (k) => l + ((k + 3) / 6) * (W - l - r);
     const py = (v) => t + (1 - (v - lo) / span) * (H - t - b);
     const poly = (arr, cls) => `<polyline class="${cls}" points="${arr.map(([k, v]) => `${px(k)},${py(v)}`).join(" ")}"/>`;
+    const area = bandPts.length >= 2
+      ? `<polygon class="wwc-event-band" points="${[...bandPts.map(([k, , h]) => `${px(k)},${py(h)}`), ...bandPts.slice().reverse().map(([k, l2]) => `${px(k)},${py(l2)}`)].join(" ")}"><title>Where the line falls when each jump is paired with a randomly drawn other place (middle 95% of shuffles)</title></polygon>`
+      : "";
     return `<svg class="wwc-event" viewBox="0 0 ${W} ${H}" role="img" aria-label="Average change in the outcome around the driver's jumps">
+      ${area}
       <line class="wwc-axis" x1="${l}" x2="${W - r}" y1="${py(0)}" y2="${py(0)}"/>
       <line class="wwc-median" x1="${px(0)}" x2="${px(0)}" y1="${t}" y2="${H - b}"/>
       ${ctl.length ? poly(ctl, "wwc-event-control") : ""}${poly(pts, "wwc-event-line")}
@@ -631,7 +639,53 @@ window.WardWiseCharts = (function () {
     </svg>`;
   }
 
-  // ---- the lag grid: every area-year at gaps of 0–5 years (relationship page) ----
+  // Every sharp jump behind the event study, one dot per place (rows) and year (columns): blue up,
+  // orange down. Clusters in one column are one shock seen many times, not many experiments.
+  function jumpDots(jumps, { areas = [], years = [] } = {}) {
+    if (!jumps?.length || !years.length) return "";
+    const y0 = years[0], y1 = years[years.length - 1], nY = y1 - y0 + 1;
+    const rowOf = new Map(areas.map((a, i) => [a, i]));
+    const nA = Math.max(1, areas.length);
+    const W = 280, l = 6, r = 6, t = 6, b = 18;
+    const H = Math.min(200, Math.max(70, nA * 2 + t + b));
+    const px = (yr) => l + ((yr - y0 + 0.5) / nY) * (W - l - r);
+    const py = (i) => t + ((i + 0.5) / nA) * (H - t - b);
+    const ups = [], downs = [];
+    for (const [area, yr, sign] of jumps) {
+      const i = rowOf.get(String(area));
+      if (i == null) continue;
+      (sign > 0 ? ups : downs).push(`M${px(yr).toFixed(1)} ${py(i).toFixed(1)}h0`);
+    }
+    const perYear = {};
+    for (const [, yr] of jumps) perYear[yr] = (perYear[yr] || 0) + 1;
+    const ticks = [y0, Math.round((y0 + y1) / 2), y1].filter((v, i, a) => a.indexOf(v) === i);
+    return `<svg class="wwc-jumps" viewBox="0 0 ${W} ${H}" role="img" aria-label="${jumps.length} sharp jumps across ${Object.keys(perYear).length} years">
+      ${Object.entries(perYear).map(([yr, n]) => `<rect class="wwc-jump-col" x="${px(+yr) - (W - l - r) / nY / 2}" y="${t}" width="${(W - l - r) / nY}" height="${H - t - b}"><title>${yr}: ${n} jump${n === 1 ? "" : "s"}</title></rect>`).join("")}
+      <path class="wwc-jump is-up" d="${ups.join("")}"/><path class="wwc-jump is-down" d="${downs.join("")}"/>
+      ${ticks.map((yr) => `<text class="wwc-lag-k" x="${px(yr)}" y="${H - 5}" text-anchor="middle">${yr}</text>`).join("")}
+    </svg>`;
+  }
+
+  // One correlation per year (the within-year r of the two measures' changes): a single year far
+  // from the rest is a shared shock carrying the pooled number.
+  function yearRStrip(rows) {
+    const pts = (rows || []).filter(([, r]) => Number.isFinite(r));
+    if (pts.length < 2) return "";
+    const y0 = pts[0][0], y1 = pts[pts.length - 1][0], nY = Math.max(1, y1 - y0);
+    const W = 280, H = 90, l = 22, r = 8, t = 8, b = 18;
+    const px = (yr) => l + ((yr - y0) / nY) * (W - l - r);
+    const py = (v) => t + (1 - (v + 1) / 2) * (H - t - b);
+    return `<svg class="wwc-rstrip" viewBox="0 0 ${W} ${H}" role="img" aria-label="Correlation of changes, year by year">
+      <line class="wwc-axis" x1="${l}" x2="${W - r}" y1="${py(0)}" y2="${py(0)}"/>
+      <text class="wwc-lag-k" x="${l - 4}" y="${py(1) + 4}" text-anchor="end">+1</text>
+      <text class="wwc-lag-k" x="${l - 4}" y="${py(0) + 4}" text-anchor="end">0</text>
+      <text class="wwc-lag-k" x="${l - 4}" y="${py(-1) + 4}" text-anchor="end">−1</text>
+      ${pts.map(([yr, v]) => `<line class="wwc-rstrip-stem" x1="${px(yr)}" x2="${px(yr)}" y1="${py(0)}" y2="${py(v)}"/><line class="wwc-rstrip-dot" x1="${px(yr)}" x2="${px(yr)}" y1="${py(v)}" y2="${py(v)}"><title>${yr}: r = ${v.toFixed(2)}</title></line>`).join("")}
+      <text class="wwc-lag-k" x="${l}" y="${H - 4}">${y0}</text><text class="wwc-lag-k" x="${W - r}" y="${H - 4}" text-anchor="end">${y1}</text>
+    </svg>`;
+  }
+
+  // ---- the lag grid: every area-year at gaps of −5..+5 years (relationship page) ----
   // panels from WardWiseMetricPages.lagPanels. Each panel is one scatter: across = X in year t,
   // up = Y in year t + k, split at (cx, cy) — zero for changes, the medians for levels. Dots are
   // zero-length round-capped segments gathered into one path per class (a χGRID pair is thousands
@@ -639,9 +693,15 @@ window.WardWiseCharts = (function () {
   // the split, in units of the typical distance from it: the quadrants are what the reader reads
   // (there are no tick values to distort), and a handful of outliers no longer squash everything
   // into the middle. The last 1% are pinned to the edge.
-  const LAG_GAP_LABEL = (k) => (k === 0 ? "Same year" : `${k} year${k === 1 ? "" : "s"} later`);
+  // k > 0: the second measure (Y) read k years after the first; k < 0: the first (X) is the later one.
+  const LAG_GAP_LABEL = (k) => (k === 0 ? "Same year"
+    : `${k > 0 ? "Y" : "X"} ${Math.abs(k)} yr${Math.abs(k) === 1 ? "" : "s"} later`);
+  const pText = (p) => (p == null ? "" : p < 0.001 ? "p < 0.001" : p < 0.01 ? `p = ${p.toFixed(3)}` : `p = ${p.toFixed(2)}`);
 
-  function lagGrid(panels, { mode = "changes", highlightId = null } = {}) {
+  // Layout: "Same year" as one big panel, beside two rows of five lined up by distance, so each
+  // column compares the same gap both ways: the top row reads the second measure (Y) 1–5 years
+  // AFTER the first (X), the bottom row 1–5 years BEFORE it (X later). xLabel/yLabel name the rows.
+  function lagGrid(panels, { mode = "changes", highlightId = null, xLabel = "the first measure", yLabel = "the second" } = {}) {
     const W = 200, H = 200, pad = 10;
     const pct = (v) => (v == null ? "–" : `${Math.round(v * 100)}%`);
     // signed-log position of v relative to the split c, and the 99th-percentile reach of those
@@ -654,9 +714,13 @@ window.WardWiseCharts = (function () {
       return (v) => Math.max(-1, Math.min(1, t(v) / lim));
     };
     const sameWord = mode === "levels" ? "same side of the middle" : "moved the same way";
-    const cells = panels.map((p) => {
-      const title = `<figcaption><strong>${LAG_GAP_LABEL(p.k)}</strong>`;
-      if (p.n < 10) return `<figure class="wwc-lg-cell is-empty">${title}<span>Too few overlapping years</span></figcaption></figure>`;
+    // The big panel keeps the full caption; the small ones say just the gap and the share with its p,
+    // and carry the rest (r, area-years, what shuffled places give) in a hover tooltip.
+    const cell = (p) => {
+      const main = p.k === 0;
+      const name = main ? "Same year" : `${Math.abs(p.k)} yr${Math.abs(p.k) === 1 ? "" : "s"}`;
+      const title = `<figcaption><strong>${name}</strong>`;
+      if (p.n < 10) return `<figure class="wwc-lg-cell is-empty${main ? " is-main" : ""}">${title}<span>Too few overlapping years</span></figcaption></figure>`;
       const ax = axis(p.pts.map((d) => d.x), p.cx), ay = axis(p.pts.map((d) => d.y), p.cy);
       const px = (v) => pad + ((ax(v) + 1) / 2) * (W - 2 * pad);
       const py = (v) => pad + (1 - (ay(v) + 1) / 2) * (H - 2 * pad);
@@ -668,7 +732,21 @@ window.WardWiseCharts = (function () {
         if (highlightId && d.area === highlightId) paths.you += m;
       }
       const mid = W / 2;
-      return `<figure class="wwc-lg-cell">
+      const tip = `${LAG_GAP_LABEL(p.k)}: ${pct(p.same)} ${sameWord}${p.r == null ? "" : `, r ${p.r.toFixed(2)}`}, ${p.n.toLocaleString()} area-years`
+        + (p.null_mean != null ? `; shuffled places ${pct(p.null_mean)}, ${pText(p.p)}${p.sig ? " (beyond chance after the correction for 11 gaps)" : ""}` : "");
+      // Against shuffled places, not 50%: "+4 pts" is how far the share sits from what random
+      // pairings of places give. Panels inside the shuffled band are faded: nothing to see there.
+      const tested = p.null_mean != null && p.same != null;
+      const pts = tested ? Math.round((p.same - p.null_mean) * 100) : null;
+      const ptsText = pts == null ? "" : `${pts > 0 ? "+" : pts < 0 ? "−" : "±"}${Math.abs(pts)} pts`;
+      const inBand = tested && p.null_band && p.same >= p.null_band[0] && p.same <= p.null_band[1];
+      const caption = main
+        ? `${title}${tested
+            ? `<span><b>${ptsText}</b> vs shuffled places (${pct(p.same)} moved the same way; shuffled ${pct(p.null_mean)}) · ${pText(p.p)}${p.sig ? " ✓" : ""}</span>`
+            : `<span><b>${pct(p.same)}</b> ${sameWord}</span>`}
+          <span class="wwc-lg-sub">${p.r == null ? "" : `r ${p.r.toFixed(2)} · `}${p.n.toLocaleString()} area-years</span></figcaption>`
+        : `${title} <span class="wwc-lg-p${p.sig ? " is-sig" : ""}"><b>${tested ? ptsText : pct(p.same)}</b>${p.p != null ? ` · ${pText(p.p).replace(" = ", " ")}${p.sig ? " ✓" : ""}` : ""}</span></figcaption>`;
+      return `<figure class="wwc-lg-cell${p.sig ? " is-sig" : ""}${inBand ? " is-inband" : ""}${main ? " is-main" : ""}" title="${esc(tip)}">
         <svg class="wwc-lg" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(LAG_GAP_LABEL(p.k))}: ${p.n} area-years, ${pct(p.same)} ${sameWord}">
           <rect class="wwc-lg-quad" x="${mid}" y="0" width="${mid}" height="${mid}"/>
           <rect class="wwc-lg-quad" x="0" y="${mid}" width="${mid}" height="${mid}"/>
@@ -681,32 +759,81 @@ window.WardWiseCharts = (function () {
           <text class="wwc-lg-corner" x="${W - 6}" y="18" text-anchor="end">${mode === "levels" ? "both high" : "both up"}</text>
           <text class="wwc-lg-corner" x="6" y="${H - 7}">${mode === "levels" ? "both low" : "both down"}</text>
         </svg>
-        ${title}<span><b>${pct(p.same)}</b> ${sameWord}${p.r == null ? "" : ` · r ${p.r.toFixed(2)}`} · ${p.n.toLocaleString()} area-years</span></figcaption>
+        ${caption}
       </figure>`;
-    }).join("");
-    return `<div class="wwc-lg-grid">${cells}</div>`;
+    };
+    const byK = Object.fromEntries(panels.map((p) => [p.k, p]));
+    const row = (sign) => [1, 2, 3, 4, 5].map((d) => byK[sign * d]).filter(Boolean).map(cell).join("");
+    // Desktop: one grid, the big panel spanning both rows (so it stretches to their height), a slim
+    // tag, then five panels per row; columns line up by gap. Phones: big panel, then each row swipes.
+    const tested = panels.some((p) => p.null_mean != null);
+    return `<p class="wwc-lg-legend">X = ${esc(xLabel)}, Y = ${esc(yLabel)}. Big panel: the same year.
+        <b>Top row</b>: Y 1–5 years after X, where it shows if X moves first.
+        <b>Bottom row</b>: Y 1–5 years before X, the other way round.${tested
+          ? ` Each panel says how many points more (or fewer) place-years moved the same way than when places are paired at random; faded panels sit inside what random pairings give.`
+          : ""} Hover a panel for its numbers.</p>
+      <div class="wwc-lg-layout">
+        ${byK[0] ? `<div class="wwc-lg-main">${cell(byK[0])}</div>` : ""}
+        <div class="wwc-lg-row"><span class="wwc-lg-tag">Y later</span>${row(1)}</div>
+        <div class="wwc-lg-row"><span class="wwc-lg-tag">X later</span>${row(-1)}</div>
+      </div>`;
   }
 
-  // Share of area-years on the same side at each gap, as bars up or down from the 50% a coin flip
-  // would give: the interesting differences are a few points, invisible on a 0–100% scale.
+  // Share of area-years on the same side at each gap. Changes: a dot for the observed share, its
+  // year-bootstrap 95% range as a whisker, and a grey band for what pairing each place's X with a
+  // randomly drawn OTHER place's Y gives (the area-shuffle null, which keeps shared shock years);
+  // dots that clear the band after the correction for eleven gaps are filled. Levels: plain bars
+  // against 50%. The interesting differences are a few points, invisible on a 0–100% scale.
   function lagShareStrip(panels, { mode = "changes" } = {}) {
     const rows = panels.filter((p) => p.same != null && p.n >= 10);
     if (!rows.length) return "";
-    const W = 340, H = 130, plotW = 260, mid = 62, half = 42, bw = 30, gap = (plotW - 6 * bw) / 7;
-    const reach = Math.max(0.1, ...rows.map((p) => Math.abs(p.same - 0.5)));
+    const ks = panels.map((p) => p.k), kMin = Math.min(...ks), nK = Math.max(...ks) - kMin + 1;
+    const W = 420, H = 150, plotW = 360, mid = 66, half = 50, slot = plotW / nK;
+    const vals = rows.flatMap((p) => [p.same, ...(p.ci || []), ...(p.null_band || [])]).filter(Number.isFinite);
+    const reach = Math.max(0.05, ...vals.map((v) => Math.abs(v - 0.5)));
     const y = (v) => mid - ((v - 0.5) / reach) * half;
-    const best = rows.reduce((a, b) => (Math.abs(b.same - 0.5) > Math.abs(a.same - 0.5) ? b : a));
-    const bars = rows.map((p) => {
-      const x = gap + p.k * (bw + gap), top = Math.min(mid, y(p.same)), h = Math.max(1, Math.abs(y(p.same) - mid));
-      const above = p.same >= 0.5;
-      return `<rect class="wwc-lg-share${p === best ? " is-best" : ""}" x="${x}" y="${top}" width="${bw}" height="${h}" rx="3"><title>${LAG_GAP_LABEL(p.k)}: ${Math.round(p.same * 100)}% ${mode === "levels" ? "on the same side" : "moved the same way"} (${p.n} area-years)</title></rect>
-        <text class="wwc-lag-k" x="${x + bw / 2}" y="${above ? top - 4 : top + h + 12}" text-anchor="middle">${Math.round(p.same * 100)}%</text>
-        <text class="wwc-lag-k" x="${x + bw / 2}" y="${H - 4}" text-anchor="middle">${p.k === 0 ? "same yr" : `+${p.k} yr`}</text>`;
+    const cx = (k) => (k - kMin + 0.5) * slot;
+    const marks = rows.map((p) => {
+      const x = cx(p.k);
+      const tip = `${LAG_GAP_LABEL(p.k)}: ${Math.round(p.same * 100)}% ${mode === "levels" ? "on the same side" : "moved the same way"} (${p.n} area-years`
+        + (p.n_years ? `, ${p.n_years} distinct years` : "") + ")"
+        + (p.null_mean != null ? `; shuffled places give ${Math.round(p.null_mean * 100)}%, ${pText(p.p)}` : "")
+        + (p.ci ? `; 95% range resampling years ${Math.round(p.ci[0] * 100)}–${Math.round(p.ci[1] * 100)}%` : "");
+      const band = p.null_band ? `<rect class="wwc-lg-null" x="${x - slot * 0.32}" y="${y(p.null_band[1])}" width="${slot * 0.64}" height="${Math.max(1, y(p.null_band[0]) - y(p.null_band[1]))}" rx="3"/>` : "";
+      const whisk = p.ci ? `<line class="wwc-lg-ci" x1="${x}" x2="${x}" y1="${y(p.ci[0])}" y2="${y(p.ci[1])}"/>` : "";
+      const mark = mode === "levels" || p.null_band == null
+        ? `<rect class="wwc-lg-share" x="${x - slot * 0.3}" y="${Math.min(mid, y(p.same))}" width="${slot * 0.6}" height="${Math.max(1, Math.abs(y(p.same) - mid))}" rx="3"/>`
+        : `<line class="wwc-lg-obs${p.sig ? " is-sig" : ""}" x1="${x}" x2="${x}" y1="${y(p.same)}" y2="${y(p.same)}"/>`;
+      return `<g><title>${esc(tip)}</title>${band}${whisk}${mark}</g>
+        <text class="wwc-lag-k" x="${x}" y="${H - 22}" text-anchor="middle">${p.k > 0 ? `+${p.k}` : p.k}</text>`;
     }).join("");
-    return `<svg class="wwc-lg-strip" viewBox="0 0 ${W} ${H}" role="img" aria-label="Share moving the same way at each gap, against 50%">
+    const zeroX = cx(0);
+    return `<svg class="wwc-lg-strip" viewBox="0 0 ${W} ${H}" role="img" aria-label="Share moving the same way at each gap, against what shuffled places give">
       <line class="wwc-median" x1="0" x2="${plotW}" y1="${mid}" y2="${mid}"/>
-      <text class="wwc-lag-k" x="${plotW + 6}" y="${mid - 2}">50%</text>
-      <text class="wwc-lag-k" x="${plotW + 6}" y="${mid + 11}">coin flip</text>${bars}</svg>`;
+      <text class="wwc-lag-k" x="${plotW + 6}" y="${mid + 4}">50%</text>${marks}
+      ${kMin < 0 ? `<text class="wwc-lag-k" x="${zeroX - slot}" y="${H - 6}" text-anchor="end">← X later</text>` : ""}
+      <text class="wwc-lag-k" x="${zeroX + slot}" y="${H - 6}">Y later →</text></svg>`;
+  }
+
+  // Each year's contribution to the share at one gap: area-years that moved the same way above the
+  // line, opposite ways below. A single tall year is a shared shock doing the work.
+  function yearContribBars(byYear) {
+    const rows = byYear || [];
+    if (!rows.length) return "";
+    const W = 600, H = 150, l = 4, r = 4, mid = 66, half = 50;
+    const top = Math.max(1, ...rows.map(([, s, o]) => Math.max(s, o)));
+    const slot = (W - l - r) / rows.length, bw = Math.max(2, slot * 0.7);
+    const bars = rows.map(([yr, same, opp], i) => {
+      const x = l + i * slot + (slot - bw) / 2, hs = (same / top) * half, ho = (opp / top) * half;
+      const share = same + opp ? Math.round((same / (same + opp)) * 100) : 0;
+      return `<g><title>${yr}: ${same} same way, ${opp} opposite (${share}% same)</title>
+        <rect class="wwc-yc is-same" x="${x}" y="${mid - hs}" width="${bw}" height="${Math.max(0.5, hs)}" rx="1.5"/>
+        <rect class="wwc-yc is-opp" x="${x}" y="${mid}" width="${bw}" height="${Math.max(0.5, ho)}" rx="1.5"/></g>`;
+    }).join("");
+    const labelAt = (i) => `<text class="wwc-lag-k" x="${l + i * slot + slot / 2}" y="${H - 6}" text-anchor="middle">${rows[i][0]}</text>`;
+    const idx = [0, Math.floor((rows.length - 1) / 2), rows.length - 1].filter((v, i, a) => a.indexOf(v) === i);
+    return `<svg class="wwc-yc-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Each year's same-way and opposite-way counts">
+      <line class="wwc-axis" x1="${l}" x2="${W - r}" y1="${mid}" y2="${mid}"/>${bars}${idx.map(labelAt).join("")}</svg>`;
   }
 
   function attachTips(container) {
@@ -795,5 +922,6 @@ window.WardWiseCharts = (function () {
     bloom,
     humanizeDomain,
     DOMAIN_SHORT,
-    attachTips, scatter, lagBars, eventPath, lagGrid, lagShareStrip, LAG_GAP_LABEL, niceTicks };
+    attachTips, scatter, lagBars, eventPath, jumpDots, yearRStrip, lagGrid, lagShareStrip, yearContribBars,
+    LAG_GAP_LABEL, pText, niceTicks };
 })();

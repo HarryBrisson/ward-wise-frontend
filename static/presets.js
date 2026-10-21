@@ -333,6 +333,21 @@ window.WardWisePresets = [
       "lakefront_distance_miles",
     ],
   },
+  {
+    id: "zoning",
+    icon_metric: "rezonings_upzoning_share",
+    name: "Zoning & growth",
+    short: "Zoning",
+    tagline: "Rezonings, upzoning, room for more homes, and whether building follows",
+    metric_ids: [
+      "rezonings_passed_per_km2",
+      "rezonings_upzoning_share",
+      "rezonings_to_multifamily_share",
+      "zoned_capacity_added_sqft_per_km2",
+      "new_residential_units_permitted_est",
+      "new_residential_construction_permits_count",
+    ],
+  },
 ];
 
 window.WardWisePresetTools = (function () {

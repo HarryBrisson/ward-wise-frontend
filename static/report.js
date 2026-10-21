@@ -375,7 +375,7 @@
         <h2 class="report-prose-head">${esc(n.headline)}</h2>
         <div class="report-prose">${paragraphs}</div>
         <p class="report-prose-note"><b>Reading these numbers.</b> ${esc(n.reading_note)}</p>
-        <footer class="report-prose-provenance">Written by a model (${esc(n.provenance?.model || "Claude")}) from Penlight's own data${when ? ` on ${esc(when)}` : ""}; every number links to its measure${n.stale ? "; written from an earlier data release" : ""}. <a href="/suggest-metric">Report a problem</a>.</footer>
+        <footer class="report-prose-provenance">Written by a model (${esc(n.provenance?.model || "Claude")}) from Ward Wise's own data${when ? ` on ${esc(when)}` : ""}; every number links to its measure${n.stale ? "; written from an earlier data release" : ""}. <a href="/suggest-metric">Report a problem</a>.</footer>
       </section>`;
   }
 
@@ -619,7 +619,7 @@
   function render() {
     const el = root();
     if (!el) return;
-    document.title = `${nameFor(state.areaId)} — full report — Ward Wise Penlight`;
+    document.title = `${nameFor(state.areaId)} — full report — Ward Wise`;
     const overTimeBody = el.querySelector("[data-overtime-body]")?.innerHTML;
     el.innerHTML = renderHead() + renderIdentity() + renderTabs()
       + `<div class="report-tabpanels">${renderHero() + renderRead() + renderMix() + renderCtas() + renderPeek() + renderOverTimeShell() + renderChangesShell() + renderDomainsShell() + renderAlderShell()}</div>`

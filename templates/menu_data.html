@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Data &amp; methods · Menu money · Ward Wise{% endblock %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='report_ui.css', v=asset_version) }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='editorial.css', v=asset_version) }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='menu_hub.css', v=asset_version) }}">
+{% endblock %}
+
+{% block content %}
+  <main class="ed-page mh-page">
+    <header class="ed-masthead mh-masthead">
+      <p class="ed-kicker">Aldermanic menu money · Data &amp; methods</p>
+      <h1>Every number here is in a public file.</h1>
+      <p class="ed-standfirst">The menu-money pages are built from one open dataset: every project line the city has posted since 2005,
+        cleaned, categorized, placed on the map, and linked back to the city document it came from. Use it, check it, cite it.</p>
+    </header>
+    {% include "_menu_tabs.html" %}
+
+    <section class="mh-prose">
+      <p class="ed-section-label">The dataset</p>
+      <div id="mh-release"><p class="report-loading">Loading release…</p></div>
+      <ul>
+        <li><strong>menu_line_items.csv</strong>: one row per project: ward, year, item, location, cost, category, coordinates, and the source PDF.</li>
+        <li><strong>ward_year_category.csv</strong>: dollars and share of spending per ward, year and category. This is the table behind "Ward 40 spent 24.6% on sidewalks".</li>
+        <li><strong>ward_year.csv</strong>: totals per ward and year, with the approximate allotment.</li>
+        <li><strong>menu_projects.geojson</strong>: the projects as map features.</li>
+        <li><strong>infrastructure_menu.csv</strong>: unit prices by item and year, each with its source and confidence label.</li>
+      </ul>
+      <p>Everything is on <a href="https://github.com/HarryBrisson/ward-wise-menu-data">GitHub</a>, with the
+        <a href="https://github.com/HarryBrisson/ward-wise-menu-data/blob/main/METHODOLOGY.md">full methodology</a>.
+        Releases are numbered and never change after publication, so a citation to a release always points at the same numbers.</p>
+
+      <p class="ed-section-label">Where it comes from</p>
+      <ul>
+        <li><strong>2012 to 2023:</strong> the annual menu postings published by the City of Chicago Office of Budget and Management.</li>
+        <li><strong>2024 onward:</strong> OBM's quarterly menu reports. These are cumulative, so each year uses its latest report. The newest year is marked partial until its fourth-quarter report is out.</li>
+        <li><strong>2005 to 2011:</strong> earlier OBM postings, scraped by Ward Wise Chicago volunteers.</li>
+      </ul>
+      <p>Each row links to its PDF on chicago.gov where the city still hosts it.</p>
+
+      <p class="ed-section-label">What to watch for</p>
+      <ul>
+        <li><strong>Shares describe choices, not results.</strong> A ward that spends little on sidewalks may have newer sidewalks, a different program paying for them, or different priorities.</li>
+        <li><strong>Ward boundaries moved in 2015 and 2023.</strong> "Ward 40 in 2012" is not the same ground as Ward 40 today.</li>
+        <li><strong>Costs are nominal.</strong> A block of resurfacing costs more every year (see the price list), so flat dollars buy less over time.</li>
+        <li><strong>Categories come from item names.</strong> A few items could reasonably sit in two categories. The rules are published.</li>
+        <li><strong>About 5% of projects aren't on the map.</strong> Either the location text is unreadable, or the geocoded point landed outside the project's own ward and was discarded. They still count in every total.</li>
+      </ul>
+
+      <p class="ed-section-label">Citing a specific view</p>
+      <p>Every menu-money page has a <em>Cite this view</em> box. It gives the page's exact URL (filters included) together with the release, so a reader can open the same view and download the same rows.</p>
+
+      <p class="ed-section-label">Found a problem?</p>
+      <p>Open an issue on <a href="https://github.com/HarryBrisson/ward-wise-menu-data/issues">GitHub</a> with the row's <code>id</code>, or write to us via the <a href="{{ url_for('ui.about_page') }}">About page</a>. Corrections go into the next release and are listed in its changelog.</p>
+
+      <p class="ed-section-label">Credits</p>
+      <p>Line-item extraction for 2005 to 2023 by Sean MacMullan and contributors (ward-wise/data-analysis). Early scraping by Jake Smith and John C. Ruf. The original menu-spending visualizer by Ward Wise Chicago.</p>
+    </section>
+  </main>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='common.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='menu_hub.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='menu_data.js', v=asset_version) }}"></script>
+{% endblock %}

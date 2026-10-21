@@ -63,10 +63,14 @@
     if (panelsNode) panelsNode.prepend(noneNode);
     const cards = [...root.querySelectorAll(".metric-definition-card")].map((card) => {
       const source = card.querySelector(".metric-definition-meta dd");
+      // name + one-line definition + source; the dates line stays out of search
+      const summary = card.querySelector(".metric-definition-summary");
+      const title = summary.querySelector(".metric-definition-title");
+      const description = summary.querySelector(":scope > span:last-child");
       return {
         card,
         panel: card.closest(".metric-domain-panel"),
-        text: `${card.querySelector(".metric-definition-summary").textContent} ${source ? source.textContent : ""}`.toLowerCase(),
+        text: `${title ? title.textContent : ""} ${description ? description.textContent : ""} ${source ? source.textContent : ""}`.toLowerCase(),
       };
     });
     const panels = [...root.querySelectorAll(".metric-domain-panel")];
@@ -97,8 +101,84 @@
           link.querySelector("strong").textContent = n;
         }
       });
+      if (ranked) ranked.hidden = shown === 0;
       countNode.textContent = terms.length ? `${shown} of ${total}` : `${total} measures`;
       noneNode.hidden = shown > 0;
+    }
+
+    // --- Ordering ------------------------------------------------------------------------
+    // "By domain" is how metric_details.js draws the page. The date orders lift every card out
+    // of its domain into one ranked list (a domain tag rides along on each card) and put them
+    // back, in their drawn order, when the reader returns to "By domain".
+    const sortSelect = document.getElementById("fd-dict-sort");
+    const SORTS = {
+      "added-new": { key: "added", dir: -1, title: "Newest added first", note: "When each measure first appeared on Ward Wise." },
+      "added-old": { key: "added", dir: 1, title: "Oldest added first", note: "When each measure first appeared on Ward Wise." },
+      "through-new": { key: "through", dir: -1, title: "Freshest data first", note: "The newest period each measure's data covers." },
+      "through-old": { key: "through", dir: 1, title: "Stalest data first", note: "The newest period each measure's data covers." },
+    };
+    const homes = cards.map((entry) => ({ card: entry.card, list: entry.card.parentElement }));
+    let ranked = null;
+
+    function rankedPanel() {
+      if (ranked) return ranked;
+      ranked = document.createElement("section");
+      ranked.className = "metric-domain-panel metric-ranked-panel";
+      ranked.innerHTML = `
+        <div class="metric-domain-heading">
+          <p class="eyebrow">All measures</p>
+          <h4></h4>
+          <p class="transparency-meta"></p>
+        </div>
+        <div class="metric-definition-list"></div>`;
+      panelsNode.prepend(ranked);
+      panelsNode.prepend(noneNode);
+      return ranked;
+    }
+
+    function applySort(value) {
+      const sort = SORTS[value];
+      if (!sort) {
+        homes.forEach(({ card, list }) => list.append(card));
+        root.classList.remove("is-ranked");
+        return;
+      }
+      const panel = rankedPanel();
+      panel.querySelector("h4").textContent = sort.title;
+      panel.querySelector(".transparency-meta").textContent = sort.note;
+      const list = panel.querySelector(".metric-definition-list");
+      // undated measures sink to the bottom either way; ties keep the domain order
+      const ordered = homes
+        .map(({ card }, index) => ({ card, index, value: card.dataset[sort.key] || "" }))
+        .sort((a, b) => {
+          if (!a.value !== !b.value) return a.value ? -1 : 1;
+          return (a.value < b.value ? -1 : a.value > b.value ? 1 : 0) * sort.dir || a.index - b.index;
+        });
+      ordered.forEach(({ card }) => list.append(card));
+      root.classList.add("is-ranked");
+    }
+
+    function syncSortUrl(value) {
+      const params = new URLSearchParams(location.search);
+      if (SORTS[value]) params.set("sort", value);
+      else params.delete("sort");
+      const query = params.toString();
+      history.replaceState(null, "", `${location.pathname}${query ? `?${query}` : ""}${location.hash}`);
+    }
+
+    if (sortSelect) {
+      const hasDates = cards.some((entry) => entry.card.dataset.added || entry.card.dataset.through);
+      sortSelect.disabled = !hasDates;
+      const wanted = new URLSearchParams(location.search).get("sort");
+      if (hasDates && SORTS[wanted]) {
+        sortSelect.value = wanted;
+        applySort(wanted);
+      }
+      sortSelect.addEventListener("change", () => {
+        applySort(sortSelect.value);
+        syncSortUrl(sortSelect.value);
+        filter();
+      });
     }
 
     input.addEventListener("input", filter);

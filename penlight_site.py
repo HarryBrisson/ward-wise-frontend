@@ -32,6 +32,14 @@ VIEWS_JSON = ROOT / "views.json"
 SITE_BASE_DEFAULT = "https://www.wardwise.org"
 PUBLIC_BASE = "https://www.wardwise.org"
 
+# Features that are built but don't yet do everything their pages describe. Templates read these (and
+# base.html hands them to JS as <body data-*>), so the "in testing" copy flips in one place at launch.
+SITE_FLAGS = {
+    # Ward alert emails. Sign-up and confirmation work; the digest and same-day emails are switched off
+    # until launch. Set True in the same change as `scripts/remote_pipeline.sh schedule --alerts-on`.
+    "alerts_sending": False,
+}
+
 
 @dataclass(frozen=True)
 class Page:
@@ -58,12 +66,19 @@ PAGES: tuple[Page, ...] = (
     Page("drivers", "/reports/drivers", "report_drivers.html", "ui.drivers_page"),
     Page("impact", "/reports/impact", "report_impact.html", "ui.impact_page"),
     Page("deepdive", "/reports/deep-dive", "report_deepdive.html", "ui.report_deepdive_page"),
+    Page("methodology", "/reports/methodology", "report_methodology.html", "ui.methodology_page"),
     Page("term", "/reports/term", "report_term.html", "ui.report_term_page"),
     Page("years", "/reports/data-years", "report_years.html", "ui.report_years_page"),
     Page("report", "/report", "report.html", "ui.report_page"),
     Page("compare", "/compare", "compare.html", "ui.compare_page"),
     Page("index", "/index", "index_page.html", "ui.index_page"),
     Page("menu", "/menu", "menu.html", "ui.menu_page"),
+    Page("menu_ward", "/menu/ward", "menu_ward.html", "ui.menu_ward_page"),
+    Page("menu_compare", "/menu/compare", "menu_compare.html", "ui.menu_compare_page"),
+    Page("menu_map", "/menu/map", "menu_map.html", "ui.menu_map_page"),
+    Page("menu_prices", "/menu/prices", "menu_prices.html", "ui.menu_prices_page"),
+    Page("menu_costs", "/menu/costs", "menu_costs.html", "ui.menu_costs_page"),
+    Page("menu_data", "/menu/data", "menu_data.html", "ui.menu_data_page"),
     Page("near", "/near", "near.html", "ui.near_page"),
     Page("near_change", "/near/change", "near_change.html", "ui.near_change_page"),
     Page("dictionary", "/dictionary", "dictionary.html", "ui.dictionary_page"),
@@ -167,6 +182,7 @@ def make_environment(version_for: Callable[[str], str], *, app_base: str = "", g
         "ga_id": ga_id,
         "build_sha": build_sha,
         "app_base": app_base,
+        "site_flags": SITE_FLAGS,
     })
     return env
 

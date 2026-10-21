@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Costs · Menu money · Ward Wise{% endblock %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='report_ui.css', v=asset_version) }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='editorial.css', v=asset_version) }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='menu_hub.css', v=asset_version) }}">
+{% endblock %}
+
+{% block content %}
+  <main class="ed-page mh-page" aria-live="polite">
+    <header class="ed-masthead mh-masthead">
+      <p class="ed-kicker">Aldermanic menu money · What wards paid</p>
+      <h1>What wards actually paid.</h1>
+      <p class="ed-standfirst">The price list says what a block of resurfacing should cost. The spending records say what each one did: thousands of projects, from the cheapest to the most expensive, year by year and ward by ward.</p>
+    </header>
+    {% include "_menu_tabs.html" %}
+    <div id="mh-costs"><p class="report-loading">Loading…</p></div>
+  </main>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='common.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='menu_hub.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='menu_costs.js', v=asset_version) }}"></script>
+{% endblock %}

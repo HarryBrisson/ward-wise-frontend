@@ -20,7 +20,7 @@
         <p class="fd-eyebrow">Ward Wise</p>
         <h1 class="fd-display">Chicago, measured.</h1>
         <p class="fd-sub" style="margin-top: 20px">
-          <span data-fd-count="metrics">271</span> measures of daily life for every ward and
+          <span data-fd-count="metrics">Hundreds of</span> measures of daily life for every ward and
           neighborhood, built from public records and free for everyone.
         </p>
         <div class="fd-actions">
@@ -56,8 +56,8 @@
     <section class="fd-section">
       <div class="fd-wrap">
         <div class="fd-figures">
-          <div class="fd-figure"><strong data-fd-count="metrics">271</strong><span>measures</span></div>
-          <div class="fd-figure"><strong data-fd-count="sources">58</strong><span>public data sources</span></div>
+          <div class="fd-figure"><strong data-fd-count="metrics">–</strong><span>measures</span></div>
+          <div class="fd-figure"><strong data-fd-count="sources">–</strong><span>public data sources</span></div>
           <div class="fd-figure"><strong>50</strong><span>wards</span></div>
           <div class="fd-figure"><strong>77</strong><span>community areas</span></div>
         </div>
@@ -96,11 +96,11 @@
 
     <section class="fd-section fd-center">
       <div class="fd-wrap fd-narrow fd-stack">
-        <p class="fd-eyebrow">Ward alerts</p>
+        <p class="fd-eyebrow">Ward alerts{% if not site_flags.alerts_sending %} · in testing{% endif %}</p>
         <h2 class="fd-h1">Know before it's decided.</h2>
-        <p class="fd-sub">An email when your alderperson introduces legislation, a hearing opens for comment, or a building permit lands on your block.</p>
+        <p class="fd-sub">{% if not site_flags.alerts_sending %}Coming soon: {% endif %}An email when your alderperson introduces legislation, a hearing opens for comment, or a building permit lands on your block.</p>
         <div class="fd-actions" style="margin-top: 12px">
-          <a class="fd-btn" href="{{ url_for('ui.alerts') }}">Get ward alerts</a>
+          <a class="fd-btn" href="{{ url_for('ui.alerts') }}">{{ "Get ward alerts" if site_flags.alerts_sending else "Join the early list" }}</a>
           <a class="fd-more" href="{{ url_for('ui.residents') }}">Contact your alderperson</a>
         </div>
       </div>

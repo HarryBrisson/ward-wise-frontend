@@ -12,22 +12,24 @@ deploy.**
 
 | Branch | Where it serves | Who merges |
 |---|---|---|
-| `next` | **new.wardwise.org** — the preview channel, same live data | any collaborator, after one approving review |
-| `main` | **penlight.wardwise.org** — the stable site | the maintainer, via a PR from `next` |
+| `dev` | **dev.wardwise.org** — the preview channel, same live data | any collaborator, after one approving review |
+| `main` | **www.wardwise.org** — the stable site | the maintainer, via a PR from `dev` |
 
-Day to day you work against `next`. When the preview looks right, open a PR `next → main`; that
-PR is the release note. Both channels build from every push, so `new.wardwise.org` is never behind
+Day to day you work against `dev`. A PR into `main` from any other branch fails the required
+`main-from-dev` check, so everything reaches the stable site through the preview first. When the
+preview looks right, open a PR `dev → main`; that
+PR is the release note. Both channels build from every push, so `dev.wardwise.org` is never behind
 what's merged.
 
 ## The loop
 
-1. Branch from `next`, edit templates under `templates/` or files under `static/`, reload.
+1. Branch from `dev`, edit templates under `templates/` or files under `static/`, reload.
 2. `python scripts/build_static.py && python scripts/check_build.py dist` — the same two commands
    CI runs. `python server.py --built` shows you exactly what Pages will serve.
-3. Open a PR into `next`. The `pages / build` check must pass and one collaborator must approve.
+3. Open a PR into `dev`. The `pages / build` check must pass and one collaborator must approve.
    Changes to the deploy mechanism itself (`.github/`, `scripts/build_static.py`,
    `penlight_site.py`, `views.json`) need the maintainer's review on any branch (`.github/CODEOWNERS`).
-4. Merge. `new.wardwise.org` updates within a few minutes; `/build.json` on either host shows
+4. Merge. `dev.wardwise.org` updates within a few minutes; `/build.json` on either host shows
    which commit is live there.
 
 ## Adding a page
@@ -72,8 +74,10 @@ Match what's there — this codebase has a consistent voice.
 
 ## Testing a change
 
-There's no JS test suite yet. Before opening a PR, load the pages you touched and check the
-browser console is clean. For the map: switching geography (ward / neighborhood / χGRID) works,
+`python -m pytest` builds the site and opens every page at phone and desktop width; see
+[TESTING.md](TESTING.md). It catches pages that fail to build, broken internal links, sideways
+scroll and script crashes, not everything. Before opening a PR, still load the pages you touched
+and check the browser console is clean. For the map: switching geography (ward / neighborhood / χGRID) works,
 toggling metrics rescores the choropleth and the leaderboard, a ward's mini report shows its
 photo. Sanity-check against <https://penlight.wardwise.org> if you're unsure whether something
 is your change or already the case live.
