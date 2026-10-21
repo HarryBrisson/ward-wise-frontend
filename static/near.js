@@ -97,13 +97,16 @@
     [/camera|security/i, "📷"],
   ];
   // rezoning rows: [lat, lng, year, "RS-3 → RM-5 · 1234 N X St", capacity_sqft_delta, category],
-  // category upzoning|downzoning|lateral. An unknown category falls back to lateral's look.
+  // category upzoning|downzoning|lateral|unknown. "lateral" is a known even FAR change; "unknown" is
+  // a rezoning whose FAR on either side isn't known, and any category this file doesn't know looks
+  // like it too, so nothing unresolved is ever passed off as lateral.
   const REZONING_STYLE = {
     upzoning: { emoji: "🏗️", color: "#c2410c", label: "Upzoning" },
     downzoning: { emoji: "🏡", color: "#1d4ed8", label: "Downzoning" },
     lateral: { emoji: "📐", color: "#64748b", label: "Lateral rezoning" },
+    unknown: { emoji: "❔", color: "#a1a1aa", label: "FAR change unknown" },
   };
-  const rezoningStyle = (category) => REZONING_STYLE[category] || REZONING_STYLE.lateral;
+  const rezoningStyle = (category) => REZONING_STYLE[category] || REZONING_STYLE.unknown;
   const escHtml = (text) => String(text == null ? "" : text).replace(/[&<>"']/g,
     (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
   // eLMS-derived text is not ours: escape it, and drop rows the map can't place
@@ -633,7 +636,7 @@
         <sup>†</sup> Google-observed: a matched business whose listing is marked permanently
         closed — covers recent years the licence rule can't see yet, incomplete by nature.
         Map markers: green opened, red closed, purple menu projects${hasRezonings
-          ? "; rezonings 🏗️ up (orange), 🏡 down (blue), 📐 lateral (grey), passed ordinances only" : ""}.</p>
+          ? "; rezonings 🏗️ up (orange), 🏡 down (blue), 📐 lateral (grey), ❔ FAR change unknown (light grey), passed ordinances only" : ""}.</p>
     </section>`;
   }
 
