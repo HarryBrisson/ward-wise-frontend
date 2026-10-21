@@ -262,13 +262,17 @@
 .menu-swatch { border-radius: 3px; display: inline-block; height: 0.7rem; margin-right: 0.35rem; vertical-align: -1px; width: 0.7rem; }
 
 .menu-table-wrap { margin-top: 0.6rem; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-.menu-table { border-collapse: collapse; font-size: 0.8rem; min-width: 56rem; width: 100%; }
+.menu-table { border-collapse: collapse; font-size: 0.8rem; min-width: 40rem; width: 100%; }
 .menu-table thead th { background: var(--surface); border-bottom: 2px solid var(--border); position: sticky; text-align: left; top: 0; z-index: 1; }
 .menu-table th.num, .menu-table td.num { text-align: right; }
 .menu-table tbody th { font-weight: 700; text-align: left; }
-.menu-table td, .menu-table th { padding: 0.35rem 0.45rem; vertical-align: middle; }
-.menu-table .menu-col-ward { min-width: 12rem; }
-.menu-table .menu-col-top { min-width: 9rem; white-space: nowrap; }
+.menu-table td, .menu-table th { padding: 0.35rem 0.3rem; vertical-align: middle; }
+.menu-table .menu-col-ward { min-width: 8.5rem; }
+.menu-table thead .sort-btn { letter-spacing: 0.01em; white-space: normal; }
+.menu-table thead th .sort-arrow { display: none; }
+.menu-table thead th[aria-sort] .sort-arrow { display: inline; }
+@media (max-width: 640px) { .menu-table .menu-col-ward { min-width: 8.5rem; } }
+.menu-table .menu-col-top { min-width: 7rem; white-space: nowrap; }
 .menu-table tbody tr.menu-row { border-top: 1px solid var(--hair); }
 .menu-table tbody tr.menu-row:hover { background: var(--surface-muted); }
 .menu-table tbody tr.is-focus > th { box-shadow: inset 3px 0 0 var(--hue); }
@@ -278,6 +282,10 @@ th[aria-sort] .sort-btn { color: var(--hue); }
 .ward-toggle { background: none; border: 0; color: var(--text); cursor: pointer; display: grid; font: inherit; font-weight: 750; padding: 0; text-align: left; }
 .ward-toggle small { color: var(--muted-text); font-size: 0.68rem; font-weight: 500; }
 .ward-toggle:hover { color: var(--hue); }
+.menu-table-wrap { container-type: inline-size; }
+/* The open-ward panel must not set the table's width (it clipped the Schools column); pin it to the visible width instead, so it stays readable while the table scrolls. */
+.menu-detail-row > td { max-width: 0; }
+.menu-detail { left: 0; position: sticky; width: calc(100cqw - 1.8rem); }
 .menu-detail-row > td { background: var(--hue-soft); border-left: 3px solid var(--hue); padding: 0.8rem 0.9rem; }
 .menu-detail-bars { display: grid; gap: 0.45rem 1.4rem; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); }
 .detail-metric-head { align-items: baseline; display: flex; font-size: 0.8rem; justify-content: space-between; }
