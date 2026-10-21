@@ -5,6 +5,11 @@
 
 {% block content %}
   <main>
+    {% if not site_flags.alerts_sending %}
+    <div class="fd-notice" role="note">
+      <div class="fd-wrap"><strong>Ward alerts are in testing and aren't sending yet.</strong> Sign up to join the early list: we'll email you once now to confirm your address, and your first alert goes out when alerts launch. The email on this page is a preview built from this week's real records.</div>
+    </div>
+    {% endif %}
     <section class="fd-ab-hero">
       <div class="fd-wrap fd-stack">
         <p class="fd-eyebrow">Ward alerts</p>
@@ -42,12 +47,12 @@
             <label class="fd-ab-label" for="fd-alert-email" data-fd-ab-email-label>Email</label>
             <div class="fd-ab-send-row">
               <input id="fd-alert-email" name="email" type="email" required placeholder="you@example.com" autocomplete="email">
-              <button type="submit" class="fd-btn" data-fd-ab-submit>Sign up</button>
+              <button type="submit" class="fd-btn" data-fd-ab-submit>{{ "Sign up" if site_flags.alerts_sending else "Join the early list" }}</button>
             </div>
             {# a field people never see: bots fill it in, and the API quietly ignores those sign-ups #}
             <input type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" class="fd-hp">
             <p id="fd-alert-note" class="fd-small" role="status"></p>
-            <p class="fd-small fd-ab-privacy" data-fd-ab-privacy>We'll email you once to confirm. Your address is used only for these alerts, never shared, and every email has a one-click unsubscribe.</p>
+            <p class="fd-small fd-ab-privacy" data-fd-ab-privacy>We'll email you once to confirm.{% if not site_flags.alerts_sending %} Nothing else is sent until alerts launch.{% endif %} Your address is used only for these alerts, never shared, and every email has a one-click unsubscribe.</p>
             <button type="button" class="fd-link-btn" data-fd-ab-unsubscribe hidden>Unsubscribe from all alerts</button>
           </div>
         </form>

@@ -67,7 +67,7 @@
           </article>
         </div>
         <div class="fd-actions">
-          <a class="fd-btn" href="{{ url_for('ui.alerts') }}">Get ward alerts</a>
+          <a class="fd-btn" href="{{ url_for('ui.alerts') }}">{{ "Get ward alerts" if site_flags.alerts_sending else "Ward alerts: join the early list" }}</a>
           <a class="fd-more" href="https://311.chicago.gov" target="_blank" rel="noopener">Report a problem to 311</a>
         </div>
       </div>
@@ -84,10 +84,10 @@
           </p>
         </div>
         <div class="fd-stack">
-          <p class="fd-tag">Stay informed</p>
+          <p class="fd-tag">{{ "Stay informed" if site_flags.alerts_sending else "Coming soon" }}</p>
           <h2 class="fd-h2">Your ward, in your inbox.</h2>
-          <p class="fd-body">Alerts for new legislation, hearings, permits and election dates in your ward.</p>
-          <a class="fd-more" href="{{ url_for('ui.alerts') }}">Choose your alerts</a>
+          <p class="fd-body">Alerts for new legislation, hearings, permits and election dates in your ward.{% if not site_flags.alerts_sending %} They're in testing and not sending yet.{% endif %}</p>
+          <a class="fd-more" href="{{ url_for('ui.alerts') }}">{{ "Choose your alerts" if site_flags.alerts_sending else "Join the early list" }}</a>
         </div>
       </div>
     </section>

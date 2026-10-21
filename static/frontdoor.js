@@ -2073,8 +2073,13 @@
     const emailLabel = root.querySelector("[data-fd-ab-email-label]");
     const privacy = root.querySelector("[data-fd-ab-privacy]");
     const unsubscribeButton = root.querySelector("[data-fd-ab-unsubscribe]");
+    // penlight_site.SITE_FLAGS.alerts_sending, via <body data-alerts-sending>. Until alerts launch, every
+    // message says so: sign-ups are real (an early list) but no alert email goes out yet.
+    const sending = document.body.dataset.alertsSending === "true";
     const FLASH = {
-      confirmed: "You're confirmed. Your alerts start with the next email.",
+      confirmed: sending
+        ? "You're confirmed. Your alerts start with the next email."
+        : "You're confirmed and on the early list. Alerts are still in testing, so nothing is sent yet; your first alert goes out when they launch.",
       unsubscribed: "You're unsubscribed. No more alert emails will be sent.",
       expired: "That link has expired or isn't valid. Sign up again below and we'll send a fresh one.",
       suppressed: "Email to this address keeps bouncing, so alerts are paused. Sign up again with another address.",
@@ -2162,10 +2167,12 @@
         if (manageToken) {
           const saved = await alertsApi(`/api/alerts/preferences?m=${encodeURIComponent(manageToken)}`, prefs);
           enterManageMode(saved);
-          say(`Saved. Your next email goes out ${whenFirst()}.`, true);
+          say(sending ? `Saved. Your next email goes out ${whenFirst()}.`
+            : "Saved. Alerts are still in testing, so nothing is sent yet; your first alert goes out when they launch.", true);
         } else {
           await alertsApi("/api/alerts/subscribe", { ...prefs, email: emailInput.value.trim(), website: form.elements.website.value });
-          say(`Check ${emailInput.value.trim()} for a confirmation email. Click its link and your first alert goes out ${whenFirst()}.`, true);
+          say(sending ? `Check ${emailInput.value.trim()} for a confirmation email. Click its link and your first alert goes out ${whenFirst()}.`
+            : `Check ${emailInput.value.trim()} for a confirmation email. Click its link to join the early list. Alerts are still in testing, so your first alert goes out when they launch.`, true);
         }
       } catch (error) {
         say(error.message);

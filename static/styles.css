@@ -5484,6 +5484,10 @@ body.fd-theme {
 .fd-grid-4 { display: grid; gap: 20px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .fd-grid-2 { display: grid; gap: 20px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
+/* A feature that is built but not yet doing what its page describes (penlight_site.SITE_FLAGS). */
+.fd-notice { background: color-mix(in srgb, #f5b400 16%, var(--bg, #fff)); border-bottom: 1px solid color-mix(in srgb, #f5b400 45%, transparent); color: var(--ink, #1d1d1f); font-size: 15px; line-height: 1.5; padding: 14px 0; }
+.fd-notice strong { font-weight: 650; }
+.gn-badge { border: 1px solid currentColor; border-radius: 999px; font-size: 10px; font-weight: 600; letter-spacing: 0.02em; margin-left: 4px; opacity: 0.75; padding: 0 5px; text-transform: uppercase; vertical-align: 1px; }
 .fd-proposal { border-bottom: 1px solid var(--hair); color: var(--ink-2); font-size: 12px; padding: 10px 0; text-align: center; }
 /* honeypot: off-screen, never focusable by keyboard users */
 .fd-hp { height: 1px; left: -9999px; opacity: 0; position: absolute; width: 1px; }
