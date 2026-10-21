@@ -74,8 +74,10 @@ Match what's there — this codebase has a consistent voice.
 
 ## Testing a change
 
-There's no JS test suite yet. Before opening a PR, load the pages you touched and check the
-browser console is clean. For the map: switching geography (ward / neighborhood / χGRID) works,
+`python -m pytest` builds the site and opens every page at phone and desktop width; see
+[TESTING.md](TESTING.md). It catches pages that fail to build, broken internal links, sideways
+scroll and script crashes, not everything. Before opening a PR, still load the pages you touched
+and check the browser console is clean. For the map: switching geography (ward / neighborhood / χGRID) works,
 toggling metrics rescores the choropleth and the leaderboard, a ward's mini report shows its
 photo. Sanity-check against <https://penlight.wardwise.org> if you're unsure whether something
 is your change or already the case live.

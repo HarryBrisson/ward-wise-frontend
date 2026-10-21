@@ -2999,6 +2999,19 @@ select {
   gap: 0.5rem;
 }
 
+/* inside the suggestion forms the shared label rule makes labels grids and inputs 100% wide,
+   which stacks the checkbox above its sentence */
+.metric-recommendation-form .settings-option {
+  align-items: flex-start;
+  display: flex;
+}
+
+.metric-recommendation-form .settings-option input {
+  flex: 0 0 auto;
+  margin-top: 0.2rem;
+  width: auto;
+}
+
 /* Change-over-time coverage: a small info icon beside the equation; detail lives in its tooltip. */
 .delta-info {
   background: var(--surface-muted);
@@ -3264,11 +3277,18 @@ select {
   }
 }
 
+/* !important on the box properties: form-field rules such as .fd-theme input[type="text"] are more
+   specific and otherwise stretch a hidden input back to full width, which scrolled the page sideways. */
 .visually-hidden {
+  border: 0 !important;
   clip: rect(0 0 0 0);
-  height: 1px; width: 1px;
+  clip-path: inset(50%);
+  height: 1px !important; width: 1px !important;
+  margin: -1px !important;
   overflow: hidden;
+  padding: 0 !important;
   position: absolute;
+  white-space: nowrap;
 }
 
 /* Support page: action cards + nomination coverage + metric growth */
@@ -3639,7 +3659,7 @@ select {
 
 /* API docs + admin API keys */
 .api-docs-layout .metrics-panel { display: grid; gap: 0.6rem; }
-.api-code { background: color-mix(in srgb, var(--shadow-ink) 4%, transparent); border: 1px solid color-mix(in srgb, var(--shadow-ink) 8%, transparent); border-radius: var(--radius-md); padding: 0.8rem 0.9rem; font-size: 0.78rem; line-height: 1.5; overflow-x: auto; margin: 0; }
+.api-code { background: color-mix(in srgb, var(--shadow-ink) 4%, transparent); border: 1px solid color-mix(in srgb, var(--shadow-ink) 8%, transparent); border-radius: var(--radius-md); padding: 0.8rem 0.9rem; font-size: 0.78rem; line-height: 1.5; overflow-x: auto; white-space: pre-wrap; word-break: break-all; margin: 0; }
 .api-note { color: var(--muted-text); font-size: 0.85rem; margin: 0; max-width: 52rem; }
 .api-note code, .api-docs-layout h2 code { background: color-mix(in srgb, var(--shadow-ink) 5%, transparent); border-radius: 4px; padding: 0.05rem 0.3rem; font-size: 0.92em; }
 .api-list { color: var(--muted-text); font-size: 0.85rem; margin: 0; padding-left: 1.1rem; display: grid; gap: 0.35rem; max-width: 52rem; }
@@ -3997,6 +4017,12 @@ select {
   /* the badges are the first thing to go when the row can't hold four columns */
   .yearsgrid-prov { display: none; }
   .yearsgrid-row { grid-template-columns: minmax(8rem, 1.5fr) minmax(0, 3fr) auto; }
+}
+
+@media (max-width: 640px) {
+  /* Must follow the 960px rule: the earlier phone override lost to it, so the row kept three
+     columns for two visible cells (badge and note are hidden). */
+  .yearsgrid-row { grid-template-columns: minmax(0, 1fr) auto; }
 }
 
 /* Cross-reference between metrics that measure the same thing from different sources. */
@@ -4656,7 +4682,7 @@ body:has(#near-picker:not([hidden])) .near-layout { max-width: 1180px; }
 
 /* location-first chooser: the map is the fallback, not the toll gate */
 .near-choose { margin: 0 0 1.5rem; max-width: 34rem; }
-.near-choose-lead { color: var(--muted-text, #667); font-size: 1rem; margin: 0 0 0.9rem; }
+.near-choose-lead { color: var(--muted-text, #667); font-size: 1rem; margin: 0 0 1.25rem; }
 .near-locate-primary {
   background: var(--action, #155e75);
   border: none;
@@ -4668,6 +4694,7 @@ body:has(#near-picker:not([hidden])) .near-layout { max-width: 1180px; }
   font-weight: 600;
   padding: 0.65rem 1.4rem;
 }
+.near-locate-primary { margin-top: 0.5rem; }
 .near-locate-primary:disabled { cursor: default; opacity: 0.65; }
 .near-choose-alt {
   background: none;
@@ -4676,7 +4703,9 @@ body:has(#near-picker:not([hidden])) .near-layout { max-width: 1180px; }
   cursor: pointer;
   font: inherit;
   font-size: 0.9rem;
-  margin-left: 0.9rem;
+  display: block;
+  margin: 0.25rem 0 0;
+  padding: 0;
   text-decoration: underline;
 }
 .near-choose-privacy { color: var(--muted, #667); font-size: 0.8rem; margin: 0.8rem 0 0; }
@@ -4704,6 +4733,10 @@ body:has(#near-picker:not([hidden])) .near-layout { max-width: 1180px; }
 .notes-table th { border-bottom: 1px solid var(--border, #d9dee6); padding: 0.2rem 0.5rem; text-align: left; }
 .notes-table td { border-bottom: 1px solid color-mix(in srgb, var(--shadow-ink) 6%, transparent); padding: 0.2rem 0.5rem; vertical-align: top; }
 .notes-families td:last-child { max-width: 30rem; }
+/* The tables are built by data_notes.js with no wrapper, so the table itself scrolls sideways on a phone. */
+@media (max-width: 640px) {
+  .notes-table { display: block; overflow-x: auto; }
+}
 
 /* methodology modal */
 .near-methodology { border: 1px solid var(--border, #d9dee6); border-radius: 12px; max-width: 640px; padding: 1.1rem 1.3rem; }
@@ -4713,9 +4746,11 @@ body:has(#near-picker:not([hidden])) .near-layout { max-width: 1180px; }
 .near-methodology li { font-size: 0.85rem; margin-bottom: 0.4rem; }
 
 /* address lookup */
-.near-address-form { display: flex; gap: 0.4rem; margin: 0.6rem 0; }
-.near-address-form input { border: 1px solid var(--border, #d9dee6); border-radius: 8px; flex: 1; font: inherit; max-width: 22rem; padding: 0.35rem 0.6rem; }
+.near-address-form { display: flex; gap: 0.5rem; margin: 1rem 0 0.9rem; }
+.near-address-form button { border-radius: 8px; flex: 0 0 auto; padding-inline: 1rem; }
+.near-address-form input { border: 1px solid var(--border, #d9dee6); border-radius: 8px; flex: 1; font: inherit; max-width: 22rem; min-width: 0; padding: 0.5rem 0.7rem; text-overflow: ellipsis; }
 .near-address-bar { margin: 0; }
+.near-address-bar button { padding-inline: 0.6rem; }
 .near-address-bar input { font-size: 0.82rem; max-width: 13rem; padding: 0.25rem 0.5rem; }
 
 
@@ -4942,6 +4977,15 @@ body:has(#near-picker:not([hidden])) .near-layout { max-width: 1180px; }
 @media (max-width: 640px) {
   .map-legend { width: 9.5rem; }
   .map-overlays-tr { right: 0.6rem; }
+  /* On a phone the top-right sits on the north-side wards; the lower-left corner of the frame is
+     empty (the city leans toward the lake), so park the key there, above the Map details switch. */
+  .map-card:not(.is-lens) .map-overlays-tr {
+    bottom: 4.2rem;
+    justify-items: start;
+    left: 0.6rem;
+    right: auto;
+    top: auto;
+  }
 }
 
 @media (max-width: 640px) {
@@ -5299,12 +5343,18 @@ html.is-theming, html.is-theming * { transition: background-color 0.35s ease, co
     justify-content: flex-start;
     order: 3;
     overflow-x: auto;
-    padding: 12px 0;
+    padding: 0;
     scrollbar-width: none;
   }
   .gn-links::-webkit-scrollbar { display: none; }
-  /* Fade the last link so the row reads as one you can swipe. */
-  .gn-links { -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent); mask-image: linear-gradient(90deg, #000 88%, transparent); padding-right: 24px; }
+  /* Links keep their 13px type but get ~44px tap areas from padding. */
+  .gn .gn-links a { padding: 15px 0; }
+  /* "More" is pinned to the right edge of the strip so it never scrolls out of sight; the rest of
+     the links scroll under it. The opaque background hides them, the left shadow is the swipe cue. */
+  .gn .gn-more { background: var(--bg); box-shadow: -12px 0 10px -4px var(--bg); flex: none; padding-left: 4px; position: sticky; right: 0; }
+  .gn .gn-more .gn-more-toggle { padding: 15px 4px; }
+  /* Pull the 44px tap area out of the layout so the top row keeps its height. */
+  .gn .gn-theme, .gn .gn-account .nav-account-button { height: 44px; margin-block: -7px; width: 44px; }
 }
 
 /* --- Theme ---------------------------------------------------------------- */
@@ -5390,10 +5440,21 @@ body.fd-theme {
   color: var(--ink);
   font: inherit;
   font-size: 17px;
+  /* `font: inherit` pulls in the bold weight of an enclosing form label, so reset it here */
+  font-weight: 400;
+  max-width: 100%;
   min-height: 48px;
+  min-width: 0;
+  overflow: hidden;
   padding: 12px 16px;
+  text-overflow: ellipsis;
   width: 100%;
 }
+/* placeholders read as hints, not typed text */
+.fd-theme input::placeholder,
+.fd-theme textarea::placeholder { color: var(--muted-text); font-weight: 400; opacity: 1; }
+/* the single-line ellipsis above would stop a long textarea entry from scrolling */
+.fd-theme textarea { overflow: auto; text-overflow: clip; }
 .fd-theme select {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none' stroke='%236e6e73' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m1 1.5 5 5 5-5'/%3E%3C/svg%3E");
   background-position: right 16px center;
@@ -5423,7 +5484,15 @@ body.fd-theme {
 .fd-grid-4 { display: grid; gap: 20px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .fd-grid-2 { display: grid; gap: 20px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
+/* A feature that is built but not yet doing what its page describes (penlight_site.SITE_FLAGS). */
+.fd-notice { background: color-mix(in srgb, #f5b400 16%, var(--bg, #fff)); border-bottom: 1px solid color-mix(in srgb, #f5b400 45%, transparent); color: var(--ink, #1d1d1f); font-size: 15px; line-height: 1.5; padding: 14px 0; }
+.fd-notice strong { font-weight: 650; }
+.gn-badge { border: 1px solid currentColor; border-radius: 999px; font-size: 10px; font-weight: 600; letter-spacing: 0.02em; margin-left: 4px; opacity: 0.75; padding: 0 5px; text-transform: uppercase; vertical-align: 1px; }
 .fd-proposal { border-bottom: 1px solid var(--hair); color: var(--ink-2); font-size: 12px; padding: 10px 0; text-align: center; }
+/* honeypot: off-screen, never focusable by keyboard users */
+.fd-hp { height: 1px; left: -9999px; opacity: 0; position: absolute; width: 1px; }
+.fd-ab-privacy { color: var(--ink-3); margin-top: 6px; }
+.fd-ab-note-ok { color: var(--green, #1a7f37); }
 
 /* --- Home ----------------------------------------------------------------- */
 
@@ -6251,6 +6320,9 @@ body.fd-theme {
 .fd-dict-search:focus-within { box-shadow: 0 0 0 3px rgb(0 113 227 / 20%); }
 .fd-dict-search input::-webkit-search-cancel-button { cursor: pointer; }
 .fd-dict-count { color: var(--ink-3); flex: none; font-size: 14px; font-variant-numeric: tabular-nums; }
+.fd-dict-sort { align-items: center; color: var(--ink-3); display: inline-flex; font-size: 14px; gap: 10px; margin-top: 14px; }
+.fd-theme .fd-dict-sort select { background: var(--fill); border: 0; border-radius: 10px; color: var(--ink); font-size: 14px; min-height: 36px; padding: 0 12px; width: auto; }
+.fd-dict-sort select:disabled { opacity: 0.5; }
 .fd-dict-body { padding: 8px 0 96px; }
 .fd-dict-none { background: var(--fill); border-radius: 18px; color: var(--ink-2); padding: 24px 28px; }
 .fd-dict-none[hidden] { display: none; }
@@ -6308,7 +6380,14 @@ body.fd-theme {
   width: 8px;
 }
 .fd-dict .metric-definition-card[open] > .metric-definition-summary::after { transform: translateY(3px) rotate(225deg); }
-.fd-dict .metric-definition-heading { justify-content: flex-start; }
+.fd-dict .metric-definition-heading { flex-wrap: wrap; justify-content: flex-start; row-gap: 4px; }
+.fd-dict .metric-definition-dates { color: var(--ink-3); display: inline-flex; flex-wrap: wrap; font-size: 13px; font-variant-numeric: tabular-nums; gap: 0 14px; margin-left: auto; }
+.fd-dict .metric-definition-domain { display: none; }
+/* Ranked view: one flat list, no domain rail; each card names its domain instead. */
+.fd-dict .metric-transparency-content:not(.is-ranked) .metric-ranked-panel { display: none; }
+.fd-dict .is-ranked .metric-domain-panel:not(.metric-ranked-panel), .fd-dict .is-ranked .metric-domain-toc { display: none; }
+.fd-dict .is-ranked .metric-domain-layout { grid-template-columns: minmax(0, 1fr); }
+.fd-dict .is-ranked .metric-definition-domain { display: inline; }
 .fd-dict .metric-definition-title { color: var(--ink); font-size: 17px; font-weight: 600; letter-spacing: -0.015em; }
 .fd-dict .metric-definition-summary > span:last-child { color: var(--ink-2); font-size: 15px; line-height: 1.45; max-width: 68ch; }
 
@@ -6338,6 +6417,9 @@ body.fd-theme {
   .fd-dict .metric-domain-toc-link { background: var(--fill); border-radius: 980px; flex: none; gap: 8px; font-size: 14px; padding: 7px 14px; white-space: nowrap; }
   .fd-dict .metric-definition-meta { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .fd-dict-hero { padding: 48px 0 24px; }
+}
+@media (max-width: 640px) {
+  .fd-dict .metric-definition-dates { flex-basis: 100%; margin-left: 0; }
 }
 @media (max-width: 480px) {
   .fd-dict .metric-definition-meta { grid-template-columns: minmax(0, 1fr); }
@@ -7070,6 +7152,8 @@ body:not(.fd-theme) .comparison-row.is-selected .comparison-row-community-areas 
 .gn .gn-more-menu a[aria-current="page"] { background: var(--fill); font-weight: 600; }
 
 .gn-account { position: relative; display: flex; align-items: center; }
+/* display:flex above would otherwise beat [hidden], showing an empty circle to signed-out visitors. */
+.gn-account[hidden] { display: none; }
 .gn-account .nav-account-button { width: 30px; height: 30px; border-radius: 50%; border: 0; background: var(--fill); color: var(--ink); font: 600 12px/1 -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif; cursor: pointer; display: grid; place-items: center; }
 .gn .gn-account .nav-account-email { color: var(--ink-2); font-size: 12px; margin: 8px 18px 6px; overflow: hidden; text-overflow: ellipsis; }
 

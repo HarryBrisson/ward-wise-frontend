@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{% block title %}Ward Wise Penlight{% endblock %}</title>
+    <title>{% block title %}Ward Wise{% endblock %}</title>
     <meta name="penlight-build" content="{{ build_sha }}">
     {# Cascade order matters: the original sheet first, then the shared K3 shell
        (header + page chrome), then whatever the page itself adds. Page CSS
@@ -14,14 +14,13 @@
   </head>
   <body data-page="{{ page_key }}">
     <header class="site-header">
-      <a class="site-brand" href="{{ url_for('ui.k3') }}" aria-label="Ward Wise Penlight home">
+      <a class="site-brand" href="{{ url_for('ui.k3') }}" aria-label="Ward Wise home">
         <span class="brand-mark" aria-hidden="true">
           <img class="brand-logo" src="{{ url_for('static', filename='logo.svg') }}" alt=""
                width="64" height="64">
         </span>
         <span class="brand-copy">
-          <span class="brand-kicker">Ward Wise</span>
-          <span class="brand-name">Penlight</span>
+          <span class="brand-name">Ward Wise</span>
         </span>
       </a>
       <nav class="site-nav" aria-label="Main navigation">
