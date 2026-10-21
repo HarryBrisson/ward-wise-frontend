@@ -1,6 +1,9 @@
 {% extends "base.html" %}
 
-{% block title %}Visual signifiers — Ward Wise Penlight  <script>
+{% block title %}Visual signifiers — Ward Wise{% endblock %}
+
+{% block scripts %}
+  <script>
     // Every area's photo with its provenance, from /api/signifiers/groups. Same markup the server
     // used to render; escaped because captions and credits are free text from the sources.
     (function () {
@@ -35,7 +38,7 @@
 {% block content %}
   <main class="signifiers-page">
     <header class="signifiers-header">
-      <p class="eyebrow">Ward Wise Penlight</p>
+      <p class="eyebrow">Ward Wise</p>
       <h1>Visual signifiers</h1>
       <p>
         Each ward, neighborhood, and &chi;GRID shows a representative photo of a place

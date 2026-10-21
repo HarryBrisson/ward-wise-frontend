@@ -165,7 +165,12 @@ body[data-page="about"] .panel section + section {
 
 /* Rows carry a caption on the right, so the column is a little wider than the
    Support page's reading measure. */
-body[data-page="k3_dictionary"] .metrics-layout { max-width: 780px; }
+body[data-page="k3_dictionary"] .metrics-layout {
+  /* minmax(0, 1fr): the implicit grid column otherwise grows to the nowrap filter pills (652px)
+     and drags the whole page wider than a phone. */
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 780px;
+}
 
 /* how a rank gets made, as a margin note rather than a card */
 body[data-page="k3_dictionary"] .dict-note {
@@ -196,6 +201,7 @@ body[data-page="k3_dictionary"] .dict-searchrow { position: relative; }
 body[data-page="k3_dictionary"] #dict-search {
   background: #fff;
   border: 1px solid var(--k3-hair);
+  box-sizing: border-box; /* width:100% plus padding otherwise overshoots the bar */
   border-radius: 10px;
   color: var(--k3-ink);
   font: inherit;

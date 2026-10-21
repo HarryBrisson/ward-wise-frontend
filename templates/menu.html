@@ -1,10 +1,11 @@
 {% extends "base.html" %}
 
-{% block title %}Menu money — Ward Wise Penlight{% endblock %}
+{% block title %}Menu money — Ward Wise{% endblock %}
 
 {% block head %}
   <link rel="stylesheet" href="{{ url_for('static', filename='report_ui.css', v=asset_version) }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='editorial.css', v=asset_version) }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='menu_hub.css', v=asset_version) }}">
 {% endblock %}
 
 {% block content %}
@@ -16,6 +17,21 @@
         local infrastructure, and chooses how. This page shows the choices: what share went to streets, lighting, sidewalks,
         alleys, parks, cameras, schools and walking or biking, ward by ward and year by year since 2005.</p>
     </header>
+    {% include "_menu_tabs.html" %}
+
+    <div id="menu-body"><p class="report-loading">Loading the menu books…</p></div>
+
+    <section class="mh-questions" aria-label="Start with a question">
+      <p class="ed-section-label">Start with a question</p>
+      <ul>
+        <li><a href="/menu/compare?wards=19,25&amp;year=2025&amp;category=Street+Resurfacing">In 2025 one ward put nearly all its menu money into repaving, and another under 4%. Where does yours fall?</a></li>
+        <li><a href="/menu/compare?wards=49,48,47&amp;year=2025&amp;category=Pedestrian+Infrastructure">Twelve wards spent nothing on walking or biking projects in 2025. Which wards spent the most?</a></li>
+        <li><a href="/menu?sort=menu_budget_utilization&amp;dir=asc">Not every ward spends its full allotment. Who left the most unspent?</a></li>
+        <li><a href="/menu?y=2005">Repaving went from about 38% of the average ward's menu money in 2005 to 58% by 2015. What did wards buy before?</a></li>
+        <li><a href="/menu/costs?type=street_resurfacing">How much more does a block of resurfacing cost than it used to, and does it depend on the ward?</a></li>
+        <li><a href="/menu/ward">What did my ward buy last year, street by street?</a></li>
+      </ul>
+    </section>
 
     <section class="ed-howto" aria-label="How to read this">
       <p class="ed-section-label">How to read this</p>
@@ -26,8 +42,6 @@
         <div><h3>Where the numbers come from.</h3><p>The city's published menu program books, one line per project. Shares are computed from the dollars on those lines. Before 2019 some lines could not be placed on a map; that affects the "spread" measure, not the shares.</p></div>
       </div>
     </section>
-
-    <div id="menu-body"><p class="report-loading">Loading the menu books…</p></div>
   </main>
 {% endblock %}
 

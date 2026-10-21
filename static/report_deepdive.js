@@ -51,7 +51,7 @@
     const id = select().value;
     if (!id) return;
     syncUrl();
-    document.title = `${label(id)} — Metric deep dive — Ward Wise Penlight`;
+    document.title = `${label(id)} — Metric deep dive — Ward Wise`;
     node.innerHTML = `<p>Loading…</p>`;
     let data;
     try {

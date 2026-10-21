@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Compare wards · Menu money · Ward Wise{% endblock %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='report_ui.css', v=asset_version) }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='editorial.css', v=asset_version) }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='menu_hub.css', v=asset_version) }}">
+{% endblock %}
+
+{% block content %}
+  <main class="ed-page mh-page" aria-live="polite">
+    <header class="ed-masthead mh-masthead">
+      <p class="ed-kicker">Aldermanic menu money · Compare</p>
+      <h1>Two wards, same year, different choices.</h1>
+      <p class="ed-standfirst">Put up to five wards side by side. Shares show what fraction of each ward's menu money went to each category; the strip below shows every ward for one category.</p>
+    </header>
+    {% include "_menu_tabs.html" %}
+    <div id="mh-compare"><p class="report-loading">Loading…</p></div>
+  </main>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='common.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='ward-neighbors.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='menu_hub.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='menu_compare.js', v=asset_version) }}"></script>
+{% endblock %}

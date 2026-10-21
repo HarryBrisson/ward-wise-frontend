@@ -789,7 +789,7 @@
         if (counts[el.dataset.fdCount]) el.textContent = counts[el.dataset.fdCount];
       });
     } catch (_error) {
-      /* the numbers in the markup are the fallback */
+      /* the markup holds a neutral placeholder, never a stale number */
     }
   }
 

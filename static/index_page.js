@@ -404,7 +404,7 @@
     return `
       <section class="report-equation" id="ix-equation">
         <h2>Your equation</h2>
-        <p class="equation-intro">Penlight is built on the idea that there is no single answer to what makes a neighborhood good. The order below weights every measure the way the site does by default. Set your own priorities here and the ${esc(countWord(areaList().length))} re-rank to match, using the same 0 to 100 scores the map uses. <a href="/survey">Build your own index</a> and your answers also count toward the citywide tally.</p>
+        <p class="equation-intro">Ward Wise is built on the idea that there is no single answer to what makes a neighborhood good. The order below weights every measure the way the site does by default. Set your own priorities here and the ${esc(countWord(areaList().length))} re-rank to match, using the same 0 to 100 scores the map uses. <a href="/survey">Build your own index</a> and your answers also count toward the citywide tally.</p>
         <form class="equation-form" id="ix-form" aria-label="Weight the wellbeing domains">${fields}
           <button type="button" class="equation-reset" data-act="reset">${inList ? "Back to the equation" : "Back to the default equation"}</button>
         </form>
@@ -506,7 +506,7 @@
     root().querySelectorAll("[data-noun-cap]").forEach((node) => { node.textContent = G.capitalize(state.cfg.plural); });
     root().querySelectorAll("[data-noun-single]").forEach((node) => { node.textContent = state.cfg.noun; });
     root().querySelector("[data-kicker]").textContent = state.cfg.api === "ward" ? "Ward by ward" : `${G.capitalize(state.cfg.noun)} by ${state.cfg.noun}`;
-    document.title = `Index of ${count} ${state.cfg.plural} — Ward Wise Penlight`;
+    document.title = `Index of ${count} ${state.cfg.plural} — Ward Wise`;
     const line = resultLine(rows);
     const gridClass = state.view === "cards" ? "idx-grid" : "index-grid";
     el.innerHTML =
