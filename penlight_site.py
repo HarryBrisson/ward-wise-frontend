@@ -35,9 +35,10 @@ PUBLIC_BASE = "https://www.wardwise.org"
 # Features that are built but don't yet do everything their pages describe. Templates read these (and
 # base.html hands them to JS as <body data-*>), so the "in testing" copy flips in one place at launch.
 SITE_FLAGS = {
-    # Ward alert emails. Sign-up and confirmation work; the digest and same-day emails are switched off
-    # until launch. Set True in the same change as `scripts/remote_pipeline.sh schedule --alerts-on`.
-    "alerts_sending": False,
+    # Ward alert emails: live since 2026-10-21 (digest Mondays 7:00 CT, same-day zoning daily 7:30 CT).
+    # To pause them, set False in the same change as `scripts/remote_pipeline.sh schedule` (without
+    # --alerts-on) and ALERTS_SENDING unset on the private app, so no page promises an email that won't come.
+    "alerts_sending": True,
 }
 
 
