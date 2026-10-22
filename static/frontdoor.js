@@ -164,16 +164,32 @@
       ],
     },
     // Same layout as the snapshot, with rows split into sections ([data-fd-rows="<key>"]).
+    // Its metrics are the sections' metrics, in order.
     financing: {
       areaType: "community_area",
       framing: "neutral",
-      metrics: ["median_household_income"],
       sections: {
-        demographics: ["median_household_income"],
-        business: [],
+        demographics: [
+          "median_household_income",
+          "poverty_pct",
+          "observed_asking_rent_usd",
+          "public_transit_pct",
+        ],
+        business: [
+          "total_establishments_per_10000_residents",
+          "bank_branches_per_10000_residents",
+          "sbif_grants_count",
+          "sbif_grant_dollars",
+          "zoned_business_commercial_pct",
+          "vacant_building_complaints_per_10000_residents",
+          "property_crime_rate_per_10000",
+        ],
       },
     },
   };
+  Object.values(SETS).forEach((set) => {
+    if (set.sections && !set.metrics) set.metrics = Object.values(set.sections).flat();
+  });
 
   // Plain names for the rows. The API labels carry their source in parentheses, which the
   // source line under each name already covers.
@@ -197,6 +213,14 @@
     active_transportation_pct: "Walk or bike to work",
     modeled_fear_walking_pct: "Walking at night (est.)",
     chain_restaurant_share_pct: "Chain restaurants",
+    poverty_pct: "Poverty rate",
+    total_establishments_per_10000_residents: "Employer businesses",
+    bank_branches_per_10000_residents: "Bank branches",
+    sbif_grants_count: "Small business grants",
+    sbif_grant_dollars: "Small business grant dollars",
+    zoned_business_commercial_pct: "Land zoned for business",
+    vacant_building_complaints_per_10000_residents: "Vacant building complaints",
+    property_crime_rate_per_10000: "Property crime",
   };
 
   const UNIT_SUFFIX = {
@@ -242,6 +266,7 @@
       ? present.filter((entry) => entry.value < mine.value).length
       : present.filter((entry) => entry.value > mine.value).length;
     const below = present.filter((entry) => entry.value < mine.value).length;
+    const tied = present.filter((entry) => entry.value === mine.value).length - 1;
     const rank = better + 1;
     return {
       value: mine.value,
@@ -249,11 +274,17 @@
       of: present.length,
       position: present.length > 1 ? (rank - 1) / (present.length - 1) : 0.5,
       share: present.length > 1 ? below / (present.length - 1) : 0.5,
+      tied,
+      above: present.length - 1 - below - tied,
       median: median(present.map((entry) => entry.value)),
     };
   }
 
   function higherThan(spot) {
+    // Many areas can share a floor value (no grants this year), so a tie isn't "the lowest".
+    const top = spot.tied && spot.above === 0;
+    if (spot.share <= 0 && spot.tied) return top ? "Same as all" : "Tied for lowest";
+    if (top) return "Tied for highest";
     if (spot.share >= 1) return "The highest";
     if (spot.share <= 0) return "The lowest";
     return `Higher than ${Math.round(spot.share * 100)}%`;
@@ -314,10 +345,10 @@
       ? `<a href="${esc(metric.source_url)}" target="_blank" rel="noopener">${esc(metric.source)}</a>`
       : esc(metric.source || "");
     return `
-      <div style="margin-top: 20px">
+      <div class="fd-appendix-entry">
         <h3><a href="/dictionary#metric-entry-${esc(metric.metric_id)}">${esc(name)}</a></h3>
         ${metric.methodology ? `<p class="fd-small"><strong>How to read it:</strong> ${esc(metric.methodology)}</p>` : ""}
-        ${metric.calculation ? `<p class="fd-small"><strong>How it is calculated:</strong> ${esc(metric.calculation)}</p>` : ""}
+        ${metric.calculation && metric.calculation !== metric.methodology ? `<p class="fd-small"><strong>How it is calculated:</strong> ${esc(metric.calculation)}</p>` : ""}
         ${source ? `<p class="fd-small"><strong>Source:</strong> ${source}</p>` : ""}
       </div>`;
   }
