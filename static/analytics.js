@@ -14,9 +14,20 @@
     }
   }
 
+  // The ward on screen, when a page shows one ward that may not be the visitor's own:
+  // /report/ward/5, /k3?ward=5, /for/residents#ward=05.
+  function viewedWard() {
+    const report = location.pathname.match(/^\/report\/ward\/(\d{1,2})\/?$/);
+    const raw = report ? report[1]
+      : new URLSearchParams(location.search).get("ward") || new URLSearchParams(location.hash.slice(1)).get("ward");
+    const number = Number(raw);
+    return Number.isInteger(number) && number >= 1 && number <= 50 ? String(number).padStart(2, "0") : undefined;
+  }
+
+  // ward: the visitor's own (from the header picker). viewed_ward: the one on screen.
   function track(action, params = {}) {
     const page = document.body ? document.body.dataset.page : undefined;
-    const props = { ward: savedWard() || undefined, page, ...params };
+    const props = { ward: savedWard() || undefined, viewed_ward: viewedWard(), page, ...params };
     Object.keys(props).forEach((key) => { if (props[key] === undefined || props[key] === null) delete props[key]; });
     try {
       if (typeof window.gtag === "function") window.gtag("event", action, props);

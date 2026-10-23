@@ -139,6 +139,13 @@ def test_ward_pick_is_counted(page, tracked_site):
     assert ga == ph == [{"ward": "12", "how": "picker", "page": "alerts"}], (ga, ph)
 
 
+def test_counts_carry_the_ward_on_screen_too(page, tracked_site):
+    page.goto(f"{tracked_site}/k3?ward=5", wait_until="load")
+    page.evaluate("""() => { localStorage.setItem("wardwise:ward", "07"); WardWiseAnalytics.track("report_shared", { how: "copy_link" }); }""")
+    ga, ph = events(page, "report_shared")
+    assert [(e["ward"], e["viewed_ward"]) for e in ga] == [(e["ward"], e["viewed_ward"]) for e in ph] == [("07", "05")], (ga, ph)
+
+
 def test_topic_section_open_is_counted(page, tracked_site):
     page.goto(f"{tracked_site}/alerts", wait_until="load")
     page.evaluate("""() => {
