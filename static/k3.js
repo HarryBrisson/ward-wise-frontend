@@ -1589,11 +1589,14 @@
         const wardId = wardAtPoint(result.match.lat, result.match.lon);
         if (wardId) {
           box.hidden = true;
+          api.track("ward_selected", { ward: pad(wardId), how: "address" });
           selectWard(wardId);
           toast(`That address is in ${wardName(wardId)}`);
           return;
         }
       }
+      // Counted without the typed text: it is usually a home address.
+      api.track("lookup_failed", { how: "address" });
       box.innerHTML =
         `<button type="button" disabled>No Chicago match for that. ` +
         `Try a street address, a neighborhood, or a ward number.</button>`;
@@ -1705,9 +1708,11 @@
       );
       const wardId = result.match ? wardAtPoint(result.match.lat, result.match.lon) : null;
       if (wardId) {
+        api.track("ward_selected", { ward: pad(wardId), how: "address" });
         selectWard(wardId);
         toast(`${suggestion.label} is in ${wardName(wardId)}`);
       } else {
+        api.track("lookup_failed", { how: "address" });
         toast("That spot is outside Chicago's 50 wards.");
       }
     } catch (error) {
@@ -1879,6 +1884,7 @@
       render();
     });
     el("k3-share").addEventListener("click", async () => {
+      api.track("report_shared", { how: "copy_link" });
       try {
         await navigator.clipboard.writeText(location.href);
         toast("Link copied. It opens this exact view.");

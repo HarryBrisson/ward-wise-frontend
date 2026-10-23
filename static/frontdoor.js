@@ -464,7 +464,7 @@
 
     if (isWard) {
       viewingEl?.addEventListener("click", (event) => {
-        if (event.target.closest("[data-fd-adopt]")) my.set(current);
+        if (event.target.closest("[data-fd-adopt]")) my.set(current, "adopt");
         if (event.target.closest("[data-fd-mine]")) render(my.get());
       });
       document.addEventListener("fd:myward", (event) => {
@@ -477,7 +477,10 @@
         }
       });
     }
-    root.querySelector("[data-fd-print]")?.addEventListener("click", () => window.print());
+    root.querySelector("[data-fd-print]")?.addEventListener("click", () => {
+      api.track("report_shared", { how: "print" });
+      window.print();
+    });
     if (initial) render(initial);
 
     if (mapSlot && window.WardWiseCivicMap) {
@@ -744,7 +747,7 @@
       if (pick) selectArea(pick.dataset.select);
       if (event.target.closest("[data-clear]")) selectArea(state.selected);
       const adopt = event.target.closest("[data-fd-adopt-ward]");
-      if (adopt) window.WardWiseMyWard.set(adopt.dataset.fdAdoptWard);
+      if (adopt) window.WardWiseMyWard.set(adopt.dataset.fdAdoptWard, "adopt");
     });
     document.addEventListener("fd:myward", (event) => {
       if (!map || state.areaType !== "ward") return;
@@ -1839,6 +1842,14 @@
 
   // --- The page ---
 
+  function storedManageToken() {
+    try {
+      return sessionStorage.getItem("wardwise:alerts-manage");
+    } catch (_error) {
+      return null;
+    }
+  }
+
   function initAlertBuilder() {
     const root = document.getElementById("fd-alert-builder");
     if (!root) return;
@@ -2066,9 +2077,11 @@
     });
 
     // Sign-up and manage. A new address gets a confirmation email first (double opt-in); links in
-    // that email and in every alert come back here with ?m=<token> to change or stop alerts.
+    // that email and in every alert come back here with ?m=<token> to change or stop alerts. The
+    // head script (templates/_analytics_head.html) lifts the token out of the address bar before
+    // analytics loads and keeps it for this tab, so it is read from there.
     const params = new URLSearchParams(window.location.search);
-    const manageToken = params.get("m");
+    const manageToken = params.get("m") || window.WardWiseManageToken || storedManageToken();
     const submitButton = root.querySelector("[data-fd-ab-submit]");
     const emailLabel = root.querySelector("[data-fd-ab-email-label]");
     const privacy = root.querySelector("[data-fd-ab-privacy]");
@@ -2086,6 +2099,13 @@
     };
     const say = (text, ok) => { note.textContent = text; note.classList.toggle("fd-ab-note-ok", Boolean(ok)); };
     if (FLASH[params.get("alerts")]) say(FLASH[params.get("alerts")], params.get("alerts") === "confirmed");
+    // The sign-up steps, each counted with the ward the alerts are for.
+    const step = (action, extra = {}) => api.track(action, { ward: view.ward || undefined, ...extra });
+    if (params.get("alerts") === "confirmed") step("alert_signup_confirmed");
+    if (!manageToken) {
+      form.addEventListener("focusin", () => step("alert_signup_started"), { once: true });
+      topicList.addEventListener("change", () => step("alert_topics_chosen", { topics: view.on.size }), { once: true });
+    }
 
     function whenFirst() {
       return view.freq === "monthly" ? "on the first Monday of next month" : "next Monday";
@@ -2141,6 +2161,7 @@
         const prefs = await alertsApi(`/api/alerts/preferences?m=${encodeURIComponent(manageToken)}`, { unsubscribe: true });
         enterManageMode(prefs);
         say(FLASH.unsubscribed);
+        step("alert_managed", { change: "unsubscribed" });
       } catch (error) {
         say(error.message);
       }
@@ -2167,10 +2188,12 @@
         if (manageToken) {
           const saved = await alertsApi(`/api/alerts/preferences?m=${encodeURIComponent(manageToken)}`, prefs);
           enterManageMode(saved);
+          step("alert_managed", { change: "saved", topics: view.on.size });
           say(sending ? `Saved. Your next email goes out ${whenFirst()}.`
             : "Saved. Alerts are still in testing, so nothing is sent yet; your first alert goes out when they launch.", true);
         } else {
           await alertsApi("/api/alerts/subscribe", { ...prefs, email: emailInput.value.trim(), website: form.elements.website.value });
+          step("alert_signup_submitted", { topics: view.on.size, frequency: view.freq });
           say(sending ? `Check ${emailInput.value.trim()} for a confirmation email. Click its link and your first alert goes out ${whenFirst()}.`
             : `Check ${emailInput.value.trim()} for a confirmation email. Click its link to join the early list. Alerts are still in testing, so your first alert goes out when they launch.`, true);
         }

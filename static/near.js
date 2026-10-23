@@ -748,6 +748,7 @@
         chartKey = chartKey === key ? null : key;
         if (chartKey && window.WardWiseExplorer && WardWiseExplorer.track) {
           WardWiseExplorer.track("near_metric_open", { metric: chartKey, radius: radiusM });
+          if (window.WardWiseAnalytics) window.WardWiseAnalytics.measureOpened(chartKey, null);
         }
         if (lastPayload) render(lastPayload);
         const chart = termsEl.querySelector(".near-chart");
