@@ -252,3 +252,18 @@ def test_home_map_measure_pick_is_counted(page, tracked_site, site_url):
     other.click()
     ga, ph = events(page, "measure_opened")
     assert [e["measure"] for e in ga] == [e["measure"] for e in ph] == [measure], (ga, ph)
+
+
+def test_topic_opened_from_a_bloom_petal_and_not_on_close(page, tracked_site):
+    page.goto(f"{tracked_site}/alerts", wait_until="load")
+    page.evaluate("""() => document.body.insertAdjacentHTML("beforeend",
+        '<button data-domain-target="health">petal</button>' +
+        '<details class="wardreport-accordion" data-domain="health"><summary><span class="wardreport-domain">Health</span></summary>x</details>')""")
+    # The page's own petal handler opens the section, after the count's capture listener has run.
+    page.evaluate("""() => document.querySelector('[data-domain-target]').addEventListener('click', () => {
+        document.querySelector('details[data-domain=health]').open = true; })""")
+    page.locator("[data-domain-target]").click()
+    page.locator("[data-domain-target]").click()  # already open: not counted again
+    page.locator("details[data-domain=health] summary").click()  # a reader closing it: not an open
+    ga, ph = events(page, "topic_opened")
+    assert [e["topic"] for e in ga] == [e["topic"] for e in ph] == ["Health"], (ga, ph)

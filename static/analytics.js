@@ -88,9 +88,13 @@
   // Topic sections on the ward report (report_domains.js) are <details data-domain>. Count a reader
   // tapping a closed section's heading, not every "toggle": the first section ships open and
   // printing opens them all.
+  // A petal in the ward report's bloom ([data-domain-target]) opens its section too.
   document.addEventListener("click", (event) => {
-    const summary = event.target instanceof Element ? event.target.closest("summary") : null;
-    const section = summary ? summary.parentElement : null;
+    const el = event.target instanceof Element ? event.target : null;
+    const summary = el ? el.closest("summary") : null;
+    const petal = el && !summary ? el.closest("[data-domain-target]") : null;
+    const section = summary ? summary.parentElement
+      : petal ? document.querySelector(`details[data-domain="${CSS.escape(petal.dataset.domainTarget)}"]`) : null;
     if (!(section instanceof HTMLDetailsElement) || section.open || !section.dataset.domain) return;
     const label = section.querySelector(".wardreport-domain");
     track("topic_opened", { topic: label ? label.textContent.trim() : section.dataset.domain });
