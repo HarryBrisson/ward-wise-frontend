@@ -252,6 +252,7 @@ def test_home_map_measure_pick_is_counted(page, tracked_site, site_url):
     other.click()
     ga, ph = events(page, "measure_opened")
     assert [e["measure"] for e in ga] == [e["measure"] for e in ph] == [measure], (ga, ph)
+    page.unroute_all(behavior="ignoreErrors")  # map data still loading must not fail the next test
 
 
 def test_topic_opened_from_a_bloom_petal_and_not_on_close(page, tracked_site):
