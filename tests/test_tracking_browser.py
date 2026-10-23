@@ -180,6 +180,7 @@ def test_leak_posthog_backstop_scrubs_every_string(page, tracked_site):
                 keep: "/k3?m=abc",
             },
             $set_once: { $initial_current_url: "/alerts#m=" + secret },
+            $heatmap_data: { ["https://www.wardwise.org/alerts?m=" + secret]: [{ x: 1 }] },
         }));
     }""", SECRET)
     assert SECRET not in cleaned, cleaned
