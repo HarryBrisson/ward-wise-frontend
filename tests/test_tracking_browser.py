@@ -235,3 +235,20 @@ def test_topic_opened_only_on_a_readers_tap(page, tracked_site):
     page.locator("details[data-domain=health] summary").click()
     ga, ph = events(page, "topic_opened")
     assert [e["topic"] for e in ga] == [e["topic"] for e in ph] == ["Health"], (ga, ph)
+
+
+def test_home_map_measure_pick_is_counted(page, tracked_site, site_url):
+    # The map needs real data: send this build's /api calls through the test server's proxy.
+    page.route(f"{tracked_site}/api/**", lambda route: route.fulfill(
+        response=route.fetch(url=route.request.url.replace(tracked_site, site_url))))
+    page.goto(f"{tracked_site}/", wait_until="load")
+    chips = page.locator(".fd-chips button[data-id]")
+    chips.first.wait_for()
+    current = page.locator(".fd-chips button[aria-pressed=true]").get_attribute("data-id")
+    other = chips.nth(1)
+    measure = other.get_attribute("data-id")
+    assert measure != current
+    page.locator(".fd-chips button[aria-pressed=true]").click()  # already showing: not a new open
+    other.click()
+    ga, ph = events(page, "measure_opened")
+    assert [e["measure"] for e in ga] == [e["measure"] for e in ph] == [measure], (ga, ph)

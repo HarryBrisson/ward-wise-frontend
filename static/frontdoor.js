@@ -734,6 +734,7 @@
     chips.addEventListener("click", (event) => {
       const button = event.target.closest("button[data-id]");
       if (!button) return;
+      if (button.dataset.id !== state.metricId && window.WardWiseAnalytics) window.WardWiseAnalytics.measureOpened(button.dataset.id, null);
       state.metricId = button.dataset.id;
       chips.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b === button)));
       paint();
