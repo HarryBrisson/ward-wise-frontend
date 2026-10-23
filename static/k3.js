@@ -432,7 +432,7 @@
   // how: "map", "list", "search" or "address", for the ward_selected count.
   function selectWard(wardId, how) {
     const id = pad(wardId);
-    if (how && id !== pad(state.wardId)) api.track("ward_selected", { ward: id, how });
+    if (how && id !== pad(state.wardId)) api.track("ward_selected", { ward: id, viewed_ward: id, how });
     if (state.view === "compare" && id !== pad(state.wardId)) {
       state.vsId = id;
     } else {
