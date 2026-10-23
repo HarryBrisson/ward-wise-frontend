@@ -283,3 +283,42 @@ def test_middle_click_on_a_civic_link_is_counted(page, tracked_site):
     page.locator("#call").click(button="middle")
     ga, ph = events(page, "civic_step")
     assert [e["step"] for e in ga] == [e["step"] for e in ph] == ["call"], (ga, ph)
+
+
+def test_k3_ward_pick_counts_the_ward_on_screen(page, tracked_site, site_url):
+    page.route(f"{tracked_site}/api/**", lambda route: route.fulfill(
+        response=route.fetch(url=route.request.url.replace(tracked_site, site_url))))
+    page.add_init_script("localStorage.setItem('wardwise:ward', '12')")
+    with page.expect_response(lambda response: "score-matrix" in response.url):  # ward data loaded
+        page.goto(f"{tracked_site}/k3", wait_until="load")
+    page.fill("#k3-search", "5")
+    page.press("#k3-search", "Enter")
+    page.wait_for_function("(window.dataLayer || []).some((e) => e[1] === 'ward_selected')")
+    ga, ph = events(page, "ward_selected")
+    assert [(e["ward"], e["viewed_ward"], e["how"]) for e in ga] == [(e["ward"], e["viewed_ward"], e["how"]) for e in ph] \
+        == [("12", "05", "search")], (ga, ph)
+    page.unroute_all(behavior="ignoreErrors")
+
+
+def test_alert_topics_chosen_counts_once(page, tracked_site):
+    page.goto(f"{tracked_site}/alerts", wait_until="load")
+    boxes = page.locator("#fd-alert-form input[name=topics]")
+    boxes.nth(0).click()
+    boxes.nth(1).click()
+    ga, ph = events(page, "alert_topics_chosen")
+    assert len(ga) == len(ph) == 1, (ga, ph)
+
+
+def test_page_still_works_when_a_blocker_removes_posthog(browser, tracked_site):
+    context = browser.new_context()
+    context.route("**/*googletagmanager.com/**", lambda route: route.abort())
+    context.route("**/*posthog.com/**", lambda route: route.abort())
+    # A blocker that pins window.posthog to undefined before the page's own scripts run.
+    context.add_init_script("Object.defineProperty(window, 'posthog', { get: () => undefined, set: () => {} })")
+    page = context.new_page()
+    errors = []
+    page.on("pageerror", lambda error: errors.append(str(error)))
+    page.goto(f"{tracked_site}/alerts", wait_until="load")
+    page.evaluate("WardWiseAnalytics.track('report_shared', { how: 'print' })")
+    context.close()
+    assert errors == [], errors
