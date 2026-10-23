@@ -74,6 +74,15 @@
     if (step) track("civic_step", { step });
   }, true);
 
+  // Topic sections on the ward report (report_domains.js) open as <details data-domain>. "toggle"
+  // doesn't bubble, so listen while it travels down.
+  document.addEventListener("toggle", (event) => {
+    const section = event.target;
+    if (!(section instanceof HTMLDetailsElement) || !section.open || !section.dataset.domain) return;
+    const label = section.querySelector(".wardreport-domain");
+    track("topic_opened", { topic: label ? label.textContent.trim() : section.dataset.domain });
+  }, true);
+
   document.addEventListener("fd:myward", (event) => remember({ ward: (event.detail && event.detail.ward) || null }));
 
   window.WardWiseAnalytics = { track, measureOpened, civicStep };

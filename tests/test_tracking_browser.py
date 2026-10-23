@@ -137,3 +137,15 @@ def test_ward_pick_is_counted(page, tracked_site):
     page.evaluate("window.WardWiseMyWard.set('12', 'picker')")
     ga, ph = events(page, "ward_selected")
     assert ga == ph == [{"ward": "12", "how": "picker", "page": "alerts"}], (ga, ph)
+
+
+def test_topic_section_open_is_counted(page, tracked_site):
+    page.goto(f"{tracked_site}/alerts", wait_until="load")
+    page.evaluate("""() => {
+        document.body.insertAdjacentHTML("beforeend",
+          '<details class="wardreport-accordion" data-domain="health"><summary><span class="wardreport-domain">Health</span></summary>x</details>');
+        document.querySelector("details[data-domain]").open = true;
+    }""")
+    page.wait_for_timeout(100)
+    ga, ph = events(page, "topic_opened")
+    assert [e["topic"] for e in ga] == [e["topic"] for e in ph] == ["Health"], (ga, ph)
