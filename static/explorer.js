@@ -1264,9 +1264,9 @@ function renderMetricControls() {
 
 // "N active" in every domain head: how many of that domain's measures currently count. Counts the
 // available set, not the search matches, so the number holds still while the reader types.
-// Every domain a metric lives in: its catalog category plus the editorial extras in metric_tags.js.
+// Every domain a metric lives in: its catalog category plus the extras in metric_tags.js (hand-kept + the source's own).
 function metricCategories(metric) {
-  const extras = window.WardWiseMetricTags?.extraCategoriesFor(metric.metric_id) || [];
+  const extras = window.WardWiseMetricTags?.extraCategoriesFor(metric) || [];
   return [metric.category || "other", ...extras.filter((c) => c !== metric.category)];
 }
 
@@ -1282,7 +1282,7 @@ function metricSearchText(metric) {
     ...metricCategories(metric).map((c) => domainLabel(c)),
     metric.source,
     metric.metric_id.replace(/_/g, " "),
-    window.WardWiseMetricTags?.keywordsFor(metric.metric_id),
+    window.WardWiseMetricTags?.keywordsFor(metric),
   ];
   const text = parts.filter(Boolean).join(" ").toLowerCase();
   explorerState._searchText.set(metric.metric_id, text);
