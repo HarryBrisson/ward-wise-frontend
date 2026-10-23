@@ -205,8 +205,11 @@ def test_bad_manage_link_falls_back_to_sign_up(page, tracked_site):
     page.route("**/api/alerts/preferences**", lambda route: route.fulfill(
         status=404, content_type="application/json", body='{"error": "That link has expired."}'))
     page.goto(f"{tracked_site}/alerts?m=BAD", wait_until="load")
-    page.wait_for_timeout(300)
-    assert page.evaluate("sessionStorage.getItem('wardwise:alerts-manage')") is None
+    page.wait_for_function("sessionStorage.getItem('wardwise:alerts-manage') === null")
+    # Back in sign-up mode, so starting the form is a sign-up start.
+    page.locator("#fd-alert-form input[name=email]").focus()
+    ga, ph = events(page, "alert_signup_started")
+    assert len(ga) == len(ph) == 1, (ga, ph)
 
 
 def test_signup_confirmed_counts_once_with_ward(page, tracked_site):

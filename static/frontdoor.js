@@ -2111,10 +2111,19 @@
       history.replaceState(history.state, "", url.pathname + url.search + url.hash);
       if (!manageToken) step("alert_signup_confirmed");
     }
-    if (!manageToken) {
-      form.addEventListener("focusin", () => step("alert_signup_started"), { once: true });
-      topicList.addEventListener("change", () => step("alert_topics_chosen", { topics: view.on.size }), { once: true });
-    }
+    // Sign-up only (a bad manage link falls back to sign-up later), each once per visit.
+    let started = false;
+    let chosen = false;
+    form.addEventListener("focusin", () => {
+      if (manageToken || started) return;
+      started = true;
+      step("alert_signup_started");
+    });
+    topicList.addEventListener("change", () => {
+      if (manageToken || chosen) return;
+      chosen = true;
+      step("alert_topics_chosen", { topics: view.on.size });
+    });
 
     function whenFirst() {
       return view.freq === "monthly" ? "on the first Monday of next month" : "next Monday";
