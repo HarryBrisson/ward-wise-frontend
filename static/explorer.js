@@ -1017,7 +1017,12 @@ function isHighWeight(weight) {
 // One place for everything a weight change touches: the tray ("Your list"), the formula chips,
 // the domain counters, the selection log, and the scores.
 function setMetricWeight(metricId, weight, { refresh = true } = {}) {
+  const added = !Number(explorerState.weights[metricId]) && Number(weight) > 0;
   explorerState.weights[metricId] = weight;
+  if (added && window.WardWiseAnalytics) {
+    const metric = explorerState.metrics.find((m) => m.metric_id === metricId);
+    window.WardWiseAnalytics.measureOpened(metricId, metric ? domainLabel(metric.category) : null);
+  }
   markCustom();
   renderPresetTray();
   syncMetricControl(metricId);
