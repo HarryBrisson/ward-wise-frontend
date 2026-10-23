@@ -268,3 +268,14 @@ def test_topic_opened_from_a_bloom_petal_and_not_on_close(page, tracked_site):
     page.locator("details[data-domain=health] summary").click()  # a reader closing it: not an open
     ga, ph = events(page, "topic_opened")
     assert [e["topic"] for e in ga] == [e["topic"] for e in ph] == ["Health"], (ga, ph)
+
+
+def test_middle_click_on_a_civic_link_is_counted(page, tracked_site):
+    page.goto(f"{tracked_site}/alerts", wait_until="load")
+    page.evaluate("""() => {
+        document.addEventListener("auxclick", (event) => event.preventDefault());
+        document.body.append(Object.assign(document.createElement("a"), { href: "tel:3125550100", textContent: "Call", id: "call" }));
+    }""")
+    page.locator("#call").click(button="middle")
+    ga, ph = events(page, "civic_step")
+    assert [e["step"] for e in ga] == [e["step"] for e in ph] == ["call"], (ga, ph)

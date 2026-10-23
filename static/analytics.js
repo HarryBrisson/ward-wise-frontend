@@ -78,13 +78,16 @@
     return null;
   }
 
-  document.addEventListener("click", (event) => {
+  function countCivicStep(event) {
     const link = event.target instanceof Element ? event.target.closest("a[href]") : null;
     if (!link) return;
     const step = civicStep(link.getAttribute("href"));
     // The type and the ward only: never the address on the other end of the link.
     if (step) track("civic_step", { step });
-  }, true);
+  }
+  document.addEventListener("click", countCivicStep, true);
+  // A middle-click opens the link in a new tab without a "click".
+  document.addEventListener("auxclick", (event) => { if (event.button === 1) countCivicStep(event); }, true);
 
   // Topic sections on the ward report (report_domains.js) are <details data-domain>. Count a reader
   // tapping a closed section's heading, not every "toggle": the first section ships open and
