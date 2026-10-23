@@ -75,11 +75,11 @@ def stub_manage_api(page, calls):
 
 
 def test_leak_manage_token_reaches_neither_tool(page, tracked_site):
-    page.goto(f"{tracked_site}/alerts?m={SECRET}&alerts=confirmed", wait_until="load")
+    page.goto(f"{tracked_site}/alerts?m={SECRET}&utm_source=email", wait_until="load")
     page.wait_for_timeout(500)
     data = sent(page)
     assert SECRET not in data["href"], data["href"]
-    assert "alerts=confirmed" in data["href"], "only the token comes off the address"
+    assert "utm_source=email" in data["href"], "only the token comes off the address"
     assert SECRET not in json.dumps(data, default=str), "the token reached an analytics queue"
     assert data["init"], "PostHog was not set up on a build with a key"
 
@@ -144,8 +144,87 @@ def test_topic_section_open_is_counted(page, tracked_site):
     page.evaluate("""() => {
         document.body.insertAdjacentHTML("beforeend",
           '<details class="wardreport-accordion" data-domain="health"><summary><span class="wardreport-domain">Health</span></summary>x</details>');
-        document.querySelector("details[data-domain]").open = true;
     }""")
+    page.locator("details[data-domain] summary").click()
+    ga, ph = events(page, "topic_opened")
+    assert [e["topic"] for e in ga] == [e["topic"] for e in ph] == ["Health"], (ga, ph)
+
+
+def test_leak_alias_alerts_address_is_scrubbed_too(page, tracked_site):
+    page.goto(f"{tracked_site}/alerts/index.html?m={SECRET}", wait_until="load")
+    data = sent(page)
+    assert SECRET not in data["href"], data["href"]
+    assert SECRET not in json.dumps(data, default=str)
+
+
+def test_leak_posthog_backstop_scrubs_every_string(page, tracked_site):
+    # Run PostHog's before_send on an event shaped like the worst case: tokens on alias paths, in
+    # nested error frames and messages, in $set_once, and an exact Near me spot in the page link.
+    page.goto(f"{tracked_site}/", wait_until="load")
+    cleaned = page.evaluate("""(secret) => {
+        const before = window.posthog._i[0][1].before_send;
+        return JSON.stringify(before({
+            event: "$exception",
+            properties: {
+                $current_url: "https://www.wardwise.org/alerts/index.html?M=" + secret,
+                $referrer: "https://www.wardwise.org/near#lat=41.91&lng=-87.67&r=800",
+                $exception_message: "fetch failed /api/alerts/preferences?%6D=" + secret,
+                $exception_list: [{ stacktrace: { frames: [{ filename: "/alerts?x=1&m=" + secret }] } }],
+                keep: "/k3?m=abc",
+            },
+            $set_once: { $initial_current_url: "/alerts#m=" + secret },
+        }));
+    }""", SECRET)
+    assert SECRET not in cleaned, cleaned
+    assert "lat=41.91" not in cleaned, cleaned
+    assert "/k3?m=abc" in cleaned, "measure lists on other pages must survive"
+
+
+def test_manage_token_is_forgotten_on_a_later_visit(page, tracked_site):
+    calls = []
+    stub_manage_api(page, calls)
+    page.goto(f"{tracked_site}/alerts?m={SECRET}", wait_until="load")
+    page.wait_for_function("document.querySelector('#fd-alert-form').elements.email.value !== ''")
+    # The next person at a shared computer opens Alerts from the home page in the same tab.
+    page.goto(f"{tracked_site}/", wait_until="load")
+    page.goto(f"{tracked_site}/alerts", wait_until="load")
+    page.wait_for_timeout(300)
+    assert len(calls) == 1, calls
+    assert page.evaluate("document.querySelector('#fd-alert-form').elements.email.value") == ""
+
+
+def test_bad_manage_link_falls_back_to_sign_up(page, tracked_site):
+    page.route("**/api/alerts/preferences**", lambda route: route.fulfill(
+        status=404, content_type="application/json", body='{"error": "That link has expired."}'))
+    page.goto(f"{tracked_site}/alerts?m=BAD", wait_until="load")
+    page.wait_for_timeout(300)
+    assert page.evaluate("sessionStorage.getItem('wardwise:alerts-manage')") is None
+
+
+def test_signup_confirmed_counts_once_with_ward(page, tracked_site):
+    stub_manage_api(page, [])
+    page.goto(f"{tracked_site}/alerts?alerts=confirmed&m={SECRET}", wait_until="load")
+    page.wait_for_function("document.querySelector('#fd-alert-form').elements.email.value !== ''")
+    assert "alerts=confirmed" not in page.evaluate("location.href")
+    page.reload(wait_until="load")
+    page.wait_for_function("document.querySelector('#fd-alert-form').elements.email.value !== ''")
+    ga, ph = events(page, "alert_signup_confirmed")
+    assert ga == ph == [], "a reload counted the confirmation again"
+    page.goto(f"{tracked_site}/alerts?alerts=confirmed&m={SECRET}", wait_until="load")
+    page.wait_for_function("document.querySelector('#fd-alert-form').elements.email.value !== ''")
+    ga, ph = events(page, "alert_signup_confirmed")
+    assert [e.get("ward") for e in ga] == [e.get("ward") for e in ph] == ["05"], (ga, ph)
+
+
+def test_topic_opened_only_on_a_readers_tap(page, tracked_site):
+    page.goto(f"{tracked_site}/alerts", wait_until="load")
+    page.evaluate("""() => document.body.insertAdjacentHTML("beforeend",
+        '<details data-domain="character" open><summary><span class="wardreport-domain">Change</span></summary>x</details>' +
+        '<details data-domain="health"><summary><span class="wardreport-domain">Health</span></summary>x</details>')""")
+    page.evaluate("document.querySelectorAll('details[data-domain]').forEach((d) => { d.open = true; })")  # print opens all
     page.wait_for_timeout(100)
+    assert events(page, "topic_opened") == ([], [])
+    page.evaluate("document.querySelector('details[data-domain=health]').open = false")
+    page.locator("details[data-domain=health] summary").click()
     ga, ph = events(page, "topic_opened")
     assert [e["topic"] for e in ga] == [e["topic"] for e in ph] == ["Health"], (ga, ph)

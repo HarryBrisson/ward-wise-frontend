@@ -2081,7 +2081,7 @@
     // head script (templates/_analytics_head.html) lifts the token out of the address bar before
     // analytics loads and keeps it for this tab, so it is read from there.
     const params = new URLSearchParams(window.location.search);
-    const manageToken = params.get("m") || window.WardWiseManageToken || storedManageToken();
+    let manageToken = params.get("m") || window.WardWiseManageToken || storedManageToken();
     const submitButton = root.querySelector("[data-fd-ab-submit]");
     const emailLabel = root.querySelector("[data-fd-ab-email-label]");
     const privacy = root.querySelector("[data-fd-ab-privacy]");
@@ -2101,7 +2101,15 @@
     if (FLASH[params.get("alerts")]) say(FLASH[params.get("alerts")], params.get("alerts") === "confirmed");
     // The sign-up steps, each counted with the ward the alerts are for.
     const step = (action, extra = {}) => api.track(action, { ward: view.ward || undefined, ...extra });
-    if (params.get("alerts") === "confirmed") step("alert_signup_confirmed");
+    // Counted once: the flag comes off the address so a reload or bookmark doesn't count it again.
+    // With a manage link too, wait for the settings so the count carries the alerts' ward.
+    const confirmed = params.get("alerts") === "confirmed";
+    if (confirmed) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("alerts");
+      history.replaceState(history.state, "", url.pathname + url.search + url.hash);
+      if (!manageToken) step("alert_signup_confirmed");
+    }
     if (!manageToken) {
       form.addEventListener("focusin", () => step("alert_signup_started"), { once: true });
       topicList.addEventListener("change", () => step("alert_topics_chosen", { topics: view.on.size }), { once: true });
@@ -2152,8 +2160,17 @@
 
     if (manageToken) {
       alertsApi(`/api/alerts/preferences?m=${encodeURIComponent(manageToken)}`)
-        .then(enterManageMode)
-        .catch((error) => say(error.message));
+        .then((prefs) => {
+          enterManageMode(prefs);
+          if (confirmed) step("alert_signup_confirmed");
+        })
+        .catch((error) => {
+          // A bad or expired link: forget it, so "Sign up again below" signs up.
+          try { sessionStorage.removeItem("wardwise:alerts-manage"); } catch (_error) { /* nothing stored */ }
+          manageToken = null;
+          if (confirmed) step("alert_signup_confirmed");
+          say(error.message);
+        });
     }
 
     unsubscribeButton.addEventListener("click", async () => {

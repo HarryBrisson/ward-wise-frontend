@@ -351,7 +351,7 @@
           className: "k3-ward-label",
         });
         layer.on("click", () => {
-          selectWard(wardId);
+          selectWard(wardId, "map");
         });
       },
     }).addTo(map);
@@ -429,8 +429,10 @@
 
   // Tapping the map while comparing swaps out the second ward, which is the
   // obvious reading of that gesture. Anywhere else it opens the ward.
-  function selectWard(wardId) {
+  // how: "map", "list", "search" or "address", for the ward_selected count.
+  function selectWard(wardId, how) {
     const id = pad(wardId);
+    if (how && id !== pad(state.wardId)) api.track("ward_selected", { ward: id, how });
     if (state.view === "compare" && id !== pad(state.wardId)) {
       state.vsId = id;
     } else {
@@ -1261,6 +1263,9 @@
     const consequence = consequenceOf(metricId, removed);
     if (removed) delete state.weights[metricId];
     else state.weights[metricId] = 1;
+    if (!removed && window.WardWiseAnalytics) {
+      window.WardWiseAnalytics.measureOpened(metricId, metric ? api.formatCategory(metric.category) : null);
+    }
     state.edited = true;
     state.mixChosen = true; // building a list by hand is a choice like any other
     state.presetName = null;
@@ -1589,8 +1594,7 @@
         const wardId = wardAtPoint(result.match.lat, result.match.lon);
         if (wardId) {
           box.hidden = true;
-          api.track("ward_selected", { ward: pad(wardId), how: "address" });
-          selectWard(wardId);
+          selectWard(wardId, "address");
           toast(`That address is in ${wardName(wardId)}`);
           return;
         }
@@ -1708,8 +1712,7 @@
       );
       const wardId = result.match ? wardAtPoint(result.match.lat, result.match.lon) : null;
       if (wardId) {
-        api.track("ward_selected", { ward: pad(wardId), how: "address" });
-        selectWard(wardId);
+        selectWard(wardId, "address");
         toast(`${suggestion.label} is in ${wardName(wardId)}`);
       } else {
         api.track("lookup_failed", { how: "address" });
@@ -1744,7 +1747,7 @@
     const act = target.dataset.act;
     const rowNode = target.closest("[data-metric]");
     const metricId = rowNode ? rowNode.dataset.metric : null;
-    if (act === "pick-ward") selectWard(target.dataset.ward);
+    if (act === "pick-ward") selectWard(target.dataset.ward, "list");
     if (act === "pick-addr") pickAddress(Number(target.dataset.idx));
     if (act === "open-list") {
       state.view = "list";
@@ -1900,7 +1903,7 @@
       const query = search.value.trim();
       if (!query) return;
       const first = matchWards(query)[0];
-      if (first) selectWard(first.ward.ward_id);
+      if (first) selectWard(first.ward.ward_id, "search");
       else if (addressSuggestions.length) pickAddress(0);
       else geocodeAndGo(query);
     };

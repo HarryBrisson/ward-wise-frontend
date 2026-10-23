@@ -782,6 +782,7 @@
         if (chooseEl) chooseEl.hidden = true;
         setPoint(payload.lat, payload.lng);
       } else {
+        if (window.WardWiseAnalytics) window.WardWiseAnalytics.track("lookup_failed", { how: "address" });
         showPicker(true, "Couldn't place that — try '2045 N Damen Ave' or 'Damen & North', or click the map.");
       }
     } catch (error) {

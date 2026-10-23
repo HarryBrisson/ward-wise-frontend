@@ -74,11 +74,13 @@
     if (step) track("civic_step", { step });
   }, true);
 
-  // Topic sections on the ward report (report_domains.js) open as <details data-domain>. "toggle"
-  // doesn't bubble, so listen while it travels down.
-  document.addEventListener("toggle", (event) => {
-    const section = event.target;
-    if (!(section instanceof HTMLDetailsElement) || !section.open || !section.dataset.domain) return;
+  // Topic sections on the ward report (report_domains.js) are <details data-domain>. Count a reader
+  // tapping a closed section's heading, not every "toggle": the first section ships open and
+  // printing opens them all.
+  document.addEventListener("click", (event) => {
+    const summary = event.target instanceof Element ? event.target.closest("summary") : null;
+    const section = summary ? summary.parentElement : null;
+    if (!(section instanceof HTMLDetailsElement) || section.open || !section.dataset.domain) return;
     const label = section.querySelector(".wardreport-domain");
     track("topic_opened", { topic: label ? label.textContent.trim() : section.dataset.domain });
   }, true);

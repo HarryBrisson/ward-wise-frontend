@@ -1,19 +1,27 @@
 {# Analytics, included first in <head> by base.html and base_k3.html. Order matters:
    1. Alert emails link to /alerts?m=<token>. The token unlocks someone's alert settings, so it
       comes out of the address bar before any analytics script reads the URL. frontdoor.js reads
-      it back from sessionStorage, and a reload in the same tab keeps working.
+      it back from sessionStorage. Only a reload of that same page keeps it: any other visit to
+      /alerts forgets it, so the next person at a shared computer gets the sign-up form.
    2. Google Analytics and PostHog, each only when its id is set at build time. Every count goes
       to both through WardWiseAnalytics.track() (static/analytics.js). #}
 <script>
   (function () {
-    if (location.pathname.replace(/\/+$/, "") !== "/alerts") return;
+    if (!/^\/+alerts(\/index\.html)?\/*$/i.test(location.pathname)) return;
+    var KEY = "wardwise:alerts-manage";
     var url = new URL(location.href);
     var token = url.searchParams.get("m");
-    if (!token) return;
+    if (!token) {
+      var nav = performance.getEntriesByType ? performance.getEntriesByType("navigation")[0] : null;
+      if (!nav || nav.type !== "reload") {
+        try { sessionStorage.removeItem(KEY); } catch (e) { /* nothing stored */ }
+      }
+      return;
+    }
     window.WardWiseManageToken = token;
-    try { sessionStorage.setItem("wardwise:alerts-manage", token); } catch (e) { /* private mode: this page load only */ }
+    try { sessionStorage.setItem(KEY, token); } catch (e) { /* private mode: this page load only */ }
     url.searchParams.delete("m");
-    history.replaceState(history.state, "", url.pathname + url.search + url.hash);
+    try { history.replaceState(history.state, "", url.pathname + url.search + url.hash); } catch (e) { /* before_send still scrubs PostHog */ }
   })();
 </script>
 {% if ga_id %}
@@ -38,18 +46,21 @@
       var HEATMAP_PAGES = ["home", "residents", "alerts"];
       var ward = null;
       try { ward = localStorage.getItem("wardwise:ward"); } catch (e) { /* no saved ward */ }
-      // Backstop for the scrub above: no /alerts URL with an m= token leaves this browser, in any
-      // property (current page, referrer, error report).
+      // Backstop, run on every string anywhere in an event (page URLs, referrers, heat maps, error
+      // reports): an alert-settings token (m= on any alerts URL) and the spot picked on the Near me
+      // map (/near#lat=..&lng=..) never leave this browser.
       function scrub(value) {
-        if (typeof value !== "string" || value.indexOf("m=") === -1 || value.indexOf("/alerts") === -1) return value;
-        try {
-          var url = new URL(value, location.origin);
-          if (url.pathname.replace(/\/+$/, "") !== "/alerts") return value;
-          url.searchParams.delete("m");
-          return /^https?:/.test(value) ? url.href : url.pathname + url.search + url.hash;
-        } catch (e) {
-          return value.replace(/([?&])m=[^&#]*&?/, "$1");
-        }
+        if (typeof value !== "string") return value;
+        if (/alerts/i.test(value)) value = value.replace(/([?&#])(m|%6d)=[^&#\s"']*/gi, "$1$2=");
+        if (value.indexOf("/near") !== -1) value = value.replace(/(\/near[^#\s"']*)#[^\s"']*/g, "$1");
+        return value;
+      }
+      function scrubAll(node, depth) {
+        if (!node || typeof node !== "object" || depth > 8) return;
+        Object.keys(node).forEach(function (key) {
+          if (typeof node[key] === "string") node[key] = scrub(node[key]);
+          else scrubAll(node[key], depth + 1);
+        });
       }
       posthog.init({{ posthog_key|tojson }}, {
         api_host: {{ posthog_host|tojson }},
@@ -60,12 +71,7 @@
         capture_heatmaps: HEATMAP_PAGES.indexOf({{ page_key|tojson }}) !== -1,
         capture_exceptions: true,
         before_send: function (event) {
-          if (!event || !event.properties) return event;
-          Object.keys(event.properties).forEach(function (key) { event.properties[key] = scrub(event.properties[key]); });
-          ["$set", "$set_once"].forEach(function (bag) {
-            var props = event.properties[bag];
-            if (props) Object.keys(props).forEach(function (key) { props[key] = scrub(props[key]); });
-          });
+          scrubAll(event, 0);
           return event;
         },
       });
