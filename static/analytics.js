@@ -60,7 +60,8 @@
   // Civic steps: links that leave Ward Wise to act. Counted at tap time, so cards that load
   // after the page (the alderperson card, meeting feeds) are covered without extra wiring.
   function civicStep(href) {
-    if (/^mailto:/i.test(href)) return "email";
+    // Writing to Ward Wise itself (the privacy page contact) is not a civic step.
+    if (/^mailto:/i.test(href)) return /@wardwise\.org\b/i.test(href) ? null : "email";
     if (/^tel:/i.test(href)) return "call";
     let url;
     try {

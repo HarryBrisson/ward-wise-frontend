@@ -109,7 +109,7 @@ def test_civic_step_goes_to_both_tools_with_ward(page, tracked_site):
         localStorage.setItem("wardwise:ward", "05");
         // Keep the test page in place: stop the links from opening, after the count has run.
         document.addEventListener("click", (event) => event.preventDefault());
-        for (const href of ["mailto:alder@example.org", "tel:3125550100", "https://311.chicago.gov", "https://example.com/"]) {
+        for (const href of ["mailto:alder@example.org", "tel:3125550100", "https://311.chicago.gov", "https://example.com/", "mailto:harry@wardwise.org"]) {
             const link = Object.assign(document.createElement("a"), { href, textContent: href });
             document.body.append(link);
             link.click();
